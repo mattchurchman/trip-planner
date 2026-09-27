@@ -101,6 +101,16 @@ function candidateFormDialog(existing) {
   });
 }
 
+/** True only when the user is actively typing/selecting in a form control here —
+ * not just when focus happens to be resting on a button inside the container
+ * (e.g. right after a dialog it opened closes). Used to avoid wiping an
+ * in-progress edit on a live update (§8) without also freezing the UI after
+ * an action completes. */
+function isEditingInside(container) {
+  const active = document.activeElement;
+  return container.contains(active) && ["INPUT", "TEXTAREA", "SELECT"].includes(active.tagName);
+}
+
 function externalLinkRow(url, label) {
   const anchor = el("a", {
     className: "discover-link",
@@ -123,7 +133,11 @@ export function renderOverviewPage(container, tripId, myUid) {
   const tripDetailsEl = el("div", { className: "trip-details card" });
   const travelersEl = el("div", { className: "travelers-section card" });
   const travelerError = el("div", { className: "field-error-holder" });
-  const addCandidateBtn = el("button", { type: "button", className: "btn btn-primary", textContent: "Add candidate" });
+  const addCandidateBtn = el("button", {
+    type: "button",
+    className: "btn btn-primary",
+    textContent: "Add candidate destination",
+  });
   const candidateError = el("div", { className: "field-error-holder" });
   const candidatesEl = el("div", { className: "candidates-section" });
   const discoverEl = el("div", { className: "discover-section card" });
@@ -133,6 +147,7 @@ export function renderOverviewPage(container, tripId, myUid) {
     tripDetailsEl,
     travelersEl,
     el("div", { className: "candidates-header" }, [el("h2", { textContent: "Candidate destinations" }), addCandidateBtn]),
+    el("p", { className: "muted section-hint", textContent: "Add places you're considering, then rank them together." }),
     candidateError,
     candidatesEl,
     discoverEl
@@ -150,7 +165,7 @@ export function renderOverviewPage(container, tripId, myUid) {
   });
 
   function renderTripDetails() {
-    if (tripDetailsEl.contains(document.activeElement)) return; // never wipe an active edit (§8)
+    if (isEditingInside(tripDetailsEl)) return; // never wipe an active edit (§8)
     const fieldError = el("div", { className: "field-error-holder" });
     const nameInput = el("input", { type: "text", value: trip.name });
     const statusSelect = el(
@@ -292,7 +307,7 @@ export function renderOverviewPage(container, tripId, myUid) {
   }
 
   function renderTravelers() {
-    if (travelersEl.contains(document.activeElement)) return; // never wipe an active edit (§8)
+    if (isEditingInside(travelersEl)) return; // never wipe an active edit (§8)
     const addBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Add traveler" });
     addBtn.addEventListener("click", async () => {
       const result = await addTravelerDialog();
