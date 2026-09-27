@@ -96,10 +96,12 @@ export function renderRecapPage(container, tripId, myUid) {
     });
     const safeLink = trip.albumUrl ? safeUrl(trip.albumUrl) : null;
     albumSectionEl.replaceChildren(
-      el("h3", { textContent: "Photo album" }),
-      input,
-      errorHolder,
-      safeLink ? el("a", { href: safeLink, target: "_blank", rel: "noopener noreferrer", textContent: "Open shared album" }) : null
+      ...[
+        el("h3", { textContent: "Photo album" }),
+        input,
+        errorHolder,
+        safeLink ? el("a", { href: safeLink, target: "_blank", rel: "noopener noreferrer", textContent: "Open shared album" }) : null,
+      ].filter(Boolean)
     );
   }
 
