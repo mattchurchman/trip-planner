@@ -1,6 +1,6 @@
 # Trip Planner — Specification
 
-Spec version: **1.3** (September 2026)
+Spec version: **1.4** (September 2026)
 
 This is the source of truth for what the app is and how it works. The build phases are in `PHASES.md`, and the working rules for the building model are in `CLAUDE.md`. If code and this spec disagree, the spec wins unless the owner approves a change and this file is updated in the same commit.
 
@@ -83,11 +83,14 @@ Files under `js/lib/` must not touch the DOM or import Firebase, so Node can tes
 
 ## 4. Look and feel
 
-Aim for the calm, practical feel of Google's travel tools.
+Aim for a calm but polished, modern travel-app feel — Google's travel tools as the starting point, with more visual depth.
 
-- White cards on a light gray page (`#f6f8fb`), one blue accent (`#1a73e8`), dark text (`#1f2933`), 8 px rounded corners, soft 1 px borders, and the system font stack.
-- Top bar: app name, a **Help** link (opens `help.html` in a new tab), signed-in user's avatar or initial, **Sign out**.
-- Trip page: trip name and status at the top, with tabs **Overview · Places · Flights & stays · Days · Recap**. Only show tabs whose phase has been built.
+- White cards with a soft drop shadow (not just a flat border) on a light, faintly gradient page (`#f4f6fb`), Inter as the display font (system font stack as fallback), dark text (`#1a2233`), 12 px rounded corners.
+- One accent color used two ways: a solid blue (`#2f5eff`) for text, borders and outlines, and a blue-to-violet gradient for filled/primary elements (primary buttons, "chosen" badges, the pressed rank button, the avatar-initial circle).
+- Cards lift slightly (deeper shadow) on hover to signal they're interactive. Buttons and links have hover/active states with a short (~160 ms) transition — nothing snaps instantly.
+- Links are medium-weight and colored by default (not just on hover); one opened in a new tab gets a small "↗" suffix so external links are recognizable at a glance.
+- Top bar: sticky at the top of the page with a soft shadow, app name, a **Help** link (opens `help.html` in a new tab), signed-in user's avatar or initial, **Sign out**.
+- Trip page: trip name and a pill-shaped status badge at the top, with tabs **Overview · Places · Flights & stays · Days · Recap** (active tab shown with an underline + accent color, others get a light hover highlight). Only show tabs whose phase has been built.
 - Desktop: list and map side by side on the Places tab. Phone (under 760 px): one column, map above list, all controls reachable, no horizontal scrolling.
 - Category colors, used on map markers and list chips:
 
@@ -568,3 +571,4 @@ Changes are made by the owner (or a model the owner asks). Edit this file first,
 | 1.1 | 2026-09-27 | Added `trips.destinationId` and `places.destinationId` so the Places tab scopes to the currently-chosen destination instead of mixing places across destination changes (§5.3, §5.4, §7.5, §7.6). Places tab now requires a chosen destination. Add place's link-paste method is now primary/auto-parsing, with Search and Place on map moved under a secondary disclosure (§7.6). |
 | 1.2 | 2026-09-27 | Added `help.html`, a static traveler-facing help page (no sign-in), and a **Help** link in the top bar that opens it (§3.2, §4). |
 | 1.3 | 2026-09-27 | Every place now gets a location action regardless of whether it already has a pin (**Edit location** vs **Set location**) — a pasted link's coordinates aren't always the real pin, and there was previously no way to correct one without deleting the place (§7.6). Replaced the three hardcoded activity-specific Discover idea queries (rock climbing/surfing/skiing) with destination-agnostic ones (outdoor activities/adventure tours/nature excursions near \<city\>), since a fixed sport makes no sense for most destinations and the app has no compliant way to guess a region-appropriate one (§1, §9.1). |
+| 1.4 | 2026-09-27 | Visual refresh at the owner's request — the flat, single-blue "draft" look is now a card-shadow/hover-lift, gradient-accent design with the Inter font, pill-shaped status/badges, and an external-link marker; no behavior changed (§4). |
