@@ -2,6 +2,7 @@ import { auth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
 import { checkAllowlist, ensureUserDoc, watchTrip } from "./store.js";
 import { el, setPending, friendlyError } from "./ui.js";
 import { renderTripsView } from "./views/trips.js";
+import { renderOverviewPage } from "./views/overview.js";
 
 const root = document.getElementById("app");
 let tripWatchers = [];
@@ -71,24 +72,33 @@ function renderTopBar(user) {
   ]);
 }
 
-function renderTripShell(main, tripId) {
-  const container = el("div", { className: "trip-shell" });
-  main.replaceChildren(container);
-  return watchTrip(
+function renderTripShell(main, tripId, myUid) {
+  const header = el("div", { className: "trip-header" });
+  const tabBar = el("nav", { className: "tab-bar" }, [el("span", { className: "tab tab-active", textContent: "Overview" })]);
+  const content = el("div", { className: "trip-content" });
+  main.replaceChildren(el("div", { className: "trip-shell" }, [header, tabBar, content]));
+
+  const unsubHeader = watchTrip(
     tripId,
     (trip) => {
       if (!trip) {
-        container.replaceChildren(el("p", { textContent: "This trip couldn't be found." }));
+        header.replaceChildren(el("p", { textContent: "This trip couldn't be found." }));
+        content.replaceChildren();
         return;
       }
-      container.replaceChildren(
+      header.replaceChildren(
         el("h1", { textContent: trip.name }),
-        el("nav", { className: "tab-bar" }, [el("span", { className: "tab tab-active", textContent: "Overview" })]),
-        el("p", { className: "coming-soon", textContent: "More coming soon." })
+        el("p", { className: "trip-status", textContent: trip.status })
       );
     },
-    (err) => container.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }))
+    (err) => header.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }))
   );
+  const unsubOverview = renderOverviewPage(content, tripId, myUid);
+
+  return () => {
+    unsubHeader();
+    unsubOverview();
+  };
 }
 
 function route(user, main) {
@@ -96,7 +106,7 @@ function route(user, main) {
   const hash = location.hash || "#/";
   const tripMatch = hash.match(/^#\/trip\/([^/]+)/);
   if (tripMatch) {
-    tripWatchers.push(renderTripShell(main, decodeURIComponent(tripMatch[1])));
+    tripWatchers.push(renderTripShell(main, decodeURIComponent(tripMatch[1]), user.uid));
   } else {
     tripWatchers.push(renderTripsView(main, user));
   }

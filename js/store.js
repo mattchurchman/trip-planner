@@ -4,15 +4,18 @@ import {
   doc,
   getDoc,
   setDoc,
+  updateDoc,
   deleteDoc,
   addDoc,
   collection,
   onSnapshot,
   query,
+  where,
   orderBy,
   serverTimestamp,
   writeBatch,
   getDocs,
+  deleteField,
 } from "./firebase.js";
 
 const TRIP_SUBCOLLECTIONS = ["candidates", "places", "flights", "stays", "costs", "days", "comments"];
@@ -98,4 +101,107 @@ export async function deleteTrip(tripId) {
   const publicRecapSnap = await getDoc(publicRecapRef);
   if (publicRecapSnap.exists()) await deleteDoc(publicRecapRef);
   await deleteDoc(doc(db, "trips", tripId));
+}
+
+export function watchUsers(onChange, onError) {
+  return onSnapshot(
+    collection(db, "users"),
+    (snapshot) => {
+      const usersById = {};
+      for (const docSnap of snapshot.docs) usersById[docSnap.id] = docSnap.data();
+      onChange(usersById);
+    },
+    onError
+  );
+}
+
+/** Updates one or more top-level trip fields and bumps updatedAt (§5, §8). */
+export function updateTripFields(tripId, fields) {
+  return updateDoc(doc(db, "trips", tripId), { ...fields, updatedAt: serverTimestamp() });
+}
+
+/** Replaces the whole travelers array — the one field allowed to be read-modify-written (§5). */
+export function updateTravelers(tripId, travelers) {
+  return updateTripFields(tripId, { travelers });
+}
+
+export function watchCandidates(tripId, onChange, onError) {
+  return onSnapshot(
+    collection(db, "trips", tripId, "candidates"),
+    (snapshot) => onChange(snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))),
+    onError
+  );
+}
+
+export function addCandidate(tripId, fields, uid) {
+  return addDoc(collection(db, "trips", tripId, "candidates"), {
+    city: fields.city,
+    country: fields.country,
+    why: fields.why || "",
+    roughPriceNote: fields.roughPriceNote || "",
+    dateIdea: fields.dateIdea || "",
+    link: fields.link || null,
+    lat: null,
+    lng: null,
+    airport: fields.airport || "",
+    votes: {},
+    addedBy: uid,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export function updateCandidate(tripId, candidateId, fields) {
+  return updateDoc(doc(db, "trips", tripId, "candidates", candidateId), {
+    ...fields,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export function deleteCandidate(tripId, candidateId) {
+  return deleteDoc(doc(db, "trips", tripId, "candidates", candidateId));
+}
+
+export function voteOnCandidate(tripId, candidateId, uid, choice) {
+  return updateDoc(doc(db, "trips", tripId, "candidates", candidateId), {
+    [`votes.${uid}`]: choice === null ? deleteField() : choice,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+function commentTimeMillis(value) {
+  return value && typeof value.toMillis === "function" ? value.toMillis() : 0;
+}
+
+/** Comments for one target, sorted oldest-first client-side to avoid a composite index (§7.4). */
+export function watchComments(tripId, targetType, targetId, onChange, onError) {
+  const commentsQuery = query(
+    collection(db, "trips", tripId, "comments"),
+    where("targetType", "==", targetType),
+    where("targetId", "==", targetId)
+  );
+  return onSnapshot(
+    commentsQuery,
+    (snapshot) => {
+      const comments = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+      comments.sort((a, b) => commentTimeMillis(a.createdAt) - commentTimeMillis(b.createdAt));
+      onChange(comments);
+    },
+    onError
+  );
+}
+
+export function addComment(tripId, { targetType, targetId, text, uid }) {
+  return addDoc(collection(db, "trips", tripId, "comments"), {
+    targetType,
+    targetId,
+    text,
+    addedBy: uid,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export function deleteComment(tripId, commentId) {
+  return deleteDoc(doc(db, "trips", tripId, "comments", commentId));
 }

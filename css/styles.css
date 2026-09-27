@@ -239,6 +239,232 @@ input:focus-visible {
   border-radius: var(--radius);
 }
 
+.trip-header h1 {
+  margin: 0 0 4px;
+}
+
+.trip-status {
+  margin: 0 0 8px;
+  color: var(--muted);
+  text-transform: capitalize;
+}
+
+.trip-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.field:last-child {
+  margin-bottom: 0;
+}
+
+.field input,
+.field select,
+.field textarea,
+.candidate-form input,
+.candidate-form textarea,
+.candidate-form select {
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: 100%;
+}
+
+.field-row {
+  display: flex;
+  gap: 12px;
+}
+
+.field-row .field {
+  flex: 1;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.travelers-section h2,
+.candidates-header h2,
+.discover-section h2 {
+  margin-top: 0;
+}
+
+.candidates-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.traveler-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.traveler-row input {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.candidates-section {
+  display: grid;
+  gap: 12px;
+}
+
+.candidate-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.candidate-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rank-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.rank-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.rank-btn-pressed {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.rank-summary {
+  position: relative;
+}
+
+.rank-summary-toggle {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline dotted;
+}
+
+.rank-summary-details {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  position: absolute;
+  z-index: 1;
+  min-width: 160px;
+}
+
+.comments {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.comments-toggle {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 0;
+}
+
+.comments-body {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.comments-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.comment-text {
+  margin: 0;
+}
+
+.comment-meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8em;
+}
+
+.comment-form {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.comment-input {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.discover-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.discover-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.discover-link {
+  flex: 1;
+}
+
+.copy-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.copy-fallback {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  max-width: 220px;
+}
+
+.candidate-dialog,
+.traveler-dialog {
+  max-width: 420px;
+}
+
 @media (max-width: 760px) {
   .top-bar {
     padding: 12px 16px;
