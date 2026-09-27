@@ -520,10 +520,11 @@ export function renderPlacesPage(container, tripId, myUid) {
     for (const unsub of placeCommentUnsubscribes) unsub();
     placeCommentUnsubscribes = [];
 
-    listEl.replaceChildren(
-      filtered.length === 0 ? el("p", { className: "empty-state", textContent: "No places match these filters." }) : null,
-      ...filtered.map(renderPlaceRow)
-    );
+    if (filtered.length === 0) {
+      listEl.replaceChildren(el("p", { className: "empty-state", textContent: "No places match these filters." }));
+    } else {
+      listEl.replaceChildren(...filtered.map(renderPlaceRow));
+    }
 
     if (markerLayer) {
       markerLayer.clearLayers();
