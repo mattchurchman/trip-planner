@@ -78,6 +78,7 @@ function renderTopBar(user) {
   return el("header", { className: "top-bar" }, [
     el("a", { className: "app-name", textContent: "Trip Planner", href: "#/" }),
     el("div", { className: "top-bar-user" }, [
+      el("a", { className: "btn btn-link", textContent: "Help", href: "./help.html", target: "_blank", rel: "noopener noreferrer" }),
       avatar,
       el("button", { className: "btn btn-link", textContent: "Sign out", onclick: () => signOut(auth) }),
     ]),

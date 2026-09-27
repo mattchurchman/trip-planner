@@ -1,6 +1,6 @@
 # Trip Planner — Specification
 
-Spec version: **1.1** (September 2026)
+Spec version: **1.2** (September 2026)
 
 This is the source of truth for what the app is and how it works. The build phases are in `PHASES.md`, and the working rules for the building model are in `CLAUDE.md`. If code and this spec disagree, the spec wins unless the owner approves a change and this file is updated in the same commit.
 
@@ -45,6 +45,7 @@ The group's process, which the app follows:
 ```
 index.html            app shell; loads css/styles.css and js/app.js
 recap.html            public read-only recap page (Phase 6)
+help.html             static "how to use this app" page for travelers; no sign-in, no Firebase
 404.html              redirects to the app home (see note below)
 package.json          {"type": "module", "private": true}  (no dependencies)
 firestore.rules       security rules (owner pastes into the Firebase console)
@@ -76,12 +77,16 @@ tests/*.test.js
 
 Files under `js/lib/` must not touch the DOM or import Firebase, so Node can test them directly. Keep each file under about 400 lines; split if needed.
 
+### 3.2 Help page
+
+`help.html` is a static, standalone page for travelers (not the owner) so they don't need to ask the trip owner or a coding model what a button does. It needs no sign-in and imports nothing from `js/` — plain HTML/CSS content only, styled with `css/styles.css`, opened via a **Help** link in the top bar (§4) that opens it in a new tab so it never interrupts the trip the traveler was looking at. Content: a one-paragraph "what this is," the tabs in the order a group actually uses them (Overview → Places → Flights & stays → Days → Recap) with one or two sentences on what each does, and a short troubleshooting list drawn from the *traveler-facing* rows of the owner's `README.md` troubleshooting table (skip anything requiring Firebase console access, which only the owner can do). Keep it current when a later phase changes what a tab does.
+
 ## 4. Look and feel
 
 Aim for the calm, practical feel of Google's travel tools.
 
 - White cards on a light gray page (`#f6f8fb`), one blue accent (`#1a73e8`), dark text (`#1f2933`), 8 px rounded corners, soft 1 px borders, and the system font stack.
-- Top bar: app name, signed-in user's avatar or initial, **Sign out**.
+- Top bar: app name, a **Help** link (opens `help.html` in a new tab), signed-in user's avatar or initial, **Sign out**.
 - Trip page: trip name and status at the top, with tabs **Overview · Places · Flights & stays · Days · Recap**. Only show tabs whose phase has been built.
 - Desktop: list and map side by side on the Places tab. Phone (under 760 px): one column, map above list, all controls reachable, no horizontal scrolling.
 - Category colors, used on map markers and list chips:
@@ -559,3 +564,4 @@ Changes are made by the owner (or a model the owner asks). Edit this file first,
 |---|---|---|
 | 1.0 | 2026-09-26 | First version |
 | 1.1 | 2026-09-27 | Added `trips.destinationId` and `places.destinationId` so the Places tab scopes to the currently-chosen destination instead of mixing places across destination changes (§5.3, §5.4, §7.5, §7.6). Places tab now requires a chosen destination. Add place's link-paste method is now primary/auto-parsing, with Search and Place on map moved under a secondary disclosure (§7.6). |
+| 1.2 | 2026-09-27 | Added `help.html`, a static traveler-facing help page (no sign-in), and a **Help** link in the top bar that opens it (§3.2, §4). |
