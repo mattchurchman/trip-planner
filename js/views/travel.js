@@ -29,6 +29,7 @@ import { nightsBetween, nightsLabel, relativeTime } from "../lib/dates.js";
 import { latestEntry, priceDelta, isNewLow, perNightCents, sortByTimeAsc, computeTotals } from "../lib/totals.js";
 import { safeUrl, googleFlightsSearchUrl, googleHotelsUrl, bookingUrl, airbnbUrl } from "../lib/links.js";
 import { parseGoogleMapsUrl } from "../lib/mapsurl.js";
+import { parseStayLink } from "../lib/staylink.js";
 
 const PROVIDERS = [
   { value: "booking", label: "Booking.com" },
@@ -240,6 +241,18 @@ function stayFormDialog(existing, trip) {
     mapsLinkInput.addEventListener("paste", () => setTimeout(tryParseLink, 0));
     const useLinkBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Use this link" });
     useLinkBtn.addEventListener("click", tryParseLink);
+
+    // Auto-fill whatever a pasted Booking.com/Airbnb/Google Hotels link reveals;
+    // anything it can't determine is left for the user to fill in by hand.
+    function tryParseStayLink() {
+      const parsed = parseStayLink(linkInput.value);
+      if (parsed.provider) providerSelect.value = parsed.provider;
+      if (parsed.name && !nameInput.value.trim()) nameInput.value = parsed.name;
+      if (parsed.checkIn) checkInInput.value = parsed.checkIn;
+      if (parsed.checkOut) checkOutInput.value = parsed.checkOut;
+      if (parsed.guests) guestsInput.value = parsed.guests;
+    }
+    linkInput.addEventListener("paste", () => setTimeout(tryParseStayLink, 0));
 
     const form = el("form", { method: "dialog", className: "stay-form" }, [
       field("Name", nameInput),
