@@ -396,3 +396,29 @@ export function deletePriceEntry(tripId, subcollection, docId, entry) {
     updatedAt: serverTimestamp(),
   });
 }
+
+export function watchDays(tripId, onChange, onError) {
+  return watchSubcollection(tripId, "days", onChange, onError);
+}
+
+export function addDay(tripId, fields, uid) {
+  return addSubDoc(
+    tripId,
+    "days",
+    { date: fields.date ?? null, title: fields.title || "", focus: fields.focus || "", notes: fields.notes || "", order: fields.order },
+    uid
+  );
+}
+
+export function updateDay(tripId, dayId, fields) {
+  return updateSubDoc(tripId, "days", dayId, fields);
+}
+
+/** Deletes a day and moves its places back to Unplanned (§7.9). `placeIds` are the
+ * day's current places, computed by the caller from its already-loaded place list. */
+export async function deleteDayAndUnassignPlaces(tripId, dayId, placeIds) {
+  for (const placeId of placeIds) {
+    await updateSubDoc(tripId, "places", placeId, { dayId: null, dayOrder: null });
+  }
+  await deleteSubDoc(tripId, "days", dayId);
+}

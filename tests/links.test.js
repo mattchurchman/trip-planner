@@ -8,7 +8,12 @@ import {
   airbnbUrl,
   googleSearchUrl,
   googleMapsOpenUrl,
+  walkingRouteLinks,
 } from "../js/lib/links.js";
+
+function pt(lat, lng) {
+  return { lat, lng };
+}
 
 export const tests = [
   ["safeUrl accepts https", () => {
@@ -90,5 +95,53 @@ export const tests = [
       googleMapsOpenUrl("Time Out Market", "Lisbon"),
       "https://www.google.com/maps/search/?api=1&query=Time%20Out%20Market%2C%20Lisbon"
     );
+  }],
+  ["walkingRouteLinks with 2 places: single link, no waypoints", () => {
+    const links = walkingRouteLinks([pt(1, 1), pt(2, 2)]);
+    assert.equal(links.length, 1);
+    assert.equal(links[0].label, "Open walking route");
+    assert.equal(links[0].url, "https://www.google.com/maps/dir/?api=1&travelmode=walking&origin=1,1&destination=2,2");
+  }],
+  ["walkingRouteLinks with 5 places: one link with 3 waypoints in order", () => {
+    const places = [pt(0, 0), pt(1, 1), pt(2, 2), pt(3, 3), pt(4, 4)];
+    const links = walkingRouteLinks(places);
+    assert.equal(links.length, 1);
+    assert.equal(
+      links[0].url,
+      "https://www.google.com/maps/dir/?api=1&travelmode=walking&origin=0,0&destination=4,4&waypoints=1,1%7C2,2%7C3,3"
+    );
+  }],
+  ["walkingRouteLinks with 10 places: still one link, right at the 8-waypoint cap", () => {
+    const places = Array.from({ length: 10 }, (_, i) => pt(i, i));
+    const links = walkingRouteLinks(places);
+    assert.equal(links.length, 1);
+    assert.equal(links[0].label, "Open walking route");
+    const waypointsPart = links[0].url.split("waypoints=")[1];
+    assert.equal(waypointsPart.split("%7C").length, 8);
+  }],
+  ["walkingRouteLinks with 14 places splits into parts, each starting where the previous ended", () => {
+    const places = Array.from({ length: 14 }, (_, i) => pt(i, i));
+    const links = walkingRouteLinks(places);
+    assert.equal(links.length, 2);
+    assert.equal(links[0].label, "Route part 1");
+    assert.equal(links[1].label, "Route part 2");
+    assert.match(links[0].url, /origin=0,0/);
+    assert.match(links[0].url, /destination=9,9/);
+    assert.match(links[1].url, /origin=9,9/); // part 2 starts where part 1 ended
+    assert.match(links[1].url, /destination=13,13/);
+  }],
+  ["walkingRouteLinks skips places without coordinates, preserving order of the rest", () => {
+    const places = [pt(0, 0), { lat: null, lng: null }, pt(2, 2), { lat: 3, lng: null }, pt(4, 4)];
+    const links = walkingRouteLinks(places);
+    assert.equal(links.length, 1);
+    assert.equal(
+      links[0].url,
+      "https://www.google.com/maps/dir/?api=1&travelmode=walking&origin=0,0&destination=4,4&waypoints=2,2"
+    );
+  }],
+  ["walkingRouteLinks returns nothing with fewer than 2 located places", () => {
+    assert.deepEqual(walkingRouteLinks([]), []);
+    assert.deepEqual(walkingRouteLinks([pt(0, 0)]), []);
+    assert.deepEqual(walkingRouteLinks([pt(0, 0), { lat: null, lng: null }]), []);
   }],
 ];

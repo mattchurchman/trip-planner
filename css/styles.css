@@ -852,6 +852,135 @@ input:focus-visible {
   color: var(--danger);
 }
 
+.days-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.days-header h2 {
+  margin: 0;
+  margin-right: auto;
+}
+
+.days-map-wrap {
+  margin: 12px 0;
+}
+
+.day-map {
+  width: 100%;
+  height: 320px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.day-map-caption {
+  margin: 6px 0 0;
+  font-size: 0.85em;
+}
+
+.day-marker {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8em;
+  font-weight: 600;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.days-list {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.day-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.day-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.day-card-header h3 {
+  margin: 0;
+}
+
+.day-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.day-places {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.day-place-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.day-place-row > span:first-child {
+  flex: 1;
+}
+
+.day-routes {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.unplanned-pool {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.unplanned-group h4 {
+  margin: 0 0 8px;
+}
+
+.unplanned-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.unplanned-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.unplanned-row > span:first-child {
+  flex: 1;
+  min-width: 120px;
+}
+
 @media (max-width: 760px) {
   .top-bar {
     padding: 12px 16px;

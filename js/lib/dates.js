@@ -20,6 +20,17 @@ export function nightsLabel(checkIn, checkOut) {
   return `${nights} night${nights === 1 ? "" : "s"}`;
 }
 
+/**
+ * True when two "YYYY-MM-DD" date ranges overlap (inclusive of touching endpoints).
+ * False if any of the four dates is missing. A single day's range is `(date, date)`.
+ * Used for the Places "Events during trip dates" filter and the Days "Happening
+ * this day" hint (§7.6, §7.9).
+ */
+export function rangesOverlap(startA, endA, startB, endB) {
+  if (!startA || !endA || !startB || !endB) return false;
+  return startA <= endB && endA >= startB;
+}
+
 /** Relative time label such as "5 minutes ago", for recent timestamps (§8). */
 export function relativeTime(date, now = new Date()) {
   const then = date instanceof Date ? date : new Date(date);

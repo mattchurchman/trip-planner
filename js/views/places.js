@@ -4,6 +4,7 @@ import { renderComments } from "./comments.js";
 import { sortByRank, notRankedByMe, voteSummary, toMillis } from "../lib/votes.js";
 import { safeUrl, googleMapsOpenUrl } from "../lib/links.js";
 import { parseGoogleMapsUrl } from "../lib/mapsurl.js";
+import { rangesOverlap } from "../lib/dates.js";
 
 const CATEGORIES = [
   { label: "Food", color: "#e8710a" },
@@ -32,11 +33,6 @@ function openMapsUrlFor(place, destinationCity) {
   return saved || googleMapsOpenUrl(place.name, destinationCity || "");
 }
 
-function eventOverlapsTrip(place, trip) {
-  if (!place.eventStart || !place.eventEnd || !trip.startDate || !trip.endDate) return false;
-  return place.eventStart <= trip.endDate && place.eventEnd >= trip.startDate;
-}
-
 function applyFiltersAndSort(places, { filters, sortMode, trip, myUid }) {
   let filtered = places.filter((p) => {
     if (filters.categories.size > 0 && !filters.categories.has(p.category)) return false;
@@ -45,7 +41,7 @@ function applyFiltersAndSort(places, { filters, sortMode, trip, myUid }) {
       const haystack = `${p.name} ${p.note}`.toLowerCase();
       if (!haystack.includes(filters.search.toLowerCase())) return false;
     }
-    if (filters.eventsOnly && !eventOverlapsTrip(p, trip)) return false;
+    if (filters.eventsOnly && !rangesOverlap(p.eventStart, p.eventEnd, trip.startDate, trip.endDate)) return false;
     return true;
   });
   if (filters.notRankedOnly) filtered = notRankedByMe(filtered, myUid);

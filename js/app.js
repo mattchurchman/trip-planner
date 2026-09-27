@@ -5,11 +5,13 @@ import { renderTripsView } from "./views/trips.js";
 import { renderOverviewPage } from "./views/overview.js";
 import { renderPlacesPage } from "./views/places.js";
 import { renderTravelPage } from "./views/travel.js";
+import { renderDaysPage } from "./views/days.js";
 
 const TABS = [
   { key: "overview", label: "Overview", render: renderOverviewPage },
   { key: "places", label: "Places", render: renderPlacesPage },
   { key: "travel", label: "Flights & stays", render: renderTravelPage },
+  { key: "days", label: "Days", render: renderDaysPage },
 ];
 
 const root = document.getElementById("app");

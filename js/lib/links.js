@@ -57,6 +57,43 @@ export function googleMapsOpenUrl(name, city) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name}, ${city}`)}`;
 }
 
+function coordString(loc) {
+  return `${loc.lat},${loc.lng}`;
+}
+
+/**
+ * Walking-route directions link(s) for a day (§9.2). Places without coordinates
+ * are skipped; order among the located ones is preserved. At most 8 waypoints
+ * per link — a day with more than 10 located places splits into consecutive
+ * "Route part N" links, each starting where the previous one ended. Returns
+ * [] with fewer than 2 located places. `|` is encoded as %7C.
+ */
+export function walkingRouteLinks(places) {
+  const points = (places || []).filter((p) => p && p.lat != null && p.lng != null);
+  if (points.length < 2) return [];
+
+  const totalParts = Math.max(1, Math.ceil((points.length - 1) / 9));
+  const links = [];
+  let startIndex = 0;
+  let partNumber = 1;
+  while (startIndex < points.length - 1) {
+    const segment = points.slice(startIndex, Math.min(startIndex + 10, points.length));
+    const origin = segment[0];
+    const destination = segment[segment.length - 1];
+    const waypoints = segment.slice(1, -1);
+
+    let url = `https://www.google.com/maps/dir/?api=1&travelmode=walking&origin=${coordString(origin)}&destination=${coordString(destination)}`;
+    if (waypoints.length > 0) {
+      url += `&waypoints=${waypoints.map(coordString).join("%7C")}`;
+    }
+    links.push({ label: totalParts > 1 ? `Route part ${partNumber}` : "Open walking route", url });
+
+    startIndex += segment.length - 1;
+    partNumber += 1;
+  }
+  return links;
+}
+
 function monthYearLabel(dateStr) {
   if (!dateStr) return null;
   const parsed = new Date(`${dateStr}T00:00:00Z`);
