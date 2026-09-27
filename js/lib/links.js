@@ -101,7 +101,13 @@ function monthYearLabel(dateStr) {
   return parsed.toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
 }
 
-/** The 11 Overview "Discover" idea search queries (§9.1), for use with googleSearchUrl. */
+/**
+ * The 11 Overview "Discover" idea search queries (§9.1), for use with googleSearchUrl.
+ * Deliberately destination-agnostic (no named sport/activity) so they read sensibly for
+ * any city -- Google's own results surface whatever's regionally relevant (kayaking for
+ * a coastal destination, skiing for a mountain one) without this app guessing or
+ * hardcoding it, which would need a lookup or AI feature the spec rules out (§12).
+ */
 export function ideaQueries(city, startDate) {
   const monthYear = monthYearLabel(startDate);
   const withMonth = (base) => (monthYear ? `${base} ${monthYear}` : base);
@@ -113,9 +119,9 @@ export function ideaQueries(city, startDate) {
     withMonth(`${city} events`),
     withMonth(`${city} concerts`),
     withMonth(`${city} seasonal festivals`),
-    `rock climbing near ${city}`,
-    `surfing near ${city}`,
-    `skiing near ${city}`,
+    `outdoor activities near ${city}`,
+    `adventure tours near ${city}`,
+    `nature excursions near ${city}`,
     `day trips from ${city}`,
   ];
 }

@@ -453,7 +453,8 @@ export function renderPlacesPage(container, tripId, myUid) {
   }
 
   function buildSetLocationInline(place) {
-    const toggleBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Set location" });
+    const hasLocation = place.lat != null && place.lng != null;
+    const toggleBtn = el("button", { type: "button", className: "btn btn-small", textContent: hasLocation ? "Edit location" : "Set location" });
     const holder = el("div", { className: "set-location-holder", hidden: true });
     toggleBtn.addEventListener("click", () => {
       holder.hidden = !holder.hidden;
@@ -540,7 +541,7 @@ export function renderPlacesPage(container, tripId, myUid) {
         el("p", { className: "muted", textContent: place.neighborhood || "" }),
         ...details,
         hasLocation ? null : el("p", { className: "field-error", textContent: "No map pin" }),
-        hasLocation ? null : buildSetLocationInline(place),
+        buildSetLocationInline(place),
         rank,
         el("div", { className: "place-actions" }, [openBtn, editBtn, deleteBtn]),
         errorHolder,

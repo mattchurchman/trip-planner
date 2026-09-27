@@ -1,6 +1,6 @@
 # Trip Planner — Specification
 
-Spec version: **1.2** (September 2026)
+Spec version: **1.3** (September 2026)
 
 This is the source of truth for what the app is and how it works. The build phases are in `PHASES.md`, and the working rules for the building model are in `CLAUDE.md`. If code and this spec disagree, the spec wins unless the owner approves a change and this file is updated in the same commit.
 
@@ -13,7 +13,7 @@ A private, free website where a small group of friends (roughly 3–8 people) pl
 The group's process, which the app follows:
 
 1. **Explore.** Each person finds cheap or interesting destinations on Google Flights Explore (flexible dates, map mode) and adds them as *candidate destinations*. The group ranks the candidates and picks one.
-2. **Collect places.** Everyone pins places in the chosen city: food first, spread across neighborhoods worth walking, plus walking tours, museums and historic sites, concerts and seasonal events, adventure activities (climbing, surfing, skiing), and day trips or excursions. The group ranks them.
+2. **Collect places.** Everyone pins places in the chosen city: food first, spread across neighborhoods worth walking, plus walking tours, museums and historic sites, concerts and seasonal events, adventure activities (whatever's regionally relevant — climbing, surfing, skiing, kayaking...), and day trips or excursions. The group ranks them.
 3. **Flights and stays.** Each traveler records their own flight options from their home city. The group records stay options from Booking.com, Airbnb, Google Hotels or elsewhere, logs prices they have checked by hand, and ranks the stays. The app shows per-person totals.
 4. **Loose days.** Places get grouped into flexible days, usually one or two neighborhoods per day. A day can be opened as a walking route in Google Maps.
 5. **Export.** All pins export to Google My Maps, which the group uses on their phones during the trip.
@@ -390,7 +390,7 @@ Any candidate, place, flight, stay, or the trip itself can have a thread. Show t
 
   A place may be saved with no location. It shows "No map pin" and is excluded from the map and exports.
 - Map: centered on the destination (or on the pins). Each place is an `L.circleMarker` in its category color. The popup shows name, category, neighborhood, note, the rank summary, **Open in Google Maps**, and **Edit**. Clicking a list row pans to its marker and opens the popup, and clicking a marker scrolls to and highlights its row.
-- Places without coordinates are listed with a **Set location** action.
+- Every place has a location action using the same three methods as Add place: **Set location** when it has no pin yet, **Edit location** when it does — a pasted link's coordinates aren't always the actual pin (e.g. a link copied while the map view was panned/zoomed away from the marker carries the view's center, not the place's), so there must always be a way to correct one without deleting the place.
 - Edit and delete (with confirmation) any place.
 
 ### 7.7 Flights & stays tab
@@ -479,10 +479,12 @@ Idea searches on the Overview Discover panel, where `<city>` is the destination 
 - `<city> events <Month YYYY>`
 - `<city> concerts <Month YYYY>`
 - `<city> seasonal festivals <Month YYYY>`
-- `rock climbing near <city>`
-- `surfing near <city>`
-- `skiing near <city>`
+- `outdoor activities near <city>`
+- `adventure tours near <city>`
+- `nature excursions near <city>`
 - `day trips from <city>`
+
+These are deliberately destination-agnostic (no named sport) so they read sensibly for any city — a hardcoded activity like "skiing" makes no sense for most destinations, and the app can't intelligently pick a region-appropriate one without a lookup or AI feature, both out of scope (§12).
 
 ### 9.2 Google Maps links
 
@@ -565,3 +567,4 @@ Changes are made by the owner (or a model the owner asks). Edit this file first,
 | 1.0 | 2026-09-26 | First version |
 | 1.1 | 2026-09-27 | Added `trips.destinationId` and `places.destinationId` so the Places tab scopes to the currently-chosen destination instead of mixing places across destination changes (§5.3, §5.4, §7.5, §7.6). Places tab now requires a chosen destination. Add place's link-paste method is now primary/auto-parsing, with Search and Place on map moved under a secondary disclosure (§7.6). |
 | 1.2 | 2026-09-27 | Added `help.html`, a static traveler-facing help page (no sign-in), and a **Help** link in the top bar that opens it (§3.2, §4). |
+| 1.3 | 2026-09-27 | Every place now gets a location action regardless of whether it already has a pin (**Edit location** vs **Set location**) — a pasted link's coordinates aren't always the real pin, and there was previously no way to correct one without deleting the place (§7.6). Replaced the three hardcoded activity-specific Discover idea queries (rock climbing/surfing/skiing) with destination-agnostic ones (outdoor activities/adventure tours/nature excursions near \<city\>), since a fixed sport makes no sense for most destinations and the app has no compliant way to guess a region-appropriate one (§1, §9.1). |
