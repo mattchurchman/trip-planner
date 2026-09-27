@@ -28,7 +28,7 @@ export function notRankedByMe(items, uid) {
   return items.filter((item) => !(item.votes && uid in item.votes));
 }
 
-function toMillis(value) {
+export function toMillis(value) {
   if (!value) return 0;
   if (typeof value.toMillis === "function") return value.toMillis();
   if (value instanceof Date) return value.getTime();

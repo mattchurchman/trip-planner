@@ -7,6 +7,7 @@ import {
   bookingUrl,
   airbnbUrl,
   googleSearchUrl,
+  googleMapsOpenUrl,
 } from "../js/lib/links.js";
 
 export const tests = [
@@ -83,5 +84,11 @@ export const tests = [
   }],
   ["googleSearchUrl encodes the query", () => {
     assert.equal(googleSearchUrl("Lisbon food tour"), "https://www.google.com/search?q=Lisbon%20food%20tour");
+  }],
+  ["googleMapsOpenUrl encodes name and city", () => {
+    assert.equal(
+      googleMapsOpenUrl("Time Out Market", "Lisbon"),
+      "https://www.google.com/maps/search/?api=1&query=Time%20Out%20Market%2C%20Lisbon"
+    );
   }],
 ];

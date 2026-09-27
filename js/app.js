@@ -3,6 +3,12 @@ import { checkAllowlist, ensureUserDoc, watchTrip } from "./store.js";
 import { el, setPending, friendlyError } from "./ui.js";
 import { renderTripsView } from "./views/trips.js";
 import { renderOverviewPage } from "./views/overview.js";
+import { renderPlacesPage } from "./views/places.js";
+
+const TABS = [
+  { key: "overview", label: "Overview", render: renderOverviewPage },
+  { key: "places", label: "Places", render: renderPlacesPage },
+];
 
 const root = document.getElementById("app");
 let tripWatchers = [];
@@ -72,9 +78,19 @@ function renderTopBar(user) {
   ]);
 }
 
-function renderTripShell(main, tripId, myUid) {
+function renderTripShell(main, tripId, myUid, tabKey) {
   const header = el("div", { className: "trip-header" });
-  const tabBar = el("nav", { className: "tab-bar" }, [el("span", { className: "tab tab-active", textContent: "Overview" })]);
+  const tabBar = el(
+    "nav",
+    { className: "tab-bar" },
+    TABS.map((tab) =>
+      el("a", {
+        className: `tab${tab.key === tabKey ? " tab-active" : ""}`,
+        href: `#/trip/${tripId}/${tab.key}`,
+        textContent: tab.label,
+      })
+    )
+  );
   const content = el("div", { className: "trip-content" });
   main.replaceChildren(el("div", { className: "trip-shell" }, [header, tabBar, content]));
 
@@ -93,20 +109,23 @@ function renderTripShell(main, tripId, myUid) {
     },
     (err) => header.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }))
   );
-  const unsubOverview = renderOverviewPage(content, tripId, myUid);
+  const activeTab = TABS.find((t) => t.key === tabKey) || TABS[0];
+  const unsubContent = activeTab.render(content, tripId, myUid);
 
   return () => {
     unsubHeader();
-    unsubOverview();
+    unsubContent();
   };
 }
 
 function route(user, main) {
   clearTripWatchers();
   const hash = location.hash || "#/";
-  const tripMatch = hash.match(/^#\/trip\/([^/]+)/);
+  const tripMatch = hash.match(/^#\/trip\/([^/]+)(?:\/([a-z]+))?/);
   if (tripMatch) {
-    tripWatchers.push(renderTripShell(main, decodeURIComponent(tripMatch[1]), user.uid));
+    const tripId = decodeURIComponent(tripMatch[1]);
+    const tabKey = TABS.some((t) => t.key === tripMatch[2]) ? tripMatch[2] : "overview";
+    tripWatchers.push(renderTripShell(main, tripId, user.uid, tabKey));
   } else {
     tripWatchers.push(renderTripsView(main, user));
   }

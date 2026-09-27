@@ -52,6 +52,11 @@ export function googleSearchUrl(query) {
   return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
 }
 
+/** Opens a place on Google Maps by name + city (§9.2). Prefer a place's saved googleMapsUrl when it has one. */
+export function googleMapsOpenUrl(name, city) {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name}, ${city}`)}`;
+}
+
 function monthYearLabel(dateStr) {
   if (!dateStr) return null;
   const parsed = new Date(`${dateStr}T00:00:00Z`);

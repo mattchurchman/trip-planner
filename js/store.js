@@ -125,48 +125,112 @@ export function updateTravelers(tripId, travelers) {
   return updateTripFields(tripId, { travelers });
 }
 
-export function watchCandidates(tripId, onChange, onError) {
+// Generic helpers shared by the ranked, commentable subcollections (candidates, places, ...).
+function watchSubcollection(tripId, name, onChange, onError) {
   return onSnapshot(
-    collection(db, "trips", tripId, "candidates"),
+    collection(db, "trips", tripId, name),
     (snapshot) => onChange(snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))),
     onError
   );
 }
 
-export function addCandidate(tripId, fields, uid) {
-  return addDoc(collection(db, "trips", tripId, "candidates"), {
-    city: fields.city,
-    country: fields.country,
-    why: fields.why || "",
-    roughPriceNote: fields.roughPriceNote || "",
-    dateIdea: fields.dateIdea || "",
-    link: fields.link || null,
-    lat: null,
-    lng: null,
-    airport: fields.airport || "",
-    votes: {},
+function addSubDoc(tripId, name, fields, uid) {
+  return addDoc(collection(db, "trips", tripId, name), {
+    ...fields,
     addedBy: uid,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
 }
 
-export function updateCandidate(tripId, candidateId, fields) {
-  return updateDoc(doc(db, "trips", tripId, "candidates", candidateId), {
-    ...fields,
-    updatedAt: serverTimestamp(),
-  });
+function updateSubDoc(tripId, name, docId, fields) {
+  return updateDoc(doc(db, "trips", tripId, name, docId), { ...fields, updatedAt: serverTimestamp() });
 }
 
-export function deleteCandidate(tripId, candidateId) {
-  return deleteDoc(doc(db, "trips", tripId, "candidates", candidateId));
+function deleteSubDoc(tripId, name, docId) {
+  return deleteDoc(doc(db, "trips", tripId, name, docId));
 }
 
-export function voteOnCandidate(tripId, candidateId, uid, choice) {
-  return updateDoc(doc(db, "trips", tripId, "candidates", candidateId), {
+function voteOnSubDoc(tripId, name, docId, uid, choice) {
+  return updateDoc(doc(db, "trips", tripId, name, docId), {
     [`votes.${uid}`]: choice === null ? deleteField() : choice,
     updatedAt: serverTimestamp(),
   });
+}
+
+export function watchCandidates(tripId, onChange, onError) {
+  return watchSubcollection(tripId, "candidates", onChange, onError);
+}
+
+export function addCandidate(tripId, fields, uid) {
+  return addSubDoc(
+    tripId,
+    "candidates",
+    {
+      city: fields.city,
+      country: fields.country,
+      why: fields.why || "",
+      roughPriceNote: fields.roughPriceNote || "",
+      dateIdea: fields.dateIdea || "",
+      link: fields.link || null,
+      lat: null,
+      lng: null,
+      airport: fields.airport || "",
+      votes: {},
+    },
+    uid
+  );
+}
+
+export function updateCandidate(tripId, candidateId, fields) {
+  return updateSubDoc(tripId, "candidates", candidateId, fields);
+}
+
+export function deleteCandidate(tripId, candidateId) {
+  return deleteSubDoc(tripId, "candidates", candidateId);
+}
+
+export function voteOnCandidate(tripId, candidateId, uid, choice) {
+  return voteOnSubDoc(tripId, "candidates", candidateId, uid, choice);
+}
+
+export function watchPlaces(tripId, onChange, onError) {
+  return watchSubcollection(tripId, "places", onChange, onError);
+}
+
+export function addPlace(tripId, fields, uid) {
+  return addSubDoc(
+    tripId,
+    "places",
+    {
+      name: fields.name,
+      category: fields.category,
+      neighborhood: fields.neighborhood || "",
+      note: fields.note || "",
+      lat: fields.lat ?? null,
+      lng: fields.lng ?? null,
+      googleMapsUrl: fields.googleMapsUrl || null,
+      link: fields.link || null,
+      eventStart: fields.eventStart || null,
+      eventEnd: fields.eventEnd || null,
+      dayId: null,
+      dayOrder: null,
+      votes: {},
+    },
+    uid
+  );
+}
+
+export function updatePlace(tripId, placeId, fields) {
+  return updateSubDoc(tripId, "places", placeId, fields);
+}
+
+export function deletePlace(tripId, placeId) {
+  return deleteSubDoc(tripId, "places", placeId);
+}
+
+export function voteOnPlace(tripId, placeId, uid, choice) {
+  return voteOnSubDoc(tripId, "places", placeId, uid, choice);
 }
 
 function commentTimeMillis(value) {

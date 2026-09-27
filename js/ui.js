@@ -103,6 +103,35 @@ export function promptDialog(message, defaultValue = "") {
   });
 }
 
+/** A labeled form field: a <label> wrapping a caption span and the given input/select/textarea. */
+export function field(labelText, input) {
+  return el("label", { className: "field" }, [el("span", { textContent: labelText }), input]);
+}
+
+/**
+ * Builds and shows a modal <dialog> around a form. `buildForm(finish)` must
+ * synchronously return `{ form, focusEl? }`; call `finish(result)` from a
+ * submit/cancel handler to resolve. Resolves `null` on cancel (button or Esc).
+ */
+export function dialogShell(className, buildForm) {
+  return new Promise((resolve) => {
+    const dialog = el("dialog", { className: `app-dialog ${className}` });
+    const { form, focusEl } = buildForm((result) => {
+      dialog.close();
+      dialog.remove();
+      resolve(result);
+    });
+    dialog.appendChild(form);
+    document.body.appendChild(dialog);
+    dialog.addEventListener("cancel", () => {
+      dialog.remove();
+      resolve(null);
+    });
+    dialog.showModal();
+    (focusEl || form).focus();
+  });
+}
+
 /** The pressed/toggle Must/Nice/Skip summary shown next to it; tap to see who chose what (§7.3). */
 function rankSummary(votes, usersById) {
   const summaryText = voteSummary(votes) || "Not ranked yet";

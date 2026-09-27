@@ -9,7 +9,7 @@ import {
   deleteCandidate,
   voteOnCandidate,
 } from "../store.js";
-import { el, setPending, confirmDialog, friendlyError, rankControl, copyLinkButton } from "../ui.js";
+import { el, setPending, confirmDialog, friendlyError, rankControl, copyLinkButton, field, dialogShell } from "../ui.js";
 import { renderComments } from "./comments.js";
 import { sortByRank } from "../lib/votes.js";
 import {
@@ -30,29 +30,6 @@ async function nominatimSearch(query) {
   const response = await fetch(url);
   if (!response.ok) throw new Error("Location search failed. Try again in a moment.");
   return response.json();
-}
-
-function field(labelText, input) {
-  return el("label", { className: "field" }, [el("span", { textContent: labelText }), input]);
-}
-
-function dialogShell(className, buildForm) {
-  return new Promise((resolve) => {
-    const dialog = el("dialog", { className: `app-dialog ${className}` });
-    const { form, focusEl } = buildForm((result) => {
-      dialog.close();
-      dialog.remove();
-      resolve(result);
-    });
-    dialog.appendChild(form);
-    document.body.appendChild(dialog);
-    dialog.addEventListener("cancel", () => {
-      dialog.remove();
-      resolve(null);
-    });
-    dialog.showModal();
-    (focusEl || form).focus();
-  });
 }
 
 function candidateFormDialog(existing) {
