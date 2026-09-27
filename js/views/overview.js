@@ -319,7 +319,10 @@ export function renderOverviewPage(container, tripId, myUid) {
           lng = null;
         }
       }
-      const fields = { destination: { city: candidate.city, country: candidate.country, lat, lng, airport: candidate.airport || "" } };
+      const fields = {
+        destination: { city: candidate.city, country: candidate.country, lat, lng, airport: candidate.airport || "" },
+        destinationId: candidate.id,
+      };
       if (trip.status === "exploring") fields.status = "planning";
       await updateTripFields(tripId, fields);
     } catch (err) {

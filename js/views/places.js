@@ -86,7 +86,8 @@ function buildLocationPicker({ trip, mapClickState, onChange }) {
 
   const linkInput = el("input", { type: "text", placeholder: "Paste a Google Maps link" });
   const useLinkBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Use this link" });
-  useLinkBtn.addEventListener("click", () => {
+  function tryParseLink() {
+    if (!linkInput.value.trim()) return;
     errorEl.replaceChildren();
     const result = parseGoogleMapsUrl(linkInput.value);
     if (result.error) {
@@ -94,7 +95,12 @@ function buildLocationPicker({ trip, mapClickState, onChange }) {
       return;
     }
     setLocation(result.lat, result.lng, safeUrl(linkInput.value), result.name);
-  });
+  }
+  useLinkBtn.addEventListener("click", tryParseLink);
+  // Auto-parse as soon as a link is pasted (§7.6) — a paste event fires before the
+  // input's value updates, so read it on the next tick. The button stays as a
+  // fallback for a manually typed/edited link.
+  linkInput.addEventListener("paste", () => setTimeout(tryParseLink, 0));
 
   const searchInput = el("input", { type: "text", placeholder: "Search by name" });
   const searchBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Search" });
@@ -147,13 +153,22 @@ function buildLocationPicker({ trip, mapClickState, onChange }) {
   const clearBtn = el("button", { type: "button", className: "btn btn-small btn-secondary", textContent: "Clear location" });
   clearBtn.addEventListener("click", () => setLocation(null, null, null, null));
 
-  const elRoot = el("div", { className: "location-picker" }, [
-    el("div", { className: "location-method" }, [linkInput, useLinkBtn]),
+  const otherWaysToggle = el("button", { type: "button", className: "btn btn-link", textContent: "Other ways to add a location" });
+  const otherWaysHolder = el("div", { className: "other-location-methods", hidden: true }, [
     el("div", { className: "location-method" }, [searchInput, searchBtn]),
     resultsEl,
-    el("div", { className: "location-method" }, [placeOnMapBtn, clearBtn]),
-    statusEl,
+    el("div", { className: "location-method" }, [placeOnMapBtn]),
+  ]);
+  otherWaysToggle.addEventListener("click", () => {
+    otherWaysHolder.hidden = !otherWaysHolder.hidden;
+  });
+
+  const elRoot = el("div", { className: "location-picker" }, [
+    el("div", { className: "location-method location-method-primary" }, [linkInput, useLinkBtn]),
+    el("div", { className: "location-status-row" }, [statusEl, clearBtn]),
     errorEl,
+    otherWaysToggle,
+    otherWaysHolder,
   ]);
 
   return { element: elRoot, getLocation: () => ({ lat, lng, googleMapsUrl }), reset: () => setLocation(null, null, null, null) };
@@ -232,6 +247,7 @@ export function renderPlacesPage(container, tripId, myUid) {
   const listEl = el("div", { className: "places-list" });
   const mapEl = el("div", { className: "places-map" });
   const listMapWrap = el("div", { className: "places-list-map" }, [listEl, mapEl]);
+  const noDestinationEl = el("p", { className: "empty-state", textContent: "Choose a destination on the Overview tab to start adding places.", hidden: true });
 
   addPanelToggle.addEventListener("click", () => {
     addPanelHolder.hidden = !addPanelHolder.hidden;
@@ -240,6 +256,7 @@ export function renderPlacesPage(container, tripId, myUid) {
   container.replaceChildren(
     loadErrorEl,
     el("div", { className: "places-header" }, [el("h2", { textContent: "Places" }), addPanelToggle]),
+    noDestinationEl,
     addPanelHolder,
     filtersEl,
     rankCountEl,
@@ -324,7 +341,14 @@ export function renderPlacesPage(container, tripId, myUid) {
 
   function updateNeighborhoodOptions() {
     if (document.activeElement === neighborhoodSelect) return;
-    const neighborhoods = [...new Set(places.map((p) => p.neighborhood).filter(Boolean))].sort();
+    const neighborhoods = [
+      ...new Set(
+        places
+          .filter((p) => p.destinationId === trip.destinationId)
+          .map((p) => p.neighborhood)
+          .filter(Boolean)
+      ),
+    ].sort();
     const key = neighborhoods.join("|");
     if (key === lastNeighborhoodsKey) return;
     lastNeighborhoodsKey = key;
@@ -360,7 +384,7 @@ export function renderPlacesPage(container, tripId, myUid) {
       map.setView([dest.lat, dest.lng], 13);
       mapCentered = true;
     } else {
-      const located = places.filter((p) => p.lat != null && p.lng != null);
+      const located = places.filter((p) => p.destinationId === trip.destinationId && p.lat != null && p.lng != null);
       if (located.length > 0) {
         map.fitBounds(located.map((p) => [p.lat, p.lng]), { padding: [30, 30] });
         mapCentered = true;
@@ -509,13 +533,30 @@ export function renderPlacesPage(container, tripId, myUid) {
 
   function renderList() {
     if (!trip) return;
+
+    const hasDestination = Boolean(trip.destinationId);
+    noDestinationEl.hidden = hasDestination;
+    addPanelToggle.hidden = !hasDestination;
+    filtersEl.hidden = !hasDestination;
+    rankCountEl.hidden = !hasDestination;
+    listMapWrap.hidden = !hasDestination;
+    if (!hasDestination) {
+      addPanelHolder.hidden = true;
+      return;
+    }
+
     ensureMap();
     updateNeighborhoodOptions();
 
-    const filtered = applyFiltersAndSort(places, { filters, sortMode, trip, myUid });
-    const notRankedCount = notRankedByMe(places, myUid).length;
+    const placesForDestination = places.filter((p) => p.destinationId === trip.destinationId);
+    const filtered = applyFiltersAndSort(placesForDestination, { filters, sortMode, trip, myUid });
+    const notRankedCount = notRankedByMe(placesForDestination, myUid).length;
     rankCountEl.textContent =
-      notRankedCount > 0 ? `You haven't ranked ${notRankedCount} place${notRankedCount === 1 ? "" : "s"}.` : places.length > 0 ? "You've ranked every place." : "";
+      notRankedCount > 0
+        ? `You haven't ranked ${notRankedCount} place${notRankedCount === 1 ? "" : "s"}.`
+        : placesForDestination.length > 0
+          ? "You've ranked every place."
+          : "";
 
     for (const unsub of placeCommentUnsubscribes) unsub();
     placeCommentUnsubscribes = [];
@@ -586,6 +627,7 @@ export function renderPlacesPage(container, tripId, myUid) {
           tripId,
           {
             name,
+            destinationId: trip.destinationId,
             category,
             neighborhood: neighborhoodInput.value.trim(),
             note: noteInput.value.trim(),

@@ -1,6 +1,6 @@
 # Trip Planner — Specification
 
-Spec version: **1.0** (September 2026)
+Spec version: **1.1** (September 2026)
 
 This is the source of truth for what the app is and how it works. The build phases are in `PHASES.md`, and the working rules for the building model are in `CLAUDE.md`. If code and this spec disagree, the spec wins unless the owner approves a change and this file is updated in the same commit.
 
@@ -144,6 +144,8 @@ destination: null | {
   lat: number | null, lng: number | null,   // null until a location is found
   airport: string                    // IATA code or "" if unknown
 }
+destinationId: string | null         // the chosen candidate's id; stamped onto places (§5.4) so
+                                      // switching destinations later doesn't mix their place pools
 startDate: string | null             // "YYYY-MM-DD"
 endDate: string | null
 travelers: [ {
@@ -183,6 +185,8 @@ votes: { [uid]: "must" | "nice" | "skip" }
 **`places/{id}`**
 ```
 name: string
+destinationId: string | null         // the trip's destinationId when this place was added (§5.3);
+                                      // the Places tab shows only places matching the trip's current one
 category: one of the 11 categories in section 4, stored as the exact label
 neighborhood: string                 // free text, e.g. "Alfama"
 note: string
@@ -365,16 +369,18 @@ Any candidate, place, flight, stay, or the trip itself can have a thread. Show t
 - Editable: trip name (non-blank), status, start and end dates (end not before start), currency (three uppercase letters), notes.
 - **Travelers:** add a traveler by choosing an app member or typing a name; edit name, home city and home airport; remove with confirmation. At least one traveler must remain. Removing a traveler also deletes that traveler's entry in `selectedFlights`, and asks whether to delete their flight options.
 - **Candidate destinations** (shown prominently while exploring, collapsed afterward): add, edit, delete, rank, comment. Each card shows city, country, why, rough price note, date idea and link.
-- **Choose this destination** on a candidate sets `trip.destination` from the candidate. If the candidate has no coordinates, run a Nominatim search for "city, country" and use the first result. If nothing is found, store `lat` and `lng` as `null` and show a "Location needed" note with a **Set on map** action (the next click on the Places map sets the destination's coordinates). While the destination has no coordinates, the map centers on the trip's pins, or shows the whole world if there are none. It then sets status to `planning` if it was `exploring`. The group can change the destination later.
+- **Choose this destination** on a candidate sets `trip.destination` from the candidate and `trip.destinationId` to the candidate's id. If the candidate has no coordinates, run a Nominatim search for "city, country" and use the first result. If nothing is found, store `lat` and `lng` as `null` and show a "Location needed" note with a **Set on map** action (the next click on the Places map sets the destination's coordinates). While the destination has no coordinates, the map centers on the trip's pins, or shows the whole world if there are none. It then sets status to `planning` if it was `exploring`. The group can change the destination later — existing places aren't deleted, just hidden on the Places tab (§7.6) until that destination is chosen again.
 - **Discover** panel of external links (section 9.1). While exploring it shows Google Flights Explore. Once a destination exists, it also shows per-traveler flight searches, stay searches, and idea searches.
 
 ### 7.6 Places tab
 
+- Requires a chosen destination (`trip.destinationId`). If none is set yet, show a message pointing to **Choose this destination** on the Overview tab instead of the list, map and Add place form.
+- Only places whose `destinationId` matches the trip's current `destinationId` are shown, listed, mapped, counted or exported. Places from a previously-chosen destination are not deleted — they reappear if that destination is chosen again (§7.5).
 - A list and a Leaflet map showing the same filtered set.
 - Filters: category (multi-select chips), neighborhood (dropdown built from existing values), text search on name and note, **Not ranked by me**, and "Events during trip dates". Sort: Ranking (default), Newest, Neighborhood, Category.
-- **Add place** form: name (required), category (required), neighborhood, note, link, event start and end, and a location in one of three ways:
-  1. **Paste a Google Maps link.** Parse it with section 9.3. If coordinates are found, fill them in and, if the name field is empty, fill in the name.
-  2. **Search** by name, which runs a Nominatim search limited to the destination (section 9.4) and lets the user pick one of up to 5 results.
+- **Add place** form: name (required), category (required), neighborhood, note, link, event start and end, and a location in one of three ways, with pasting a link presented as the primary/recommended method since it alone captures an exact name, coordinates and a reusable link:
+  1. **Paste a Google Maps link** (recommended). Parses automatically as soon as it's pasted, using section 9.3. If coordinates are found, fill them in and, if the name field is empty, fill in the name.
+  2. **Search** by name, which runs a Nominatim search limited to the destination (section 9.4) and lets the user pick one of up to 5 results. Shown, along with method 3, under a secondary "Other ways to add a location" disclosure.
   3. **Place on map**, which switches to a mode where the next map click sets the coordinates.
 
   A place may be saved with no location. It shows "No map pin" and is excluded from the map and exports.
@@ -552,3 +558,4 @@ Changes are made by the owner (or a model the owner asks). Edit this file first,
 | Version | Date | Change |
 |---|---|---|
 | 1.0 | 2026-09-26 | First version |
+| 1.1 | 2026-09-27 | Added `trips.destinationId` and `places.destinationId` so the Places tab scopes to the currently-chosen destination instead of mixing places across destination changes (§5.3, §5.4, §7.5, §7.6). Places tab now requires a chosen destination. Add place's link-paste method is now primary/auto-parsing, with Search and Place on map moved under a secondary disclosure (§7.6). |

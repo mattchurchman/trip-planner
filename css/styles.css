@@ -13,6 +13,13 @@
   box-sizing: border-box;
 }
 
+/* Several elements below set their own `display` (flex, grid, ...) at the same
+   specificity as the browser's [hidden] rule; without this, toggling .hidden
+   on them would leave them visually shown. */
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   background: var(--bg);
@@ -499,8 +506,26 @@ input:focus-visible {
   border-radius: var(--radius);
 }
 
+.location-method-primary input {
+  font-weight: 600;
+}
+
+.location-status-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .location-status {
   margin: 0;
+}
+
+.other-location-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
 }
 
 .search-results {

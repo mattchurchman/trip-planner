@@ -61,6 +61,7 @@ export function createTrip(name, user) {
     currency: "USD",
     notes: "",
     destination: null,
+    destinationId: null,
     startDate: null,
     endDate: null,
     travelers: [
@@ -204,6 +205,7 @@ export function addPlace(tripId, fields, uid) {
     "places",
     {
       name: fields.name,
+      destinationId: fields.destinationId ?? null,
       category: fields.category,
       neighborhood: fields.neighborhood || "",
       note: fields.note || "",
