@@ -6,12 +6,14 @@ import {
   updateFlight,
   deleteFlight,
   chooseFlight,
+  clearSelectedFlight,
   watchStays,
   addStay,
   updateStay,
   deleteStay,
   voteOnStay,
   chooseStay,
+  clearSelectedStay,
   watchCosts,
   addCost,
   updateCost,
@@ -417,6 +419,9 @@ export function renderTravelPage(container, tripId, myUid) {
       if (!confirmed) return;
       try {
         await deleteFlight(tripId, flight.id);
+        if (trip.selectedFlights && trip.selectedFlights[flight.travelerId] === flight.id) {
+          await clearSelectedFlight(tripId, flight.travelerId);
+        }
       } catch (err) {
         errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
       }
@@ -523,6 +528,9 @@ export function renderTravelPage(container, tripId, myUid) {
       if (!confirmed) return;
       try {
         await deleteStay(tripId, stay.id);
+        if (trip.selectedStayId === stay.id) {
+          await clearSelectedStay(tripId);
+        }
       } catch (err) {
         errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
       }

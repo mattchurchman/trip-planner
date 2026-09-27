@@ -309,6 +309,11 @@ export function deleteFlight(tripId, flightId) {
   return deleteSubDoc(tripId, "flights", flightId);
 }
 
+/** Clears a traveler's chosen flight if it points at a specific (e.g. just-deleted) flight. */
+export function clearSelectedFlight(tripId, travelerId) {
+  return updateTripFields(tripId, { [`selectedFlights.${travelerId}`]: deleteField() });
+}
+
 export function chooseFlight(tripId, travelerId, flightId) {
   return updateTripFields(tripId, { [`selectedFlights.${travelerId}`]: flightId });
 }
@@ -345,6 +350,11 @@ export function updateStay(tripId, stayId, fields) {
 
 export function deleteStay(tripId, stayId) {
   return deleteSubDoc(tripId, "stays", stayId);
+}
+
+/** Clears trip.selectedStayId if it points at a specific (e.g. just-deleted) stay. */
+export function clearSelectedStay(tripId) {
+  return updateTripFields(tripId, { selectedStayId: null });
 }
 
 export function voteOnStay(tripId, stayId, uid, choice) {
