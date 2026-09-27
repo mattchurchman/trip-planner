@@ -16,6 +16,8 @@ import {
   writeBatch,
   getDocs,
   deleteField,
+  arrayUnion,
+  arrayRemove,
 } from "./firebase.js";
 
 const TRIP_SUBCOLLECTIONS = ["candidates", "places", "flights", "stays", "costs", "days", "comments"];
@@ -270,4 +272,117 @@ export function addComment(tripId, { targetType, targetId, text, uid }) {
 
 export function deleteComment(tripId, commentId) {
   return deleteDoc(doc(db, "trips", tripId, "comments", commentId));
+}
+
+export function watchFlights(tripId, onChange, onError) {
+  return watchSubcollection(tripId, "flights", onChange, onError);
+}
+
+export function addFlight(tripId, fields, uid) {
+  return addSubDoc(
+    tripId,
+    "flights",
+    {
+      travelerId: fields.travelerId,
+      label: fields.label || "",
+      fromCity: fields.fromCity || "",
+      fromAirport: fields.fromAirport || "",
+      toCity: fields.toCity || "",
+      toAirport: fields.toAirport || "",
+      outboundDate: fields.outboundDate || null,
+      outboundDetails: fields.outboundDetails || "",
+      returnDate: fields.returnDate || null,
+      returnDetails: fields.returnDetails || "",
+      link: fields.link || null,
+      notes: fields.notes || "",
+      prices: [],
+    },
+    uid
+  );
+}
+
+export function updateFlight(tripId, flightId, fields) {
+  return updateSubDoc(tripId, "flights", flightId, fields);
+}
+
+export function deleteFlight(tripId, flightId) {
+  return deleteSubDoc(tripId, "flights", flightId);
+}
+
+export function chooseFlight(tripId, travelerId, flightId) {
+  return updateTripFields(tripId, { [`selectedFlights.${travelerId}`]: flightId });
+}
+
+export function watchStays(tripId, onChange, onError) {
+  return watchSubcollection(tripId, "stays", onChange, onError);
+}
+
+export function addStay(tripId, fields, uid) {
+  return addSubDoc(
+    tripId,
+    "stays",
+    {
+      name: fields.name,
+      provider: fields.provider || "other",
+      link: fields.link || null,
+      neighborhood: fields.neighborhood || "",
+      lat: fields.lat ?? null,
+      lng: fields.lng ?? null,
+      checkIn: fields.checkIn || null,
+      checkOut: fields.checkOut || null,
+      guests: fields.guests || 1,
+      note: fields.note || "",
+      prices: [],
+      votes: {},
+    },
+    uid
+  );
+}
+
+export function updateStay(tripId, stayId, fields) {
+  return updateSubDoc(tripId, "stays", stayId, fields);
+}
+
+export function deleteStay(tripId, stayId) {
+  return deleteSubDoc(tripId, "stays", stayId);
+}
+
+export function voteOnStay(tripId, stayId, uid, choice) {
+  return voteOnSubDoc(tripId, "stays", stayId, uid, choice);
+}
+
+export function chooseStay(tripId, stayId) {
+  return updateTripFields(tripId, { selectedStayId: stayId });
+}
+
+export function watchCosts(tripId, onChange, onError) {
+  return watchSubcollection(tripId, "costs", onChange, onError);
+}
+
+export function addCost(tripId, fields, uid) {
+  return addSubDoc(tripId, "costs", { label: fields.label, amountCents: fields.amountCents, note: fields.note || "" }, uid);
+}
+
+export function updateCost(tripId, costId, fields) {
+  return updateSubDoc(tripId, "costs", costId, fields);
+}
+
+export function deleteCost(tripId, costId) {
+  return deleteSubDoc(tripId, "costs", costId);
+}
+
+/** Appends a PriceEntry to a flight or stay's prices array (§7.8). */
+export function logPriceEntry(tripId, subcollection, docId, entry) {
+  return updateDoc(doc(db, "trips", tripId, subcollection, docId), {
+    prices: arrayUnion(entry),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/** Removes one exact PriceEntry object from a flight or stay's prices array. */
+export function deletePriceEntry(tripId, subcollection, docId, entry) {
+  return updateDoc(doc(db, "trips", tripId, subcollection, docId), {
+    prices: arrayRemove(entry),
+    updatedAt: serverTimestamp(),
+  });
 }

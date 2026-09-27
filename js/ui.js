@@ -25,6 +25,18 @@ export function el(tag, props = {}, children = []) {
   return node;
 }
 
+/** Creates an SVG element (e.g. for the price sparkline, §7.8) with the given attributes. */
+export function svgEl(tag, attrs = {}, children = []) {
+  const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [key, value] of Object.entries(attrs)) {
+    if (value != null) node.setAttribute(key, value);
+  }
+  for (const child of [].concat(children)) {
+    if (child != null) node.appendChild(child);
+  }
+  return node;
+}
+
 /** Toggles a button between its normal label and a pending label, disabling it while pending. */
 export function setPending(button, pending, pendingText = "Saving…") {
   if (pending) {

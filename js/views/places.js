@@ -1,4 +1,4 @@
-import { watchTrip, watchUsers, watchPlaces, addPlace, updatePlace, deletePlace, voteOnPlace } from "../store.js";
+import { watchTrip, watchUsers, watchPlaces, addPlace, updatePlace, deletePlace, voteOnPlace, watchStays } from "../store.js";
 import { el, setPending, confirmDialog, friendlyError, rankControl, field, dialogShell } from "../ui.js";
 import { renderComments } from "./comments.js";
 import { sortByRank, notRankedByMe, voteSummary, toMillis } from "../lib/votes.js";
@@ -228,11 +228,14 @@ export function renderPlacesPage(container, tripId, myUid) {
   let trip = null;
   let usersById = {};
   let places = [];
+  let stays = [];
   let placeCommentUnsubscribes = [];
   let map = null;
   let markerLayer = null;
+  let stayMarkerLayer = null;
   let mapCentered = false;
   let addPanelBuilt = false;
+  let showStays = true;
   const markersById = new Map();
   const mapClickState = { armed: false, onPick: null };
   const filters = { categories: new Set(), neighborhood: "", search: "", notRankedOnly: false, eventsOnly: false };
@@ -313,6 +316,12 @@ export function renderPlacesPage(container, tripId, myUid) {
     renderList();
   });
 
+  const showStaysCheckbox = el("input", { type: "checkbox", checked: true });
+  showStaysCheckbox.addEventListener("change", () => {
+    showStays = showStaysCheckbox.checked;
+    renderStayMarkers();
+  });
+
   const sortSelect = el(
     "select",
     {},
@@ -335,6 +344,7 @@ export function renderPlacesPage(container, tripId, myUid) {
       searchInput,
       el("label", { className: "checkbox-label" }, [notRankedCheckbox, " Not ranked by me"]),
       el("label", { className: "checkbox-label" }, [eventsCheckbox, " Events during trip dates"]),
+      el("label", { className: "checkbox-label" }, [showStaysCheckbox, " Show stays"]),
       sortSelect,
     ])
   );
@@ -371,10 +381,30 @@ export function renderPlacesPage(container, tripId, myUid) {
       maxZoom: 19,
     }).addTo(map);
     markerLayer = window.L.layerGroup().addTo(map);
+    stayMarkerLayer = window.L.layerGroup().addTo(map);
     map.setView([20, 0], 2);
     map.on("click", (e) => {
       if (mapClickState.armed && mapClickState.onPick) mapClickState.onPick(e.latlng);
     });
+  }
+
+  /** Stays with coordinates appear as larger markers on this map (§7.7), toggled by "Show stays". */
+  function renderStayMarkers() {
+    if (!stayMarkerLayer) return;
+    stayMarkerLayer.clearLayers();
+    if (!showStays) return;
+    for (const stay of stays) {
+      if (stay.lat == null || stay.lng == null) continue;
+      const marker = window.L.circleMarker([stay.lat, stay.lng], {
+        radius: 9,
+        color: "#fff",
+        weight: 2,
+        fillColor: "#202124",
+        fillOpacity: 1,
+      });
+      marker.bindTooltip(`Stay: ${stay.name}`);
+      marker.addTo(stayMarkerLayer);
+    }
   }
 
   function centerMapIfNeeded() {
@@ -587,6 +617,7 @@ export function renderPlacesPage(container, tripId, myUid) {
         markersById.set(place.id, marker);
       }
     }
+    renderStayMarkers();
     centerMapIfNeeded();
   }
 
@@ -699,11 +730,21 @@ export function renderPlacesPage(container, tripId, myUid) {
     },
     (err) => listEl.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }))
   );
+  const unsubStays = watchStays(
+    tripId,
+    (s) => {
+      stays = s;
+      ensureMap();
+      renderStayMarkers();
+    },
+    () => {}
+  );
 
   return () => {
     unsubTrip();
     unsubUsers();
     unsubPlaces();
+    unsubStays();
     for (const unsub of placeCommentUnsubscribes) unsub();
     if (map) {
       map.remove();
