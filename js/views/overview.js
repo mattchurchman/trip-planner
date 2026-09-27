@@ -8,6 +8,7 @@ import {
   updateCandidate,
   deleteCandidate,
   voteOnCandidate,
+  adoptUnassignedPlaces,
 } from "../store.js";
 import { el, setPending, confirmDialog, friendlyError, rankControl, copyLinkButton, field, dialogShell } from "../ui.js";
 import { renderComments } from "./comments.js";
@@ -325,6 +326,7 @@ export function renderOverviewPage(container, tripId, myUid) {
       };
       if (trip.status === "exploring") fields.status = "planning";
       await updateTripFields(tripId, fields);
+      await adoptUnassignedPlaces(tripId, candidate.id);
     } catch (err) {
       errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
     } finally {

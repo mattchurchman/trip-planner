@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Trip Recap</title>
+    <link rel="stylesheet" href="./css/styles.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  </head>
+  <body>
+    <div id="recap-app" class="app-main"></div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script type="module">
+      // recap.html's own small script (§7.11). Needs no sign-in: it reads only
+      // publicRecaps/{tripId}, which firestore.rules allows anyone to read.
+      import { getPublicRecap } from "./js/store.js";
+      import { el } from "./js/ui.js";
+      import { safeUrl } from "./js/lib/links.js";
+
+      const root = document.getElementById("recap-app");
+
+      function getTripId() {
+        return new URLSearchParams(location.search).get("trip");
+      }
+
+      function buildPlaceCard(place) {
+        const safePhoto = place.photoUrl ? safeUrl(place.photoUrl) : null;
+        const notes = (place.notes || []).map((n) => el("p", { className: "muted", textContent: `${n.by}: ${n.text}` }));
+        return el(
+          "article",
+          { className: "card recap-public-place" },
+          [
+            el("h3", { textContent: place.name }),
+            el("p", { className: "muted", textContent: [place.category, place.neighborhood].filter(Boolean).join(" · ") }),
+            el("p", { textContent: `${place.loved} loved · ${place.fine} fine · ${place.skipped} skipped` }),
+            ...notes,
+            safePhoto ? el("a", { href: safePhoto, target: "_blank", rel: "noopener noreferrer", textContent: "Photo" }) : null,
+          ].filter(Boolean)
+        );
+      }
+
+      function renderNotPublished() {
+        root.replaceChildren(el("div", { className: "center-card" }, [el("p", { textContent: "This recap isn't published." })]));
+      }
+
+      async function init() {
+        const tripId = getTripId();
+        if (!tripId) {
+          renderNotPublished();
+          return;
+        }
+        let recap = null;
+        try {
+          recap = await getPublicRecap(tripId);
+        } catch {
+          recap = null;
+        }
+        if (!recap) {
+          renderNotPublished();
+          return;
+        }
+
+        const sortedPlaces = [...(recap.places || [])].sort((a, b) => b.loved - a.loved);
+
+        const headerChildren = [
+          el("h1", { textContent: recap.tripName }),
+          el("p", { className: "muted", textContent: [recap.city, recap.country].filter(Boolean).join(", ") }),
+        ];
+        if (recap.startDate && recap.endDate) {
+          headerChildren.push(el("p", { className: "muted", textContent: `${recap.startDate} – ${recap.endDate}` }));
+        }
+        const safeAlbum = recap.albumUrl ? safeUrl(recap.albumUrl) : null;
+        if (safeAlbum) {
+          headerChildren.push(el("a", { href: safeAlbum, target: "_blank", rel: "noopener noreferrer", textContent: "Shared photo album" }));
+        }
+
+        const mapEl = el("div", { className: "recap-public-map" });
+        const listEl = el("div", { className: "recap-public-list" }, sortedPlaces.map(buildPlaceCard));
+
+        root.replaceChildren(el("div", { className: "recap-public-header" }, headerChildren), mapEl, listEl);
+
+        if (window.L) {
+          const map = window.L.map(mapEl);
+          window.L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "© OpenStreetMap contributors",
+            maxZoom: 19,
+          }).addTo(map);
+          const located = sortedPlaces.filter((p) => p.lat != null && p.lng != null);
+          if (located.length > 0) {
+            const maxLoved = Math.max(1, ...located.map((p) => p.loved));
+            for (const place of located) {
+              const radius = 6 + (place.loved / maxLoved) * 10;
+              window.L.circleMarker([place.lat, place.lng], { radius, color: "#1a73e8", fillColor: "#1a73e8", fillOpacity: 0.7 })
+                .bindTooltip(`${place.name} (${place.loved} loved)`)
+                .addTo(map);
+            }
+            map.fitBounds(
+              located.map((p) => [p.lat, p.lng]),
+              { padding: [30, 30] }
+            );
+          } else {
+            map.setView([20, 0], 2);
+          }
+        }
+      }
+
+      init();
+    </script>
+  </body>
+</html>

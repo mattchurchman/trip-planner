@@ -422,3 +422,76 @@ export async function deleteDayAndUnassignPlaces(tripId, dayId, placeIds) {
   }
   await deleteSubDoc(tripId, "days", dayId);
 }
+
+/** Sets or clears the current user's reaction on a place (§7.11). Writes only recap.<uid>. */
+export function setPlaceReaction(tripId, placeId, uid, reaction) {
+  return updateDoc(doc(db, "trips", tripId, "places", placeId), {
+    [`recap.${uid}`]: reaction === null ? deleteField() : reaction,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/** Stamps any of this trip's places that don't yet have a destinationId (i.e. only ones
+ * copied in via "Copy to a new trip", since Places is otherwise inaccessible without one)
+ * with the newly chosen destinationId, so they become visible once a destination is picked. */
+export async function adoptUnassignedPlaces(tripId, destinationId) {
+  const snapshot = await getDocs(collection(db, "trips", tripId, "places"));
+  for (const docSnap of snapshot.docs) {
+    if (!docSnap.data().destinationId) {
+      await updateDoc(docSnap.ref, { destinationId, updatedAt: serverTimestamp() });
+    }
+  }
+}
+
+/** Copies places into a brand-new "exploring" trip (§7.11): new ids, votes and recap
+ * cleared, no day assignment, no destination yet (adopted once one is chosen). */
+export async function copyPlacesToNewTrip(name, user, places) {
+  const newTripRef = await createTrip(name, user);
+  for (const place of places) {
+    await addPlace(
+      newTripRef.id,
+      {
+        name: place.name,
+        category: place.category,
+        neighborhood: place.neighborhood,
+        note: place.note,
+        lat: place.lat,
+        lng: place.lng,
+        googleMapsUrl: place.googleMapsUrl,
+        link: place.link,
+        eventStart: place.eventStart,
+        eventEnd: place.eventEnd,
+      },
+      user.uid
+    );
+  }
+  return newTripRef.id;
+}
+
+/** Writes publicRecaps/{tripId} (§5.5). `recapData` should come from lib/recap.js's buildPublicRecap. */
+export function publishRecap(tripId, recapData) {
+  return setDoc(doc(db, "publicRecaps", tripId), { ...recapData, publishedAt: serverTimestamp() });
+}
+
+export function unpublishRecap(tripId) {
+  return deleteDoc(doc(db, "publicRecaps", tripId));
+}
+
+export function watchPublicRecap(tripId, onChange, onError) {
+  return onSnapshot(
+    doc(db, "publicRecaps", tripId),
+    (docSnap) => onChange(docSnap.exists() ? docSnap.data() : null),
+    onError
+  );
+}
+
+/** One-time read for the public recap.html page, which needs no live listener. */
+export async function getPublicRecap(tripId) {
+  const snap = await getDoc(doc(db, "publicRecaps", tripId));
+  return snap.exists() ? snap.data() : null;
+}
+
+/** Sets or clears (cents === null) one traveler's actual spend (§7.11). */
+export function setActualSpend(tripId, travelerId, cents) {
+  return updateTripFields(tripId, { [`actualSpendCents.${travelerId}`]: cents === null ? deleteField() : cents });
+}
