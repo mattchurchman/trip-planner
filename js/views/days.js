@@ -8,6 +8,7 @@ import {
   deleteDayAndUnassignPlaces,
 } from "../store.js";
 import { el, confirmDialog, friendlyError, field, dialogShell } from "../ui.js";
+import { renderExportSection } from "./exportSection.js";
 import { sortByRank, voteSummary } from "../lib/votes.js";
 import { rangesOverlap } from "../lib/dates.js";
 import { walkingRouteLinks } from "../lib/links.js";
@@ -57,6 +58,7 @@ function dayLabel(day) {
 export function renderDaysPage(container, tripId, myUid) {
   let trip = null;
   let places = [];
+  let scopedPlaces = []; // places matching trip.destinationId -- never mix in a previous destination's places
   let days = [];
   let selectedDayId = null;
   let map = null;
@@ -69,6 +71,7 @@ export function renderDaysPage(container, tripId, myUid) {
   const dayMapEl = el("div", { className: "day-map" });
   const dayMapCaption = el("p", { className: "muted day-map-caption" }, ["Straight lines show the order, not the walking path."]);
   const unplannedEl = el("div", { className: "unplanned-pool card" });
+  const exportSectionHolder = el("div", { className: "export-section-holder" });
 
   container.replaceChildren(
     loadErrorEl,
@@ -76,7 +79,8 @@ export function renderDaysPage(container, tripId, myUid) {
     el("div", { className: "days-map-wrap" }, [dayMapEl, dayMapCaption]),
     daysListEl,
     el("h2", { textContent: "Unplanned" }),
-    unplannedEl
+    unplannedEl,
+    exportSectionHolder
   );
 
   function nextOrder() {
@@ -158,7 +162,7 @@ export function renderDaysPage(container, tripId, myUid) {
   }
 
   function renderDayCard(day) {
-    const dayPlaces = places.filter((p) => p.dayId === day.id).sort((a, b) => (a.dayOrder ?? 0) - (b.dayOrder ?? 0));
+    const dayPlaces = scopedPlaces.filter((p) => p.dayId === day.id).sort((a, b) => (a.dayOrder ?? 0) - (b.dayOrder ?? 0));
     const errorHolder = el("div", { className: "field-error-holder" });
 
     const selectBtn = el("button", {
@@ -245,7 +249,7 @@ export function renderDaysPage(container, tripId, myUid) {
     select.addEventListener("change", async () => {
       const dayId = select.value;
       if (!dayId) return;
-      const countInDay = places.filter((p) => p.dayId === dayId).length;
+      const countInDay = scopedPlaces.filter((p) => p.dayId === dayId).length;
       try {
         await updatePlace(tripId, place.id, { dayId, dayOrder: countInDay });
       } catch (err) {
@@ -256,7 +260,7 @@ export function renderDaysPage(container, tripId, myUid) {
   }
 
   function renderUnplanned() {
-    const unplanned = sortByRank(places.filter((p) => p.dayId == null));
+    const unplanned = sortByRank(scopedPlaces.filter((p) => p.dayId == null));
     if (unplanned.length === 0) {
       unplannedEl.replaceChildren(el("p", { className: "empty-state", textContent: "Nothing unplanned." }));
       return;
@@ -285,6 +289,7 @@ export function renderDaysPage(container, tripId, myUid) {
 
   function renderDays() {
     if (!trip) return;
+    scopedPlaces = places.filter((p) => p.destinationId === trip.destinationId);
     createFromDatesBtn.disabled = !trip.startDate || !trip.endDate;
     const sorted = [...days].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     if (!selectedDayId && sorted.length > 0) selectedDayId = sorted[0].id;
@@ -295,10 +300,11 @@ export function renderDaysPage(container, tripId, myUid) {
     }
     const selectedDay = sorted.find((d) => d.id === selectedDayId);
     const selectedDayPlaces = selectedDay
-      ? places.filter((p) => p.dayId === selectedDay.id).sort((a, b) => (a.dayOrder ?? 0) - (b.dayOrder ?? 0))
+      ? scopedPlaces.filter((p) => p.dayId === selectedDay.id).sort((a, b) => (a.dayOrder ?? 0) - (b.dayOrder ?? 0))
       : [];
     renderDayMap(selectedDayPlaces);
     renderUnplanned();
+    exportSectionHolder.replaceChildren(renderExportSection({ trip, places: scopedPlaces, days }));
   }
 
   const unsubTrip = watchTrip(

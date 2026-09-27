@@ -981,6 +981,23 @@ input:focus-visible {
   min-width: 120px;
 }
 
+.export-section {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.export-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.export-help {
+  font-size: 0.85em;
+}
+
 @media (max-width: 760px) {
   .top-bar {
     padding: 12px 16px;

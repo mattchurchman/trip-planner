@@ -218,3 +218,16 @@ export function copyLinkButton(url) {
   });
   return el("span", { className: "copy-link" }, [btn, fallback]);
 }
+
+/** Triggers a browser download of in-memory content, e.g. an export file (§7.10). */
+export function downloadFile(filename, content, mimeType = "text/plain") {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}

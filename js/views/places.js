@@ -1,6 +1,7 @@
-import { watchTrip, watchUsers, watchPlaces, addPlace, updatePlace, deletePlace, voteOnPlace, watchStays } from "../store.js";
+import { watchTrip, watchUsers, watchPlaces, addPlace, updatePlace, deletePlace, voteOnPlace, watchStays, watchDays } from "../store.js";
 import { el, setPending, confirmDialog, friendlyError, rankControl, field, dialogShell } from "../ui.js";
 import { renderComments } from "./comments.js";
+import { renderExportSection } from "./exportSection.js";
 import { sortByRank, notRankedByMe, voteSummary, toMillis } from "../lib/votes.js";
 import { safeUrl, googleMapsOpenUrl } from "../lib/links.js";
 import { parseGoogleMapsUrl } from "../lib/mapsurl.js";
@@ -225,6 +226,7 @@ export function renderPlacesPage(container, tripId, myUid) {
   let usersById = {};
   let places = [];
   let stays = [];
+  let days = [];
   let placeCommentUnsubscribes = [];
   let map = null;
   let markerLayer = null;
@@ -247,6 +249,7 @@ export function renderPlacesPage(container, tripId, myUid) {
   const mapEl = el("div", { className: "places-map" });
   const listMapWrap = el("div", { className: "places-list-map" }, [listEl, mapEl]);
   const noDestinationEl = el("p", { className: "empty-state", textContent: "Choose a destination on the Overview tab to start adding places.", hidden: true });
+  const exportSectionHolder = el("div", { className: "export-section-holder" });
 
   addPanelToggle.addEventListener("click", () => {
     addPanelHolder.hidden = !addPanelHolder.hidden;
@@ -259,7 +262,8 @@ export function renderPlacesPage(container, tripId, myUid) {
     addPanelHolder,
     filtersEl,
     rankCountEl,
-    listMapWrap
+    listMapWrap,
+    exportSectionHolder
   );
 
   // --- Filters bar: built once; each control drives `filters`/`sortMode` and
@@ -566,6 +570,7 @@ export function renderPlacesPage(container, tripId, myUid) {
     filtersEl.hidden = !hasDestination;
     rankCountEl.hidden = !hasDestination;
     listMapWrap.hidden = !hasDestination;
+    exportSectionHolder.hidden = !hasDestination;
     if (!hasDestination) {
       addPanelHolder.hidden = true;
       return;
@@ -575,6 +580,7 @@ export function renderPlacesPage(container, tripId, myUid) {
     updateNeighborhoodOptions();
 
     const placesForDestination = places.filter((p) => p.destinationId === trip.destinationId);
+    exportSectionHolder.replaceChildren(renderExportSection({ trip, places: placesForDestination, days }));
     const filtered = applyFiltersAndSort(placesForDestination, { filters, sortMode, trip, myUid });
     const notRankedCount = notRankedByMe(placesForDestination, myUid).length;
     rankCountEl.textContent =
@@ -735,12 +741,21 @@ export function renderPlacesPage(container, tripId, myUid) {
     },
     () => {}
   );
+  const unsubDays = watchDays(
+    tripId,
+    (d) => {
+      days = d;
+      if (trip) renderList();
+    },
+    () => {}
+  );
 
   return () => {
     unsubTrip();
     unsubUsers();
     unsubPlaces();
     unsubStays();
+    unsubDays();
     for (const unsub of placeCommentUnsubscribes) unsub();
     if (map) {
       map.remove();
