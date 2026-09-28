@@ -31,7 +31,7 @@ function costFormDialog(existing) {
         return;
       }
       if (cents === null || cents < 0) {
-        errorHolder.replaceChildren(el("p", { className: "field-error", textContent: "Enter a valid amount." }));
+        errorHolder.replaceChildren(el("p", { className: "field-error", textContent: "That amount didn't look right — try something like 245 or 245.50." }));
         return;
       }
       finish({ label, amountCents: cents, note: noteInput.value.trim() });
@@ -59,7 +59,7 @@ export function renderTravelPage(container, tripId, myUid) {
   const flightsSection = createFlightsSection({ tripId, myUid, onError });
   const staysSection = createStaysSection({ tripId, myUid, onError });
 
-  const addCostBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Add shared cost" });
+  const addCostBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Add a split cost" });
   addCostBtn.addEventListener("click", async () => {
     const result = await costFormDialog(null);
     if (!result) return;
@@ -74,7 +74,7 @@ export function renderTravelPage(container, tripId, myUid) {
     loadErrorEl,
     flightsSection.element,
     staysSection.element,
-    el("div", { className: "costs-header" }, [el("h2", { textContent: "Shared costs" }), addCostBtn]),
+    el("div", { className: "costs-header" }, [el("h2", { textContent: "Split costs" }), addCostBtn]),
     costsSectionEl,
     el("h2", { textContent: "Totals" }),
     totalsCardEl
@@ -94,7 +94,7 @@ export function renderTravelPage(container, tripId, myUid) {
       });
       const deleteBtn = el("button", { type: "button", className: "btn btn-small btn-danger", textContent: "Delete" });
       deleteBtn.addEventListener("click", async () => {
-        const confirmed = await confirmDialog(`Delete "${cost.label}"?`);
+        const confirmed = await confirmDialog(`Delete "${cost.label}"?`, "Delete");
         if (!confirmed) return;
         try {
           await deleteCost(tripId, cost.id);
@@ -115,7 +115,7 @@ export function renderTravelPage(container, tripId, myUid) {
       );
     });
 
-    const body = rows.length > 0 ? rows : [el("p", { className: "empty-state", textContent: "No shared costs yet." })];
+    const body = rows.length > 0 ? rows : [el("p", { className: "empty-state", textContent: "No split costs yet. Add one for things like a rental car or groceries." })];
     costsSectionEl.replaceChildren(...body);
   }
 
@@ -132,10 +132,10 @@ export function renderTravelPage(container, tripId, myUid) {
       el("div", { className: "totals-row" }, [el("span", { textContent: t.name }), el("span", { textContent: formatMoney(t.totalCents, trip.currency) })])
     );
     const combinedRow = el("div", { className: "totals-row totals-combined" }, [
-      el("span", { textContent: "Combined" }),
+      el("span", { textContent: "Everyone together" }),
       el("span", { textContent: formatMoney(result.combinedCents, trip.currency) }),
     ]);
-    const heading = el("h3", { textContent: result.complete ? "Total" : "Partial total" });
+    const heading = el("h3", { textContent: result.complete ? "Total" : "Total so far (missing some prices)" });
     const body = [heading, ...rows, combinedRow];
     if (result.missing.length > 0) {
       body.push(el("ul", { className: "totals-missing" }, result.missing.map((m) => el("li", { textContent: m }))));

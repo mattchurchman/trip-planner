@@ -57,7 +57,7 @@ function buildLocationDisclosure({ getLat, getLng, setLocation, nameInput }) {
     if (result.name && !nameInput.value.trim()) nameInput.value = result.name;
   }
   mapsLinkInput.addEventListener("paste", () => setTimeout(tryParseLink, 0));
-  const useLinkBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Use this link" });
+  const useLinkBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Read this link" });
   useLinkBtn.addEventListener("click", tryParseLink);
 
   const toggle = el("button", { type: "button", className: "btn btn-link", textContent: "Other ways to add a location", attrs: { "aria-expanded": "false" } });
@@ -222,7 +222,7 @@ function addStayFormDialog(trip) {
       if (priceInput.value.trim()) {
         priceAmountCents = parseMoney(priceInput.value);
         if (priceAmountCents === null || priceAmountCents <= 0) {
-          errorHolder.replaceChildren(el("p", { className: "field-error", textContent: "Enter a valid amount greater than $0." }));
+          errorHolder.replaceChildren(el("p", { className: "field-error", textContent: "That price didn't look right — try something like 245 or 245.50." }));
           return;
         }
       }
@@ -391,7 +391,7 @@ export function createStaysSection({ tripId, myUid, onError }) {
     editBtn.addEventListener("click", () => openEditStayDialog(stay, trip));
     const deleteBtn = el("button", { type: "button", className: "btn btn-small btn-danger", textContent: "Delete" });
     deleteBtn.addEventListener("click", async () => {
-      const confirmed = await confirmDialog(`Delete ${stay.name}?`);
+      const confirmed = await confirmDialog(`Delete ${stay.name}?`, "Delete");
       if (!confirmed) return;
       try {
         await deleteStay(tripId, stay.id);
@@ -453,7 +453,7 @@ export function createStaysSection({ tripId, myUid, onError }) {
 
     const sorted = sortByRank(stays);
     if (sorted.length === 0) {
-      staysListEl.replaceChildren(el("p", { className: "empty-state", textContent: "No stays yet." }));
+      staysListEl.replaceChildren(el("p", { className: "empty-state", textContent: "No stays yet. Search above, then paste a link to add one." }));
     } else {
       staysListEl.replaceChildren(...sorted.map((s) => renderStayCard(s, trip, usersById)));
     }

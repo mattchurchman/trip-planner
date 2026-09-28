@@ -52,7 +52,7 @@ function showSignedOut() {
     el("div", { className: "center-card" }, [
       el("img", { className: "center-card-logo", src: "./img/logo.svg", alt: "", width: 64, height: 64 }),
       el("h1", { textContent: "Trip Planner" }),
-      el("p", { textContent: "Plan trips with your friends." }),
+      el("p", { textContent: "Plan trips with your friends — from \"where should we go?\" to the recap." }),
       signInBtn,
       errorHolder,
     ])

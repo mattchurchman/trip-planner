@@ -21,9 +21,9 @@ function candidateFormDialog(existing) {
     const form = el("form", { method: "dialog", className: "candidate-form" }, [
       field("City", cityInput),
       field("Country", countryInput),
-      field("Why", whyInput),
-      field("Rough price note", priceInput),
-      field("Date idea", dateIdeaInput),
+      field("Why go", whyInput),
+      field("Rough price", priceInput),
+      field("When", dateIdeaInput),
       field("Link", linkInput),
       errorHolder,
       el("div", { className: "dialog-actions" }, [cancelBtn, okBtn]),
@@ -138,7 +138,7 @@ function buildDetailsList(candidate) {
 }
 
 /**
- * Builds the "Candidate destinations" section of the Overview tab (§7.5): the
+ * Builds the "Destination ideas" section of the Overview tab (§7.5): the
  * header with its Add button, and the ranked list of candidate cards. Call
  * `render(candidates, trip, usersById)` whenever trip/candidates/users change
  * — it defers rebuilding the list on its own while someone is editing inside
@@ -154,7 +154,7 @@ export function createCandidatesSection({ tripId, myUid, onChoose }) {
   const addCandidateBtn = el("button", {
     type: "button",
     className: "btn btn-primary",
-    textContent: "Add candidate destination",
+    textContent: "Add a destination idea",
   });
   const candidateError = el("div", { className: "field-error-holder" });
   const candidatesEl = el("div", { className: "candidates-section" });
@@ -223,7 +223,7 @@ export function createCandidatesSection({ tripId, myUid, onChoose }) {
 
     const chooseBtn = isChosen
       ? null
-      : el("button", { type: "button", className: "btn btn-small btn-primary", textContent: "Choose this destination" });
+      : el("button", { type: "button", className: "btn btn-small btn-primary", textContent: "Pick this destination" });
     if (chooseBtn) chooseBtn.addEventListener("click", () => onChoose(candidate, chooseBtn, errorHolder));
 
     const editBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Edit" });
@@ -242,7 +242,7 @@ export function createCandidatesSection({ tripId, myUid, onChoose }) {
 
     const deleteBtn = el("button", { type: "button", className: "btn btn-small btn-danger", textContent: "Delete" });
     deleteBtn.addEventListener("click", async () => {
-      const confirmed = await confirmDialog(`Delete ${candidate.city}, ${candidate.country}?`);
+      const confirmed = await confirmDialog(`Delete ${candidate.city}, ${candidate.country}?`, "Delete");
       if (!confirmed) return;
       try {
         await deleteCandidate(tripId, candidate.id);
@@ -278,14 +278,19 @@ export function createCandidatesSection({ tripId, myUid, onChoose }) {
     candidateCommentUnsubscribes = [];
     const sorted = sortByRank(candidates);
     if (sorted.length === 0) {
-      candidatesEl.replaceChildren(el("p", { className: "empty-state", textContent: "No candidates yet." }));
+      candidatesEl.replaceChildren(
+        el("p", {
+          className: "empty-state",
+          textContent: "No ideas yet. Add a place you'd love to go — Google Flights Explore is a good place to look.",
+        })
+      );
       return;
     }
     candidatesEl.replaceChildren(...sorted.map((c) => renderCandidateCard(c, trip, usersById)));
   }
 
   const element = el("div", {}, [
-    el("div", { className: "candidates-header" }, [el("h2", { textContent: "Candidate destinations" }), addCandidateBtn]),
+    el("div", { className: "candidates-header" }, [el("h2", { textContent: "Destination ideas" }), addCandidateBtn]),
     el("p", { className: "muted section-hint", textContent: "Add places you're considering, then rank them together." }),
     candidateError,
     candidatesEl,

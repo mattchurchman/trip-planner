@@ -81,7 +81,7 @@ export function renderPlacesPage(container, tripId, myUid) {
   const listEl = el("div", { className: "places-list" });
   const mapEl = el("div", { className: "places-map" });
   const listMapWrap = el("div", { className: "places-list-map" }, [listEl, mapEl]);
-  const noDestinationEl = el("p", { className: "empty-state", textContent: "Choose a destination on the Overview tab to start adding places.", hidden: true });
+  const noDestinationEl = el("p", { className: "empty-state", textContent: "Pick a destination on the Overview tab to start adding places.", hidden: true });
   const destinationPinHintEl = el("p", { className: "field-error destination-pin-hint", hidden: true });
   const exportSectionHolder = el("div", { className: "export-section-holder" });
 
@@ -166,7 +166,7 @@ export function renderPlacesPage(container, tripId, myUid) {
     "select",
     {},
     [
-      { value: "rank", label: "Ranking" },
+      { value: "rank", label: "Group favorites" },
       { value: "newest", label: "Newest" },
       { value: "neighborhood", label: "Neighborhood" },
       { value: "category", label: "Category" },
@@ -187,7 +187,7 @@ export function renderPlacesPage(container, tripId, myUid) {
     el("div", { className: "filters-row" }, [
       filterLabel("Neighborhood", neighborhoodSelect),
       filterLabel("Search", searchInput),
-      el("label", { className: "checkbox-label" }, [notRankedCheckbox, " Not ranked by me"]),
+      el("label", { className: "checkbox-label" }, [notRankedCheckbox, " I haven't ranked yet"]),
       el("label", { className: "checkbox-label" }, [eventsCheckbox, " Events during trip dates"]),
       el("label", { className: "checkbox-label" }, [showStaysCheckbox, " Show stays"]),
       filterLabel("Sort by", sortSelect),
@@ -349,7 +349,7 @@ export function renderPlacesPage(container, tripId, myUid) {
     editBtn.addEventListener("click", () => openEditDialog(place));
     const deleteBtn = el("button", { type: "button", className: "btn btn-small btn-danger", textContent: "Delete" });
     deleteBtn.addEventListener("click", async () => {
-      const confirmed = await confirmDialog(`Delete ${place.name}?`);
+      const confirmed = await confirmDialog(`Delete ${place.name}?`, "Delete");
       if (!confirmed) return;
       try {
         await deletePlace(tripId, place.id);
@@ -426,7 +426,7 @@ export function renderPlacesPage(container, tripId, myUid) {
     placeCommentUnsubscribes = [];
     const filtered = currentFiltered();
     if (filtered.length === 0) {
-      listEl.replaceChildren(el("p", { className: "empty-state", textContent: "No places match these filters." }));
+      listEl.replaceChildren(el("p", { className: "empty-state", textContent: "No places match these filters. Try adjusting them." }));
     } else {
       listEl.replaceChildren(...filtered.map(renderPlaceRow));
     }

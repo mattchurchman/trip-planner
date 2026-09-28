@@ -175,7 +175,7 @@ export function renderOverviewPage(container, tripId, myUid) {
         );
         return;
       }
-      const confirmed = await confirmDialog(`Remove ${traveler.name}?`);
+      const confirmed = await confirmDialog(`Remove ${traveler.name}?`, "Remove");
       if (!confirmed) return;
       const travelers = trip.travelers.filter((t) => t.id !== traveler.id);
       try {
@@ -184,7 +184,8 @@ export function renderOverviewPage(container, tripId, myUid) {
         const theirFlights = await getTravelerFlights(tripId, traveler.id);
         if (theirFlights.length > 0) {
           const alsoDelete = await confirmDialog(
-            `Also delete ${theirFlights.length} flight option${theirFlights.length === 1 ? "" : "s"} saved for ${traveler.name}?`
+            `Also delete ${theirFlights.length} flight option${theirFlights.length === 1 ? "" : "s"} saved for ${traveler.name}?`,
+            "Delete"
           );
           if (alsoDelete) {
             for (const flight of theirFlights) await deleteFlight(tripId, flight.id);
@@ -268,7 +269,10 @@ export function renderOverviewPage(container, tripId, myUid) {
         });
         rows.push(
           el("div", { className: "location-needed" }, [
-            el("p", { className: "field-error", textContent: "Location needed for this destination." }),
+            el("p", {
+              className: "field-error",
+              textContent: "We couldn't find this city on the map. Use Set on map on the Places tab to place it.",
+            }),
             setOnMapBtn,
           ])
         );
@@ -302,7 +306,7 @@ export function renderOverviewPage(container, tripId, myUid) {
         rows.push(externalLinkRow(googleSearchUrl(ideaQuery), ideaQuery));
       }
     }
-    discoverEl.replaceChildren(el("h2", { textContent: "Discover" }), ...rows);
+    discoverEl.replaceChildren(el("h2", { textContent: "Search the web" }), ...rows);
   }
 
   // Each section defers its own rebuild while someone is typing in it (§8), so a

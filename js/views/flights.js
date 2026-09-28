@@ -144,7 +144,7 @@ function addFlightFormDialog(traveler, trip) {
       if (priceInput.value.trim()) {
         priceAmountCents = parseMoney(priceInput.value);
         if (priceAmountCents === null || priceAmountCents <= 0) {
-          errorHolder.replaceChildren(el("p", { className: "field-error", textContent: "Enter a valid amount greater than $0." }));
+          errorHolder.replaceChildren(el("p", { className: "field-error", textContent: "That price didn't look right — try something like 245 or 245.50." }));
           return;
         }
       }
@@ -279,7 +279,7 @@ export function createFlightsSection({ tripId, myUid, onError }) {
     editBtn.addEventListener("click", () => openEditFlightDialog(flight));
     const deleteBtn = el("button", { type: "button", className: "btn btn-small btn-danger", textContent: "Delete" });
     deleteBtn.addEventListener("click", async () => {
-      const confirmed = await confirmDialog("Delete this flight option?");
+      const confirmed = await confirmDialog("Delete this flight option?", "Delete");
       if (!confirmed) return;
       try {
         await deleteFlight(tripId, flight.id);
@@ -345,7 +345,7 @@ export function createFlightsSection({ tripId, myUid, onError }) {
 
       const cardRows =
         travelerFlights.length === 0
-          ? [el("p", { className: "empty-state", textContent: "No flight options yet." })]
+          ? [el("p", { className: "empty-state", textContent: "No flight options yet. Search Google Flights above, then add what you find." })]
           : travelerFlights.map((f) => renderFlightCard(f, traveler, trip, usersById));
 
       return el("div", { className: "traveler-flights card" }, [

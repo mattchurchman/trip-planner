@@ -55,15 +55,17 @@ export function friendlyError(err) {
   if (err && err.code === "permission-denied") {
     return "You don't have access. Are you signed in with the approved account?";
   }
-  return (err && err.message) || "Something went wrong.";
+  return (err && err.message) || "Something went wrong. Try again in a moment.";
 }
 
-/** Shows a native, accessible confirm dialog. Resolves true/false. */
-export function confirmDialog(message) {
+/** Shows a native, accessible confirm dialog. `confirmLabel` names the action
+ * itself ("Delete", "Remove", "Publish") rather than a generic "Confirm", per
+ * the wording guide's "say what a button does, as a verb." Resolves true/false. */
+export function confirmDialog(message, confirmLabel = "Confirm") {
   return new Promise((resolve) => {
     const dialog = el("dialog", { className: "app-dialog" });
     const cancelBtn = el("button", { type: "button", className: "btn btn-secondary", textContent: "Cancel" });
-    const okBtn = el("button", { type: "button", className: "btn btn-danger", textContent: "Confirm" });
+    const okBtn = el("button", { type: "button", className: "btn btn-danger", textContent: confirmLabel });
     dialog.append(
       el("p", { textContent: message }),
       el("div", { className: "dialog-actions" }, [cancelBtn, okBtn])
@@ -195,6 +197,9 @@ function rankSummary(votes, usersById) {
   return el("div", { className: "rank-summary" }, [toggleBtn, details]);
 }
 
+// What each rank choice means, shown as a tooltip (wording guide).
+const RANK_TOOLTIPS = { must: "Must go", nice: "Nice to have", skip: "Skip it" };
+
 /**
  * The Must/Nice/Skip control (§7.3). Pressing the current choice again clears it.
  * `onVote(choice | null)` is called with the new choice; the caller writes votes.<uid>.
@@ -210,6 +215,7 @@ export function rankControl({ votes = {}, myUid, usersById = {}, onVote }) {
         type: "button",
         className: `btn btn-small rank-btn rank-${choice}${pressed ? " rank-btn-pressed" : ""}`,
         textContent: choice[0].toUpperCase() + choice.slice(1),
+        title: RANK_TOOLTIPS[choice],
         attrs: { "aria-pressed": pressed ? "true" : "false" },
       });
       btn.addEventListener("click", () => onVote(pressed ? null : choice));

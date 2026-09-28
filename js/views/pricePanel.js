@@ -46,7 +46,7 @@ export function buildPricePanel({ tripId, subcollection, docId, prices, myUid, u
     if (newLow) summaryParts.push(el("span", { className: "badge-new-low", textContent: "New low" }));
     if (prices.length >= 2) summaryParts.push(buildSparkline(prices));
   } else {
-    summaryParts.push(el("p", { className: "muted", textContent: "No price logged yet." }));
+    summaryParts.push(el("p", { className: "muted", textContent: "No price yet. Check the site, then save what you saw." }));
   }
 
   const amountInput = el("input", {
@@ -56,12 +56,12 @@ export function buildPricePanel({ tripId, subcollection, docId, prices, myUid, u
     attrs: { "aria-label": "Price you checked" },
   });
   const noteInput = el("input", { type: "text", placeholder: "Note (optional)", attrs: { "aria-label": "Note about this price" } });
-  const logBtn = el("button", { type: "button", className: "btn btn-small btn-primary", textContent: "Log price" });
+  const logBtn = el("button", { type: "button", className: "btn btn-small btn-primary", textContent: "Save price" });
   logBtn.addEventListener("click", async () => {
     errorHolder.replaceChildren();
     const cents = parseMoney(amountInput.value);
     if (cents === null || cents <= 0) {
-      errorHolder.replaceChildren(el("p", { className: "field-error", textContent: "Enter a valid amount greater than $0." }));
+      errorHolder.replaceChildren(el("p", { className: "field-error", textContent: "That price didn't look right — try something like 245 or 245.50." }));
       return;
     }
     const entry = { id: crypto.randomUUID(), amountCents: cents, checkedAt: new Date().toISOString(), byUid: myUid, note: noteInput.value.trim() };
@@ -94,7 +94,7 @@ export function buildPricePanel({ tripId, subcollection, docId, prices, myUid, u
         const when = entry.checkedAt ? new Date(entry.checkedAt).toLocaleString() : "";
         const deleteBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Delete" });
         deleteBtn.addEventListener("click", async () => {
-          const confirmed = await confirmDialog(`Delete this price entry (${formatMoney(entry.amountCents, currency)})?`);
+          const confirmed = await confirmDialog(`Delete this price entry (${formatMoney(entry.amountCents, currency)})?`, "Delete");
           if (!confirmed) return;
           try {
             await deletePriceEntry(tripId, subcollection, docId, entry);
@@ -111,7 +111,7 @@ export function buildPricePanel({ tripId, subcollection, docId, prices, myUid, u
 
   return el("div", { className: "price-panel" }, [
     el("div", { className: "price-summary" }, summaryParts),
-    el("p", { className: "muted price-hint" }, ["Check the price on the site first, then log what you saw."]),
+    el("p", { className: "muted price-hint" }, ["Check the price on the site first, then save what you saw."]),
     el("div", { className: "price-log-form" }, [amountInput, noteInput, logBtn]),
     errorHolder,
     historyToggle,

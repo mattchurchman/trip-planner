@@ -66,7 +66,7 @@ export function buildLocationPicker({ trip, mapClickState, onChange, findText = 
 
   // Step 2 · Paste the Google Maps link (§7.6, §9.3).
   const linkInput = el("input", { type: "text", placeholder: "Paste a Google Maps link", attrs: { "aria-label": "Google Maps link" } });
-  const useLinkBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Use this link" });
+  const useLinkBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Read this link" });
   function tryParseLink() {
     if (!linkInput.value.trim()) return;
     errorEl.replaceChildren();
@@ -110,7 +110,7 @@ export function buildLocationPicker({ trip, mapClickState, onChange, findText = 
             });
             return el("li", {}, [btn]);
           }),
-          el("li", { className: "muted", textContent: "Search by OpenStreetMap Nominatim" })
+          el("li", { className: "muted", textContent: "Search results from OpenStreetMap" })
         );
       }
     } catch (err) {

@@ -86,7 +86,7 @@ export function renderComments({ tripId, targetType, targetId, myUid, usersById 
         if (comment.addedBy === myUid) {
           const deleteBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Delete" });
           deleteBtn.addEventListener("click", async () => {
-            const confirmed = await confirmDialog("Delete this comment?");
+            const confirmed = await confirmDialog("Delete this comment?", "Delete");
             if (!confirmed) return;
             try {
               await deleteComment(tripId, comment.id);

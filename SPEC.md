@@ -1,6 +1,6 @@
 # Trip Planner — Specification
 
-Spec version: **2.0** (September 2026)
+Spec version: **2.1** (September 2026)
 
 This is the source of truth for what the app is and how it works. The original build phases are in `PHASES.md` (all built); current work is in `docs/tasks/`. The working rules for the building model are in `CLAUDE.md`. If code and this spec disagree, the spec wins unless the owner approves a change and this file is updated in the same commit.
 
@@ -12,9 +12,9 @@ A private, free website where a small group of friends (roughly 3–8 people) pl
 
 The group's process, which the app follows:
 
-1. **Explore.** Each person finds cheap or interesting destinations on Google Flights Explore (flexible dates, map mode) and adds them as *candidate destinations*. The group ranks the candidates and picks one.
+1. **Explore.** Each person finds cheap or interesting destinations on Google Flights Explore (flexible dates, map mode) and adds them as *destination ideas*. The group ranks the ideas and picks one.
 2. **Collect places.** Everyone pins places in the chosen city: food first, spread across neighborhoods worth walking, plus walking tours, museums and historic sites, concerts and seasonal events, adventure activities (whatever's regionally relevant — climbing, surfing, skiing, kayaking...), and day trips or excursions. The group ranks them.
-3. **Flights and stays.** Each traveler records their own flight options from their home city. The group records stay options from Booking.com, Airbnb, Google Hotels or elsewhere, logs prices they have checked by hand, and ranks the stays. The app shows per-person totals.
+3. **Flights and stays.** Each traveler records their own flight options from their home city. The group records stay options from Booking.com, Airbnb, Google Hotels or elsewhere, saves prices they have checked by hand, and ranks the stays. The app shows per-person totals.
 4. **Loose days.** Places get grouped into flexible days, usually one or two neighborhoods per day. A day can be opened as a walking route in Google Maps.
 5. **Export.** All pins export to Google My Maps, which the group uses on their phones during the trip.
 6. **Recap (after the trip).** People mark places as loved, fine or skipped with a short note and a photo link, link a shared photo album, and can publish a read-only recap page.
@@ -73,10 +73,10 @@ js/lib/totals.js      pure: latest price, deltas, per-traveler totals
 js/lib/exporters.js   pure: CSV and KML generation
 js/views/trips.js     trips list
 js/views/overview.js  trip overview, travelers, discover links
-js/views/candidates.js candidate destination cards and form (§7.5)
+js/views/candidates.js destination idea cards and form (§7.5)
 js/views/places.js    places list, filters and map
 js/views/placeForm.js add/edit place form and the location picker (§7.6)
-js/views/travel.js    Flights & stays tab shell, shared costs, totals card
+js/views/travel.js    Flights & stays tab shell, split costs, totals card
 js/views/flights.js   flight options per traveler (§7.7)
 js/views/stays.js     stay options (§7.7)
 js/views/pricePanel.js price panel shared by flights and stays (§7.8)
@@ -412,7 +412,7 @@ The Firebase web config in `js/firebase-config.js` is public by design. The rule
 
 ### 7.1 Sign-in and access
 
-- Signed out: a centered card with the app name, one sentence ("Plan trips with your friends."), and **Sign in with Google** (popup).
+- Signed out: a centered card with the app name, one sentence ("Plan trips with your friends — from "where should we go?" to the recap."), and **Sign in with Google** (popup).
 - After sign-in, read `allowlist/<lowercase email>`. If it does not exist, show: "You're signed in as <email>, but this account isn't on the trip list yet. Ask the owner to add it." plus **Sign out**. Load nothing else.
 - If allowed, write the `users/{uid}` document, then show the trips list.
 - If Firebase is not configured (placeholder values still in `js/firebase-config.js`), show a setup message naming that file instead of a broken page.
@@ -429,7 +429,7 @@ The Firebase web config in `js/firebase-config.js` is public by design. The rule
 - Write only `votes.<my uid>`.
 - Score: Must = +2, Nice = +1, Skip = −1, no vote = 0. A summary such as "2 must · 1 nice · 1 skip" is shown next to the control. Hovering or tapping the summary lists who chose what, using display names from `users`.
 - Default sort: score descending, then more Must votes, then newest `createdAt`.
-- The filter **Not ranked by me** shows items where the current user has no vote. Show a count on each tab ("You haven't ranked 4 places").
+- The filter **I haven't ranked yet** shows items where the current user has no vote. Show a count on each tab ("You haven't ranked 4 places").
 
 ### 7.4 Comments
 
@@ -439,23 +439,23 @@ Any candidate, place, flight, stay, or the trip itself can have a thread. Show t
 
 - Editable: trip name (non-blank), status, start and end dates (end not before start), currency (three uppercase letters), notes.
 - **Travelers:** add a traveler by choosing an app member or typing a name; edit name, home city and home airport; remove with confirmation. At least one traveler must remain. Removing a traveler also deletes that traveler's entry in `selectedFlights`, and asks whether to delete their flight options.
-- **Candidate destinations** (shown prominently while exploring, collapsed afterward): add, edit, delete, rank, comment. Cards sit in a responsive grid (`repeat(auto-fill, minmax(280px, 1fr))`, one column on phones). Each card, top to bottom:
+- **Destination ideas** (shown prominently while exploring, collapsed afterward): add, edit, delete, rank, comment. Cards sit in a responsive grid (`repeat(auto-fill, minmax(280px, 1fr))`, one column on phones). Each card, top to bottom:
   1. **Photo banner**, 16:9, `object-fit: cover`, `alt="<city>, <country>"`, `loading="lazy"`, with a small "Photo: Wikipedia ↗" credit linking to `photo.pageUrl` in the bottom corner. When `photo` is `null`, or the image fails to load, show the same-size banner in `--hero-gradient` with the city's first letter large in white Fraunces — never a broken-image icon. While a lookup is running, show the gradient banner.
   2. **Title row:** city as `h3`, country beneath in `--muted`; a teal "Chosen" pill if this is the trip's current destination.
   3. **Labeled details**, as a definition list (`<dl>`) with the small uppercase label style from §4: **Why go**, **Rough price**, **When**, **Link** ("Open link ↗"). Hide a row when its value is empty; if all four are empty, show "No details yet — use Edit to add some." in `--muted`.
   4. **Ranking** row: the rank control and its summary.
-  5. **Actions** row: **Choose this destination** (primary; hidden on the chosen card), **Edit** and **Delete** (quiet).
+  5. **Actions** row: **Pick this destination** (primary; hidden on the chosen card), **Edit** and **Delete** (quiet).
   6. **Comments**, collapsed to a count.
 - **Photo lookups.** When a candidate is added, or edited so that its city or country changed, look up a photo (§9.7) after saving and write `photo` with a single-field update. When a card renders with `photo` missing, look it up once (at most one lookup running per candidate per page load) and save the result. A failed network request saves nothing, so it's retried next visit. Photo lookups never block saving and never show an error to the user.
-- **Choose this destination** on a candidate sets `trip.destination` from the candidate and `trip.destinationId` to the candidate's id. If the candidate has no coordinates, run a Nominatim search for "city, country" and use the first result. If nothing is found, store `lat` and `lng` as `null` and show a "Location needed" note with a **Set on map** action (the next click on the Places map sets the destination's coordinates). While the destination has no coordinates, the map centers on the trip's pins, or shows the whole world if there are none. It then sets status to `planning` if it was `exploring`. The group can change the destination later — existing places aren't deleted, just hidden on the Places tab (§7.6) until that destination is chosen again.
-- **Discover** panel of external links (section 9.1). While exploring it shows Google Flights Explore. Once a destination exists, it also shows per-traveler flight searches, stay searches, and idea searches.
+- **Pick this destination** on a candidate sets `trip.destination` from the candidate and `trip.destinationId` to the candidate's id. If the candidate has no coordinates, run a Nominatim search for "city, country" and use the first result. If nothing is found, store `lat` and `lng` as `null` and show a "We couldn't find this city on the map" note with a **Set on map** action (the next click on the Places map sets the destination's coordinates). While the destination has no coordinates, the map centers on the trip's pins, or shows the whole world if there are none. It then sets status to `planning` if it was `exploring`. The group can change the destination later — existing places aren't deleted, just hidden on the Places tab (§7.6) until that destination is chosen again.
+- **Search the web** panel of external links (section 9.1). While exploring it shows Google Flights Explore. Once a destination exists, it also shows per-traveler flight searches, stay searches, and idea searches.
 
 ### 7.6 Places tab
 
-- Requires a chosen destination (`trip.destinationId`). If none is set yet, show a message pointing to **Choose this destination** on the Overview tab instead of the list, map and Add place form.
+- Requires a chosen destination (`trip.destinationId`). If none is set yet, show a message pointing to **Pick this destination** on the Overview tab instead of the list, map and Add place form.
 - Only places whose `destinationId` matches the trip's current `destinationId` are shown, listed, mapped, counted or exported. Places from a previously-chosen destination are not deleted — they reappear if that destination is chosen again (§7.5).
 - A list and a Leaflet map showing the same filtered set.
-- Filters: category (multi-select chips), neighborhood (dropdown built from existing values), text search on name and note, **Not ranked by me**, and "Events during trip dates". Sort: Ranking (default), Newest, Neighborhood, Category.
+- Filters: category (multi-select chips), neighborhood (dropdown built from existing values), text search on name and note, **I haven't ranked yet**, and "Events during trip dates". Sort: Group favorites (default), Newest, Neighborhood, Category.
 - **Add place** form, in this order — the Google Maps link comes first because it alone captures an exact name, coordinates and a reusable link:
   1. **Step 1 · Find it on Google Maps.** A short search box ("What are you looking for?") and a **Find on Google Maps ↗** button that opens `googleMapsFindUrl` (§9.2) in a new tab. Under it, one line: "Find the place, copy the address from your browser's address bar, then paste it below."
   2. **Step 2 · Paste the Google Maps link.** The link field, focused-looking and full width. Parses automatically on paste or input (§9.3). When coordinates are found, fill the location and — if they're still empty — the name, then show "✓ Pin found" with the name. When the name box of Step 1 has text and the name field is empty, copy it into the name field too.
@@ -490,24 +490,24 @@ Any candidate, place, flight, stay, or the trip itself can have a thread. Show t
 - Each stay shows its price panel, nights, guests, price per night (when computable), rank control and comments. **Choose** adds it to `selectedStayIds` and **Unchoose** removes it; any number of stays may be chosen (for example a second neighborhood or a side trip). Deleting a stay also removes it from `selectedStayIds`.
 - A stay with coordinates also appears on the Places map as a larger `L.circleMarker` (radius 9, fill `#202124`, white 2 px border) with the tooltip "Stay: <name>". Stays can be hidden with a "Show stays" checkbox.
 
-**Shared costs.** Add, edit and delete a label, amount and note. Split equally across all travelers.
+**Split costs.** Add, edit and delete a label, amount and note. Split equally across all travelers.
 
-**Totals card.** One row per traveler: flights (all their chosen flights added up) + stays share (their share of every chosen stay) + shared costs share = total. Then a combined total. If anything is missing, label the card **Partial total** and list what is missing, such as "No flight chosen for Sam", "No price logged for Sam's flight "Nonstop, Tuesday out"" or "No price logged for Casa Alfama". Never show a missing price as $0.
+**Totals card.** One row per traveler: flights (all their chosen flights added up) + stays share (their share of every chosen stay) + split costs share = total. Then an "Everyone together" total. If anything is missing, label the card **Total so far (missing some prices)** and list what is missing, such as "No flight chosen for Sam", "No price logged for Sam's flight "Nonstop, Tuesday out"" or "No price logged for Casa Alfama". Never show a missing price as $0.
 
 ### 7.8 Price panel (flights and stays)
 
 - Shows the latest price, when it was checked and by whom, the change from the previous check (for example "▲ $38 higher", "▼ $12 lower", "No change"), a **New low** badge when the latest amount is lower than every earlier one, and a small inline SVG sparkline of all entries in time order (only when there are 2 or more).
-- An amount input pre-filled with the latest amount, an optional note, and **Log price**, which appends a PriceEntry with `arrayUnion`. Amounts accept "$1,234.56", "1234.56", "1234" and "1234.5", and anything that is not a positive amount is rejected with an inline error.
+- An amount input pre-filled with the latest amount, an optional note, and **Save price**, which appends a PriceEntry with `arrayUnion`. Amounts accept "$1,234.56", "1234.56", "1234" and "1234.5", and anything that is not a positive amount is rejected with an inline error.
 - **History** expands the full list, newest first. Each entry has a delete action (with confirmation) that uses `arrayRemove` on the exact entry object.
-- A reminder next to the input: "Check the price on the site first, then log what you saw."
+- A reminder next to the input: "Check the price on the site first, then save what you saw."
 
 ### 7.9 Days tab
 
 - **Create days from trip dates** makes one day per date from start to end, skipping dates that already have a day. **Add day** makes an undated day. Days are sorted by `order`.
-- Each day card shows date or label, title, focus, notes, its places in `dayOrder`, and actions to edit or delete the day. Deleting a day moves its places back to Unplanned.
-- The **Unplanned** pool lists places with `dayId: null`, grouped by neighborhood and sorted by rank. Each has an **Add to day** menu.
-- Within a day, **▲** and **▼** buttons reorder places and **Remove** returns a place to Unplanned. Do not use drag-and-drop.
-- Events whose `eventStart`–`eventEnd` range overlaps a dated day show a hint "Happening this day" in the Unplanned pool for that day.
+- Each day card shows date or label, title, focus, notes, its places in `dayOrder`, and actions to edit or delete the day. Deleting a day moves its places back to Not in a day yet.
+- The **Not in a day yet** pool lists places with `dayId: null`, grouped by neighborhood and sorted by rank. Each has an **Add to day** menu.
+- Within a day, **▲** and **▼** buttons (each with an `aria-label` naming the place and direction, e.g. "Move Time Out Market up") reorder places and **Remove** returns a place to Not in a day yet. Do not use drag-and-drop.
+- Events whose `eventStart`–`eventEnd` range overlaps a dated day show a hint "Happening this day" in the Not in a day yet pool for that day.
 - **Day map:** selecting a day shows its places as numbered markers joined by a dashed straight line in order. A caption reads "Straight lines show the order, not the walking path."
 - **Open walking route** builds Google Maps directions links (section 9.2) through the day's located places in order.
 
@@ -523,8 +523,8 @@ Available from the Places tab and the Days tab.
 ### 7.11 Recap tab (Phase 6)
 
 - **Photo album link:** paste a Google Photos or iCloud shared album link into `albumUrl`, validated with section 9.5.
-- **Place reactions:** for each place in the trip, each user can set Loved, Fine or Skipped, a note, and an optional photo link (a link to one photo in the shared album). Write only `recap.<my uid>`.
-- **Next time:** places no one marked Loved, Fine or Skipped, listed as "Didn't get to", plus places marked Skipped. **Copy to a new trip** creates a new trip in `exploring` status whose places are copies of these places (new IDs, votes and recap cleared, `dayId` null).
+- **How was it?:** for each place in the trip, each user can set Loved, Fine or Skipped, a note, and an optional photo link (a link to one photo in the shared album). Write only `recap.<my uid>`.
+- **Didn't get to:** places no one marked Loved, Fine or Skipped, listed as "Didn't get to", plus places marked Skipped. **Copy to a new trip** creates a new trip in `exploring` status whose places are copies of these places (new IDs, votes and recap cleared, `dayId` null).
 - **Planned vs actual:** each traveler can enter their actual spend (`actualSpendCents.<travelerId>`). This is shown beside the planned total from section 11.
 - **Publish recap** writes `publicRecaps/{tripId}` (section 5.5) after a confirmation that lists what becomes public: trip name, city, dates, album link, place names and locations, reaction counts, notes with first names only, and photo links. **Unpublish** deletes it. Show the public link `recap.html?trip=<tripId>` with **Copy link**.
 - `recap.html` needs no sign-in. It reads only `publicRecaps/{tripId}` and shows a map with markers sized or colored by loves, a list sorted by loves, notes, photo links, and the album link. If the recap doesn't exist, it says "This recap isn't published."
@@ -554,7 +554,7 @@ All builders live in `js/lib/links.js` (and `mapsurl.js`) and are unit tested. A
 | Airbnb search | `https://www.airbnb.com/s/<encoded city>/homes?checkin=<YYYY-MM-DD>&checkout=<YYYY-MM-DD>&adults=<n>` (leave out missing dates) |
 | Google search idea | `https://www.google.com/search?q=` + encode(query) |
 
-Idea searches on the Overview Discover panel, where `<city>` is the destination city and `<Month YYYY>` comes from the start date (leave it out if there's no date):
+Idea searches on the Overview "Search the web" panel, where `<city>` is the destination city and `<Month YYYY>` comes from the start date (leave it out if there's no date):
 
 - `<city> best food neighborhoods`
 - `<city> food tour`
@@ -595,7 +595,7 @@ These are deliberately destination-agnostic (no named sport) so they read sensib
 - URL: `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&q=` + encode(`<query>, <destination city>, <destination country>`). For a destination lookup, the query is `<city>, <country>`.
 - Run only when a Search button is pressed, never on each keystroke. Allow at most one request per second (queue or disable the button briefly).
 - Show each result's `display_name` and use its `lat` and `lon` (strings, so convert them to numbers).
-- Show "Search by OpenStreetMap Nominatim" under the results.
+- Show "Search results from OpenStreetMap" under the results.
 - On network failure, show an inline error and suggest Place on map.
 
 ### 9.5 URL safety
@@ -656,9 +656,9 @@ Both exports include only places with coordinates. Downloads use a `Blob` and a 
 - **Nights:** whole days between check-in and check-out computed in UTC, and only when both exist and check-out is later. Otherwise show "Dates needed".
 - **Per night:** the latest stay total divided by nights, rounded to the nearest cent for display only. Never store it.
 - **Equal split** `split(amountCents, n)`: `base = floor(amount / n)` and `remainder = amount − base × n`. The first `remainder` travelers (in `travelers` array order) get `base + 1`, and the rest get `base`. The shares always add up exactly to the amount.
-- **Traveler total:** the latest price of each of that traveler's chosen flights, added up, + their share of each chosen stay's latest price + their share of each shared cost, where each stay and each cost is split separately.
-- **Combined total:** the sum of traveler totals.
-- **Complete:** every traveler has at least one chosen flight, every chosen flight has at least one price, and every chosen stay has at least one price (choosing no stay is fine). Otherwise it's a **Partial total** with a list of missing items. Missing amounts count as 0 in the sum, but they are listed, and the total is never labeled complete.
+- **Traveler total:** the latest price of each of that traveler's chosen flights, added up, + their share of each chosen stay's latest price + their share of each split cost, where each stay and each cost is split separately.
+- **Everyone together:** the sum of traveler totals.
+- **Complete:** every traveler has at least one chosen flight, every chosen flight has at least one price, and every chosen stay has at least one price (choosing no stay is fine). Otherwise it's a **Total so far (missing some prices)** with a list of missing items. Missing amounts count as 0 in the sum, but they are listed, and the total is never labeled complete.
 - Store no derived values (latest price, totals, per-night, delta) in Firestore. Compute them when rendering.
 
 ## 12. Out of scope
@@ -677,3 +677,4 @@ Changes are made by the owner (or a model the owner asks). Edit this file first,
 | 1.3 | 2026-09-27 | Every place now gets a location action regardless of whether it already has a pin (**Edit location** vs **Set location**) — a pasted link's coordinates aren't always the real pin, and there was previously no way to correct one without deleting the place (§7.6). Replaced the three hardcoded activity-specific Discover idea queries (rock climbing/surfing/skiing) with destination-agnostic ones (outdoor activities/adventure tours/nature excursions near \<city\>), since a fixed sport makes no sense for most destinations and the app has no compliant way to guess a region-appropriate one (§1, §9.1). |
 | 1.4 | 2026-09-27 | Visual refresh at the owner's request — the flat, single-blue "draft" look is now a card-shadow/hover-lift, gradient-accent design with the Inter font, pill-shaped status/badges, and an external-link marker; no behavior changed (§4). |
 | 2.0 | 2026-09-27 | Owner feedback round 1 (tasks in `docs/tasks/`). New warm "sunset + teal" look with exact color, type and spacing tokens, a logo, favicon and phone toolbar color (§4). Candidate cards redesigned with labeled details and a free Wikipedia photo (§5.4, §7.5, §9.7). Add place, Add flight option and Add stay now lead with finding the item on Google and pasting its link, which fills in what it can; flight links are read by new `flightlink.js` (§7.6, §7.7, §9.2, §9.6). Any number of flights per traveler and stays per trip can be chosen, and totals add them all (§5.3, §7.7, §11). Big view files split up and outside lookups moved to `js/lookup.js` (§3.1). Documented `staylink.js`, which existed without a spec entry. |
+| 2.1 | 2026-09-28 | Wording pass (T07): applied `docs/tasks/WORDING.md` across every screen — "Destination ideas", "Pick this destination", "Search the web", "I haven't ranked yet", "Group favorites", "Save price", "Split costs", "Everyone together", "Total so far (missing some prices)", "How was it?", "Didn't get to", "Read this link", "Search results from OpenStreetMap", and updated empty-state/error text. Confirmation dialogs now name the action ("Delete", "Unpublish", "Publish") instead of a generic "Confirm". The **▲**/**▼** day-reorder buttons get an `aria-label` naming the place and direction. No layout, styling, behavior or stored data changed; category names are untouched. |

@@ -78,7 +78,7 @@ export function renderDaysPage(container, tripId, myUid) {
     el("div", { className: "days-header" }, [el("h2", { textContent: "Days" }), createFromDatesBtn, addDayBtn]),
     el("div", { className: "days-map-wrap" }, [dayMapEl, dayMapCaption]),
     daysListEl,
-    el("h2", { textContent: "Unplanned" }),
+    el("h2", { textContent: "Not in a day yet" }),
     unplannedEl,
     exportSectionHolder
   );
@@ -188,7 +188,7 @@ export function renderDaysPage(container, tripId, myUid) {
 
     const deleteBtn = el("button", { type: "button", className: "btn btn-small btn-danger", textContent: "Delete" });
     deleteBtn.addEventListener("click", async () => {
-      const confirmed = await confirmDialog(`Delete ${dayLabel(day)}? Its places return to Unplanned.`);
+      const confirmed = await confirmDialog(`Delete ${dayLabel(day)}? Its places go back to Not in a day yet.`, "Delete");
       if (!confirmed) return;
       try {
         await deleteDayAndUnassignPlaces(
@@ -203,9 +203,21 @@ export function renderDaysPage(container, tripId, myUid) {
     });
 
     const placeRows = dayPlaces.map((place, index) => {
-      const upBtn = el("button", { type: "button", className: "btn btn-link", textContent: "▲", disabled: index === 0 });
+      const upBtn = el("button", {
+        type: "button",
+        className: "btn btn-link",
+        textContent: "▲",
+        disabled: index === 0,
+        attrs: { "aria-label": `Move ${place.name} up` },
+      });
       upBtn.addEventListener("click", () => movePlace(dayPlaces, index, -1));
-      const downBtn = el("button", { type: "button", className: "btn btn-link", textContent: "▼", disabled: index === dayPlaces.length - 1 });
+      const downBtn = el("button", {
+        type: "button",
+        className: "btn btn-link",
+        textContent: "▼",
+        disabled: index === dayPlaces.length - 1,
+        attrs: { "aria-label": `Move ${place.name} down` },
+      });
       downBtn.addEventListener("click", () => movePlace(dayPlaces, index, 1));
       const removeBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Remove" });
       removeBtn.addEventListener("click", () =>
@@ -235,7 +247,9 @@ export function renderDaysPage(container, tripId, myUid) {
       ]),
       day.focus ? el("p", { className: "muted", textContent: day.focus }) : null,
       day.notes ? el("p", { textContent: day.notes }) : null,
-      dayPlaces.length === 0 ? el("p", { className: "empty-state", textContent: "No places yet." }) : el("ul", { className: "day-places" }, placeRows),
+      dayPlaces.length === 0
+        ? el("p", { className: "empty-state", textContent: "No places yet. Add some from Not in a day yet, below." })
+        : el("ul", { className: "day-places" }, placeRows),
       routeLinks.length > 0 ? routeEl : null,
       errorHolder,
     ].filter(Boolean));
@@ -262,7 +276,7 @@ export function renderDaysPage(container, tripId, myUid) {
   function renderUnplanned() {
     const unplanned = sortByRank(scopedPlaces.filter((p) => p.dayId == null));
     if (unplanned.length === 0) {
-      unplannedEl.replaceChildren(el("p", { className: "empty-state", textContent: "Nothing unplanned." }));
+      unplannedEl.replaceChildren(el("p", { className: "empty-state", textContent: "Nothing here yet — places without a day show up here." }));
       return;
     }
     const groups = new Map();
@@ -294,7 +308,9 @@ export function renderDaysPage(container, tripId, myUid) {
     const sorted = [...days].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     if (!selectedDayId && sorted.length > 0) selectedDayId = sorted[0].id;
     if (sorted.length === 0) {
-      daysListEl.replaceChildren(el("p", { className: "empty-state", textContent: "No days yet." }));
+      daysListEl.replaceChildren(
+        el("p", { className: "empty-state", textContent: "No days yet. Use Create days from trip dates, or Add day to start one." })
+      );
     } else {
       daysListEl.replaceChildren(...sorted.map(renderDayCard));
     }

@@ -47,7 +47,7 @@ export function renderTripsView(container, user) {
     if (trip.createdBy === user.uid) {
       const deleteBtn = el("button", { className: "btn btn-danger btn-small", textContent: "Delete" });
       deleteBtn.addEventListener("click", async () => {
-        const confirmed = await confirmDialog(`Delete "${trip.name}"? This can't be undone.`);
+        const confirmed = await confirmDialog(`Delete "${trip.name}"? This can't be undone.`, "Delete");
         if (!confirmed) return;
         setPending(deleteBtn, true, "Deleting…");
         try {
@@ -66,7 +66,7 @@ export function renderTripsView(container, user) {
   const unsubscribe = watchTrips(
     (trips) => {
       if (trips.length === 0) {
-        list.replaceChildren(el("p", { className: "empty-state", textContent: "No trips yet. Start one!" }));
+        list.replaceChildren(el("p", { className: "empty-state", textContent: "No trips yet. Start one with New trip." }));
         return;
       }
       list.replaceChildren(...trips.map(renderCard));

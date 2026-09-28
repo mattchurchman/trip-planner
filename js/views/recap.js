@@ -62,7 +62,7 @@ export function renderRecapPage(container, tripId, myUid) {
     loadErrorEl,
     el("h2", { textContent: "Recap" }),
     albumSectionEl,
-    el("h3", { textContent: "Place reactions" }),
+    el("h3", { textContent: "How was it?" }),
     reactionsListEl,
     nextTimeEl,
     actualSpendEl,
@@ -88,7 +88,7 @@ export function renderRecapPage(container, tripId, myUid) {
       }
       const safe = safeUrl(value);
       if (!safe) {
-        errorHolder.replaceChildren(el("p", { className: "field-error", textContent: "That doesn't look like a valid link." }));
+        errorHolder.replaceChildren(el("p", { className: "field-error", textContent: "That doesn't look like a link — check you copied the whole address." }));
         return;
       }
       updateTripFields(tripId, { albumUrl: safe }).catch((err) =>
@@ -161,7 +161,7 @@ export function renderRecapPage(container, tripId, myUid) {
 
   function renderReactions() {
     if (places.length === 0) {
-      reactionsListEl.replaceChildren(el("p", { className: "empty-state", textContent: "No places to react to yet." }));
+      reactionsListEl.replaceChildren(el("p", { className: "empty-state", textContent: "No places to react to yet. Add some on the Places tab first." }));
       return;
     }
     reactionsListEl.replaceChildren(
@@ -210,7 +210,7 @@ export function renderRecapPage(container, tripId, myUid) {
     );
 
     nextTimeEl.replaceChildren(
-      el("h3", { textContent: "Next time" }),
+      el("h3", { textContent: "Didn't get to" }),
       list.length === 0 ? el("p", { className: "empty-state", textContent: "Nothing to carry forward." }) : el("ul", { className: "next-time-list" }, rows),
       copyBtn,
       errorHolder
@@ -253,7 +253,7 @@ export function renderRecapPage(container, tripId, myUid) {
         }
         const cents = parseMoney(text);
         if (cents === null) {
-          errorHolder.replaceChildren(el("p", { className: "field-error", textContent: "Enter a valid amount." }));
+          errorHolder.replaceChildren(el("p", { className: "field-error", textContent: "That amount didn't look right — try something like 245 or 245.50." }));
           return;
         }
         setActualSpend(tripId, traveler.id, cents).catch((err) =>
@@ -277,7 +277,7 @@ export function renderRecapPage(container, tripId, myUid) {
       const url = publicRecapUrl(tripId);
       const unpublishBtn = el("button", { type: "button", className: "btn btn-danger btn-small", textContent: "Unpublish" });
       unpublishBtn.addEventListener("click", async () => {
-        const confirmed = await confirmDialog("Unpublish this recap? The public link will stop working.");
+        const confirmed = await confirmDialog("Unpublish this recap? The public link will stop working.", "Unpublish");
         if (!confirmed) return;
         try {
           await unpublishRecap(tripId);
@@ -296,7 +296,8 @@ export function renderRecapPage(container, tripId, myUid) {
       const publishBtn = el("button", { type: "button", className: "btn btn-primary btn-small", textContent: "Publish recap" });
       publishBtn.addEventListener("click", async () => {
         const confirmed = await confirmDialog(
-          "Publish this recap? This makes public: trip name, city, dates, album link, place names and locations, reaction counts, notes (first names only), and photo links. Never emails, uids or prices."
+          "Publish this recap? This makes public: trip name, city, dates, album link, place names and locations, reaction counts, notes (first names only), and photo links. Never emails, account IDs or prices.",
+          "Publish"
         );
         if (!confirmed) return;
         setPending(publishBtn, true, "Publishing…");
