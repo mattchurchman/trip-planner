@@ -311,7 +311,7 @@ export function renderOverviewPage(container, tripId, myUid) {
     if (!trip) return;
     renderWhenIdle(tripDetailsEl, renderTripDetails);
     renderWhenIdle(travelersEl, renderTravelers);
-    candidatesSection.render(candidates, usersById);
+    candidatesSection.render(candidates, trip, usersById);
     renderDiscover();
   }
 

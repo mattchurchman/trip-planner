@@ -213,6 +213,14 @@ export function voteOnCandidate(tripId, candidateId, uid, choice) {
   return voteOnSubDoc(tripId, "candidates", candidateId, uid, choice);
 }
 
+/** Single-field write of a candidate's looked-up destination photo (§5.4, §7.5):
+ * `{ url, pageUrl }` when one was found, or `null` when the lookup ran and
+ * found nothing usable. A missing `photo` field (not yet looked up) is never
+ * written here — see findPhoto() in candidates.js. */
+export function setCandidatePhoto(tripId, candidateId, photo) {
+  return updateSubDoc(tripId, "candidates", candidateId, { photo });
+}
+
 export function watchPlaces(tripId, onChange, onError) {
   return watchSubcollection(tripId, "places", onChange, onError);
 }
