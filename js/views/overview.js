@@ -4,21 +4,16 @@ import {
   watchCandidates,
   updateTripFields,
   updateTravelers,
-  addCandidate,
-  updateCandidate,
-  deleteCandidate,
-  voteOnCandidate,
   adoptUnassignedPlaces,
   getTravelerFlights,
   removeTraveler,
   deleteFlight,
 } from "../store.js";
-import { el, setPending, confirmDialog, friendlyError, rankControl, copyLinkButton, field, dialogShell, renderWhenIdle } from "../ui.js";
-import { renderComments } from "./comments.js";
+import { el, setPending, confirmDialog, friendlyError, copyLinkButton, field, dialogShell, renderWhenIdle } from "../ui.js";
 import { pendingDestinationPin } from "./places.js";
-import { sortByRank } from "../lib/votes.js";
+import { createCandidatesSection } from "./candidates.js";
+import { nominatimSearch } from "../lookup.js";
 import {
-  safeUrl,
   googleFlightsExploreUrl,
   googleFlightsSearchUrl,
   googleHotelsUrl,
@@ -29,65 +24,6 @@ import {
 } from "../lib/links.js";
 
 const STATUSES = ["exploring", "planning", "booked", "done"];
-
-let lastNominatimAt = 0;
-
-async function nominatimSearch(query) {
-  // Nominatim's usage policy allows at most one request per second (§9.4).
-  const wait = Math.max(0, 1000 - (Date.now() - lastNominatimAt));
-  if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
-  lastNominatimAt = Date.now();
-  const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(query)}`;
-  const response = await fetch(url);
-  if (!response.ok) throw new Error("Location search failed. Try again in a moment.");
-  return response.json();
-}
-
-function candidateFormDialog(existing) {
-  return dialogShell("candidate-dialog", (finish) => {
-    const cityInput = el("input", { type: "text", value: existing?.city || "" });
-    const countryInput = el("input", { type: "text", value: existing?.country || "" });
-    const whyInput = el("textarea", { rows: 2, value: existing?.why || "" });
-    const priceInput = el("input", { type: "text", value: existing?.roughPriceNote || "" });
-    const dateIdeaInput = el("input", { type: "text", value: existing?.dateIdea || "" });
-    const linkInput = el("input", { type: "text", value: existing?.link || "" });
-    const errorHolder = el("div", { className: "field-error-holder" });
-    const cancelBtn = el("button", { type: "button", className: "btn btn-secondary", textContent: "Cancel" });
-    const okBtn = el("button", { type: "submit", className: "btn btn-primary", textContent: existing ? "Save" : "Add" });
-
-    const form = el("form", { method: "dialog", className: "candidate-form" }, [
-      field("City", cityInput),
-      field("Country", countryInput),
-      field("Why", whyInput),
-      field("Rough price note", priceInput),
-      field("Date idea", dateIdeaInput),
-      field("Link", linkInput),
-      errorHolder,
-      el("div", { className: "dialog-actions" }, [cancelBtn, okBtn]),
-    ]);
-    cancelBtn.addEventListener("click", () => finish(null));
-    form.addEventListener("submit", (event) => {
-      event.preventDefault();
-      const city = cityInput.value.trim();
-      const country = countryInput.value.trim();
-      if (!city || !country) {
-        errorHolder.replaceChildren(
-          el("p", { className: "field-error", textContent: "City and country are required." })
-        );
-        return;
-      }
-      finish({
-        city,
-        country,
-        why: whyInput.value.trim(),
-        roughPriceNote: priceInput.value.trim(),
-        dateIdea: dateIdeaInput.value.trim(),
-        link: linkInput.value.trim() || null,
-      });
-    });
-    return { form, focusEl: cityInput };
-  });
-}
 
 function externalLinkRow(url, label) {
   const anchor = el("a", {
@@ -105,42 +41,45 @@ export function renderOverviewPage(container, tripId, myUid) {
   let trip = null;
   let usersById = {};
   let candidates = [];
-  let candidateCommentUnsubscribes = [];
 
   const loadErrorEl = el("div", { className: "field-error-holder" });
   const tripDetailsEl = el("div", { className: "trip-details card" });
   const travelersEl = el("div", { className: "travelers-section card" });
   const travelerError = el("div", { className: "field-error-holder" });
-  const addCandidateBtn = el("button", {
-    type: "button",
-    className: "btn btn-primary",
-    textContent: "Add candidate destination",
-  });
-  const candidateError = el("div", { className: "field-error-holder" });
-  const candidatesEl = el("div", { className: "candidates-section" });
   const discoverEl = el("div", { className: "discover-section card" });
 
-  container.replaceChildren(
-    loadErrorEl,
-    tripDetailsEl,
-    travelersEl,
-    el("div", { className: "candidates-header" }, [el("h2", { textContent: "Candidate destinations" }), addCandidateBtn]),
-    el("p", { className: "muted section-hint", textContent: "Add places you're considering, then rank them together." }),
-    candidateError,
-    candidatesEl,
-    discoverEl
-  );
-
-  addCandidateBtn.addEventListener("click", async () => {
-    const result = await candidateFormDialog(null);
-    if (!result) return;
-    candidateError.replaceChildren();
+  async function chooseDestination(candidate, button, errorHolder) {
+    errorHolder.replaceChildren();
+    setPending(button, true, "Setting…");
     try {
-      await addCandidate(tripId, result, myUid);
+      let { lat, lng } = candidate;
+      if (lat == null || lng == null) {
+        const results = await nominatimSearch(`${candidate.city}, ${candidate.country}`);
+        if (results && results.length > 0) {
+          lat = Number(results[0].lat);
+          lng = Number(results[0].lon);
+        } else {
+          lat = null;
+          lng = null;
+        }
+      }
+      const fields = {
+        destination: { city: candidate.city, country: candidate.country, lat, lng, airport: candidate.airport || "" },
+        destinationId: candidate.id,
+      };
+      if (trip.status === "exploring") fields.status = "planning";
+      await updateTripFields(tripId, fields);
+      await adoptUnassignedPlaces(tripId, candidate.id);
     } catch (err) {
-      candidateError.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
+      errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
+    } finally {
+      setPending(button, false);
     }
-  });
+  }
+
+  const candidatesSection = createCandidatesSection({ tripId, myUid, onChoose: chooseDestination });
+
+  container.replaceChildren(loadErrorEl, tripDetailsEl, travelersEl, candidatesSection.element, discoverEl);
 
   function renderTripDetails() {
     const fieldError = el("div", { className: "field-error-holder" });
@@ -318,112 +257,6 @@ export function renderOverviewPage(container, tripId, myUid) {
     );
   }
 
-  async function chooseDestination(candidate, button, errorHolder) {
-    errorHolder.replaceChildren();
-    setPending(button, true, "Setting…");
-    try {
-      let { lat, lng } = candidate;
-      if (lat == null || lng == null) {
-        const results = await nominatimSearch(`${candidate.city}, ${candidate.country}`);
-        if (results && results.length > 0) {
-          lat = Number(results[0].lat);
-          lng = Number(results[0].lon);
-        } else {
-          lat = null;
-          lng = null;
-        }
-      }
-      const fields = {
-        destination: { city: candidate.city, country: candidate.country, lat, lng, airport: candidate.airport || "" },
-        destinationId: candidate.id,
-      };
-      if (trip.status === "exploring") fields.status = "planning";
-      await updateTripFields(tripId, fields);
-      await adoptUnassignedPlaces(tripId, candidate.id);
-    } catch (err) {
-      errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
-    } finally {
-      setPending(button, false);
-    }
-  }
-
-  function renderCandidateCard(candidate) {
-    const errorHolder = el("div", { className: "field-error-holder" });
-    const details = [];
-    if (candidate.why) details.push(el("p", { textContent: candidate.why }));
-    if (candidate.roughPriceNote) details.push(el("p", { className: "muted", textContent: candidate.roughPriceNote }));
-    if (candidate.dateIdea) details.push(el("p", { className: "muted", textContent: candidate.dateIdea }));
-    const safeLink = candidate.link ? safeUrl(candidate.link) : null;
-    if (safeLink) {
-      details.push(el("a", { href: safeLink, target: "_blank", rel: "noopener noreferrer", textContent: "Link" }));
-    }
-
-    const rank = rankControl({
-      votes: candidate.votes || {},
-      myUid,
-      usersById,
-      onVote: (choice) => {
-        voteOnCandidate(tripId, candidate.id, myUid, choice).catch((err) => {
-          errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
-        });
-      },
-    });
-
-    const chooseBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Choose this destination" });
-    chooseBtn.addEventListener("click", () => chooseDestination(candidate, chooseBtn, errorHolder));
-
-    const editBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Edit" });
-    editBtn.addEventListener("click", async () => {
-      const result = await candidateFormDialog(candidate);
-      if (!result) return;
-      try {
-        await updateCandidate(tripId, candidate.id, result);
-      } catch (err) {
-        errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
-      }
-    });
-
-    const deleteBtn = el("button", { type: "button", className: "btn btn-small btn-danger", textContent: "Delete" });
-    deleteBtn.addEventListener("click", async () => {
-      const confirmed = await confirmDialog(`Delete ${candidate.city}, ${candidate.country}?`);
-      if (!confirmed) return;
-      try {
-        await deleteCandidate(tripId, candidate.id);
-      } catch (err) {
-        errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
-      }
-    });
-
-    const { element: commentsEl, unsubscribe: commentsUnsub } = renderComments({
-      tripId,
-      targetType: "candidate",
-      targetId: candidate.id,
-      myUid,
-      usersById,
-    });
-    candidateCommentUnsubscribes.push(commentsUnsub);
-
-    return el("article", { className: "card candidate-card" }, [
-      el("h3", { textContent: `${candidate.city}, ${candidate.country}` }),
-      ...details,
-      rank,
-      el("div", { className: "candidate-actions" }, [chooseBtn, editBtn, deleteBtn]),
-      errorHolder,
-      commentsEl,
-    ]);
-  }
-
-  function renderCandidates() {
-    for (const unsub of candidateCommentUnsubscribes) unsub();
-    candidateCommentUnsubscribes = [];
-    const sorted = sortByRank(candidates);
-    if (sorted.length === 0) {
-      candidatesEl.replaceChildren(el("p", { className: "empty-state", textContent: "No candidates yet." }));
-      return;
-    }
-    candidatesEl.replaceChildren(...sorted.map(renderCandidateCard));
-  }
-
   function renderDiscover() {
     const rows = [externalLinkRow(googleFlightsExploreUrl(), "Google Flights Explore")];
     const dest = trip.destination;
@@ -479,7 +312,7 @@ export function renderOverviewPage(container, tripId, myUid) {
     if (!trip) return;
     renderWhenIdle(tripDetailsEl, renderTripDetails);
     renderWhenIdle(travelersEl, renderTravelers);
-    renderWhenIdle(candidatesEl, renderCandidates);
+    candidatesSection.render(candidates, usersById);
     renderDiscover();
   }
 
@@ -504,13 +337,13 @@ export function renderOverviewPage(container, tripId, myUid) {
       candidates = c;
       rerender();
     },
-    (err) => candidatesEl.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }))
+    (err) => candidatesSection.renderError(friendlyError(err))
   );
 
   return () => {
     unsubTrip();
     unsubUsers();
     unsubCandidates();
-    for (const unsub of candidateCommentUnsubscribes) unsub();
+    candidatesSection.unsubscribe();
   };
 }

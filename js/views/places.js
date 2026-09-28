@@ -1,13 +1,13 @@
-import { watchTrip, watchUsers, watchPlaces, addPlace, updatePlace, deletePlace, voteOnPlace, watchStays, watchDays, updateTripFields } from "../store.js";
-import { el, setPending, confirmDialog, friendlyError, rankControl, field, dialogShell, renderWhenIdle } from "../ui.js";
+import { watchTrip, watchUsers, watchPlaces, updatePlace, deletePlace, voteOnPlace, watchStays, watchDays, updateTripFields } from "../store.js";
+import { el, confirmDialog, friendlyError, rankControl, renderWhenIdle } from "../ui.js";
 import { renderComments } from "./comments.js";
 import { renderExportSection } from "./exportSection.js";
+import { editPlaceDialog, buildSetLocationInline, buildAddPlacePanel } from "./placeForm.js";
 import { sortByRank, notRankedByMe, voteSummary, toMillis } from "../lib/votes.js";
 import { safeUrl, googleMapsOpenUrl } from "../lib/links.js";
-import { parseGoogleMapsUrl } from "../lib/mapsurl.js";
 import { rangesOverlap } from "../lib/dates.js";
 
-const CATEGORIES = [
+export const CATEGORIES = [
   { label: "Food", color: "#e8710a" },
   { label: "Drinks & nightlife", color: "#9334e6" },
   { label: "Neighborhood walk", color: "#188038" },
@@ -28,20 +28,6 @@ const CATEGORY_COLOR = Object.fromEntries(CATEGORIES.map((c) => [c.label, c.colo
  * than storage because switching tabs rebuilds the view but never reloads the page.
  */
 export const pendingDestinationPin = { tripId: null };
-
-let lastNominatimAt = 0;
-
-async function nominatimSearch(query, limit = 5) {
-  // Nominatim's usage policy allows at most one request per second (§9.4), so
-  // queue rather than fire on every press.
-  const wait = Math.max(0, 1000 - (Date.now() - lastNominatimAt));
-  if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
-  lastNominatimAt = Date.now();
-  const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=${limit}&q=${encodeURIComponent(query)}`;
-  const response = await fetch(url);
-  if (!response.ok) throw new Error("Search failed. Try again in a moment.");
-  return response.json();
-}
 
 function openMapsUrlFor(place, destinationCity) {
   const saved = place.googleMapsUrl ? safeUrl(place.googleMapsUrl) : null;
@@ -65,195 +51,6 @@ function applyFiltersAndSort(places, { filters, sortMode, trip, myUid }) {
   if (sortMode === "neighborhood") return [...filtered].sort((a, b) => (a.neighborhood || "").localeCompare(b.neighborhood || ""));
   if (sortMode === "category") return [...filtered].sort((a, b) => a.category.localeCompare(b.category));
   return sortByRank(filtered);
-}
-
-/**
- * The three location-entry methods from §7.6: paste a Google Maps link, search
- * (Nominatim, scoped to the destination), or place on map. `mapClickState` is a
- * shared mutable flag/callback the page's Leaflet map click handler reads.
- * `onChange({lat, lng, googleMapsUrl, suggestedName?})` fires whenever a location is picked or cleared.
- */
-function buildLocationPicker({ trip, mapClickState, onChange }) {
-  let lat = null;
-  let lng = null;
-  let googleMapsUrl = null;
-  let placingArmed = false;
-
-  const statusEl = el("p", { className: "muted location-status" });
-  const errorEl = el("div", { className: "field-error-holder" });
-
-  function updateStatus() {
-    statusEl.textContent = lat != null && lng != null ? `Location set: ${lat.toFixed(5)}, ${lng.toFixed(5)}` : "No location set yet.";
-  }
-  updateStatus();
-
-  function setLocation(newLat, newLng, mapsUrl, suggestedName) {
-    lat = newLat;
-    lng = newLng;
-    googleMapsUrl = mapsUrl || null;
-    updateStatus();
-    onChange({ lat, lng, googleMapsUrl, suggestedName });
-  }
-
-  const linkInput = el("input", { type: "text", placeholder: "Paste a Google Maps link", attrs: { "aria-label": "Google Maps link" } });
-  const useLinkBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Use this link" });
-  function tryParseLink() {
-    if (!linkInput.value.trim()) return;
-    errorEl.replaceChildren();
-    const result = parseGoogleMapsUrl(linkInput.value);
-    if (result.error) {
-      errorEl.replaceChildren(el("p", { className: "field-error", textContent: result.error }));
-      return;
-    }
-    setLocation(result.lat, result.lng, safeUrl(linkInput.value), result.name);
-  }
-  useLinkBtn.addEventListener("click", tryParseLink);
-  // Auto-parse as soon as a link is pasted (§7.6) — a paste event fires before the
-  // input's value updates, so read it on the next tick. The button stays as a
-  // fallback for a manually typed/edited link.
-  linkInput.addEventListener("paste", () => setTimeout(tryParseLink, 0));
-
-  const searchInput = el("input", { type: "text", placeholder: "Search by name", attrs: { "aria-label": "Search for a place by name" } });
-  const searchBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Search" });
-  const resultsEl = el("ul", { className: "search-results" });
-  searchBtn.addEventListener("click", async () => {
-    errorEl.replaceChildren();
-    resultsEl.replaceChildren();
-    const query = searchInput.value.trim();
-    if (!query) return;
-    const dest = trip.destination;
-    const fullQuery = dest ? `${query}, ${dest.city}, ${dest.country}` : query;
-    setPending(searchBtn, true, "Searching…");
-    try {
-      const results = await nominatimSearch(fullQuery, 5);
-      if (results.length === 0) {
-        resultsEl.replaceChildren(el("li", { className: "muted", textContent: "No results. Try Place on map instead." }));
-      } else {
-        resultsEl.replaceChildren(
-          ...results.map((r) => {
-            const btn = el("button", { type: "button", className: "btn btn-small search-result", textContent: r.display_name });
-            btn.addEventListener("click", () => {
-              setLocation(Number(r.lat), Number(r.lon), null, null);
-              resultsEl.replaceChildren();
-            });
-            return el("li", {}, [btn]);
-          }),
-          el("li", { className: "muted", textContent: "Search by OpenStreetMap Nominatim" })
-        );
-      }
-    } catch (err) {
-      errorEl.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
-    } finally {
-      setPending(searchBtn, false);
-    }
-  });
-
-  const placeOnMapBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Place on map" });
-  function disarmPlacing() {
-    placingArmed = false;
-    placeOnMapBtn.textContent = "Place on map";
-    placeOnMapBtn.setAttribute("aria-pressed", "false");
-    mapClickState.armed = false;
-    mapClickState.onPick = null;
-    mapClickState.disarm = null;
-  }
-  placeOnMapBtn.setAttribute("aria-pressed", "false");
-  placeOnMapBtn.addEventListener("click", () => {
-    if (placingArmed) {
-      disarmPlacing();
-      return;
-    }
-    // Only one picker can own the map's next click; cancel whoever had it so
-    // their button doesn't stay stuck reading "Click the map…".
-    if (mapClickState.disarm) mapClickState.disarm();
-    placingArmed = true;
-    placeOnMapBtn.textContent = "Click the map…";
-    placeOnMapBtn.setAttribute("aria-pressed", "true");
-    mapClickState.armed = true;
-    mapClickState.disarm = disarmPlacing;
-    mapClickState.onPick = (latlng) => {
-      setLocation(latlng.lat, latlng.lng, null, null);
-      disarmPlacing();
-    };
-  });
-
-  const clearBtn = el("button", { type: "button", className: "btn btn-small btn-secondary", textContent: "Clear location" });
-  clearBtn.addEventListener("click", () => setLocation(null, null, null, null));
-
-  const otherWaysToggle = el("button", {
-    type: "button",
-    className: "btn btn-link",
-    textContent: "Other ways to add a location",
-    attrs: { "aria-expanded": "false" },
-  });
-  const otherWaysHolder = el("div", { className: "other-location-methods", hidden: true }, [
-    el("div", { className: "location-method" }, [searchInput, searchBtn]),
-    resultsEl,
-    el("div", { className: "location-method" }, [placeOnMapBtn]),
-  ]);
-  otherWaysToggle.addEventListener("click", () => {
-    otherWaysHolder.hidden = !otherWaysHolder.hidden;
-    otherWaysToggle.setAttribute("aria-expanded", otherWaysHolder.hidden ? "false" : "true");
-  });
-
-  const elRoot = el("div", { className: "location-picker" }, [
-    el("div", { className: "location-method location-method-primary" }, [linkInput, useLinkBtn]),
-    el("div", { className: "location-status-row" }, [statusEl, clearBtn]),
-    errorEl,
-    otherWaysToggle,
-    otherWaysHolder,
-  ]);
-
-  return { element: elRoot, getLocation: () => ({ lat, lng, googleMapsUrl }), reset: () => setLocation(null, null, null, null) };
-}
-
-function editPlaceDialog(place) {
-  return dialogShell("place-edit-dialog", (finish) => {
-    const nameInput = el("input", { type: "text", value: place.name });
-    const categorySelect = el(
-      "select",
-      {},
-      CATEGORIES.map((c) => el("option", { value: c.label, textContent: c.label, selected: c.label === place.category }))
-    );
-    const neighborhoodInput = el("input", { type: "text", value: place.neighborhood });
-    const noteInput = el("textarea", { rows: 2, value: place.note });
-    const linkInput = el("input", { type: "text", value: place.link || "" });
-    const eventStartInput = el("input", { type: "date", value: place.eventStart || "" });
-    const eventEndInput = el("input", { type: "date", value: place.eventEnd || "" });
-    const errorHolder = el("div", { className: "field-error-holder" });
-    const cancelBtn = el("button", { type: "button", className: "btn btn-secondary", textContent: "Cancel" });
-    const okBtn = el("button", { type: "submit", className: "btn btn-primary", textContent: "Save" });
-
-    const form = el("form", { method: "dialog", className: "place-edit-form" }, [
-      field("Name", nameInput),
-      field("Category", categorySelect),
-      field("Neighborhood", neighborhoodInput),
-      field("Note", noteInput),
-      field("Link", linkInput),
-      el("div", { className: "field-row" }, [field("Event start", eventStartInput), field("Event end", eventEndInput)]),
-      errorHolder,
-      el("div", { className: "dialog-actions" }, [cancelBtn, okBtn]),
-    ]);
-    cancelBtn.addEventListener("click", () => finish(null));
-    form.addEventListener("submit", (event) => {
-      event.preventDefault();
-      const name = nameInput.value.trim();
-      if (!name) {
-        errorHolder.replaceChildren(el("p", { className: "field-error", textContent: "Name is required." }));
-        return;
-      }
-      finish({
-        name,
-        category: categorySelect.value,
-        neighborhood: neighborhoodInput.value.trim(),
-        note: noteInput.value.trim(),
-        link: linkInput.value.trim() || null,
-        eventStart: eventStartInput.value || null,
-        eventEnd: eventEndInput.value || null,
-      });
-    });
-    return { form, focusEl: nameInput };
-  });
 }
 
 /** Renders the Places tab (§7.6) into `container`. Returns a single unsubscribe function. */
@@ -287,6 +84,10 @@ export function renderPlacesPage(container, tripId, myUid) {
   const noDestinationEl = el("p", { className: "empty-state", textContent: "Choose a destination on the Overview tab to start adding places.", hidden: true });
   const destinationPinHintEl = el("p", { className: "field-error destination-pin-hint", hidden: true });
   const exportSectionHolder = el("div", { className: "export-section-holder" });
+
+  function onError(message) {
+    loadErrorEl.replaceChildren(el("p", { className: "field-error", textContent: message }));
+  }
 
   addPanelToggle.addEventListener("click", () => {
     addPanelHolder.hidden = !addPanelHolder.hidden;
@@ -436,7 +237,7 @@ export function renderPlacesPage(container, tripId, myUid) {
           });
           mapCentered = false;
         } catch (err) {
-          loadErrorEl.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
+          onError(friendlyError(err));
         }
         renderDestinationPinHint();
         return;
@@ -514,40 +315,8 @@ export function renderPlacesPage(container, tripId, myUid) {
     try {
       await updatePlace(tripId, place.id, result);
     } catch (err) {
-      loadErrorEl.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
+      onError(friendlyError(err));
     }
-  }
-
-  function buildSetLocationInline(place) {
-    const hasLocation = place.lat != null && place.lng != null;
-    const toggleBtn = el("button", { type: "button", className: "btn btn-small", textContent: hasLocation ? "Edit location" : "Set location" });
-    const holder = el("div", { className: "set-location-holder", hidden: true });
-    toggleBtn.addEventListener("click", () => {
-      holder.hidden = !holder.hidden;
-      if (!holder.hidden && holder.children.length === 0) {
-        const picker = buildLocationPicker({
-          trip,
-          mapClickState,
-          onChange: async (payload) => {
-            // A null location here is the explicit "Clear location" press — the
-            // picker never fires onChange on its own — so removing a wrong pin works.
-            const cleared = payload.lat == null;
-            try {
-              await updatePlace(tripId, place.id, {
-                lat: payload.lat,
-                lng: payload.lng,
-                googleMapsUrl: cleared ? null : payload.googleMapsUrl || place.googleMapsUrl || null,
-              });
-              holder.hidden = true;
-            } catch (err) {
-              loadErrorEl.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
-            }
-          },
-        });
-        holder.appendChild(picker.element);
-      }
-    });
-    return el("div", { className: "set-location-wrap" }, [toggleBtn, holder]);
   }
 
   function renderPlaceRow(place) {
@@ -629,7 +398,7 @@ export function renderPlacesPage(container, tripId, myUid) {
         el("p", { className: "muted", textContent: place.neighborhood || "" }),
         ...details,
         hasLocation ? null : el("p", { className: "field-error", textContent: "No map pin" }),
-        buildSetLocationInline(place),
+        buildSetLocationInline({ place, trip, tripId, mapClickState, onError }),
         rank,
         el("div", { className: "place-actions" }, [openBtn, editBtn, deleteBtn]),
         errorHolder,
@@ -721,100 +490,27 @@ export function renderPlacesPage(container, tripId, myUid) {
     centerMapIfNeeded();
   }
 
-  function buildAddPlacePanel() {
-    const nameInput = el("input", { type: "text" });
-    const categorySelect = el("select", {}, [
-      el("option", { value: "", textContent: "Choose a category", disabled: true, selected: true }),
-      ...CATEGORIES.map((c) => el("option", { value: c.label, textContent: c.label })),
-    ]);
-    const neighborhoodInput = el("input", { type: "text" });
-    const noteInput = el("textarea", { rows: 2 });
-    const linkInput = el("input", { type: "text" });
-    const eventStartInput = el("input", { type: "date" });
-    const eventEndInput = el("input", { type: "date" });
-    const errorHolder = el("div", { className: "field-error-holder" });
-    const submitBtn = el("button", { type: "button", className: "btn btn-primary", textContent: "Add place" });
-
-    const locationPicker = buildLocationPicker({
-      trip,
-      mapClickState,
-      onChange: (payload) => {
-        if (payload.suggestedName && !nameInput.value.trim()) nameInput.value = payload.suggestedName;
-      },
-    });
-
-    submitBtn.addEventListener("click", async () => {
-      errorHolder.replaceChildren();
-      const name = nameInput.value.trim();
-      const category = categorySelect.value;
-      if (!name || !category) {
-        errorHolder.replaceChildren(el("p", { className: "field-error", textContent: "Name and category are required." }));
-        return;
-      }
-      const { lat, lng, googleMapsUrl } = locationPicker.getLocation();
-      setPending(submitBtn, true, "Adding…");
-      try {
-        await addPlace(
-          tripId,
-          {
-            name,
-            destinationId: trip.destinationId,
-            category,
-            neighborhood: neighborhoodInput.value.trim(),
-            note: noteInput.value.trim(),
-            link: linkInput.value.trim() || null,
-            eventStart: eventStartInput.value || null,
-            eventEnd: eventEndInput.value || null,
-            lat,
-            lng,
-            googleMapsUrl,
-          },
-          myUid
-        );
-        nameInput.value = "";
-        categorySelect.value = "";
-        neighborhoodInput.value = "";
-        noteInput.value = "";
-        linkInput.value = "";
-        eventStartInput.value = "";
-        eventEndInput.value = "";
-        locationPicker.reset();
-        addPanelHolder.hidden = true;
-        addPanelToggle.setAttribute("aria-expanded", "false");
-      } catch (err) {
-        errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
-      } finally {
-        setPending(submitBtn, false);
-      }
-    });
-
-    addPanelHolder.replaceChildren(
-      el("div", { className: "add-place-panel card" }, [
-        field("Name", nameInput),
-        field("Category", categorySelect),
-        field("Neighborhood", neighborhoodInput),
-        field("Note", noteInput),
-        field("Link", linkInput),
-        el("div", { className: "field-row" }, [field("Event start", eventStartInput), field("Event end", eventEndInput)]),
-        el("h4", { textContent: "Location (optional)" }),
-        locationPicker.element,
-        errorHolder,
-        submitBtn,
-      ])
-    );
-  }
-
   const unsubTrip = watchTrip(
     tripId,
     (t) => {
       trip = t;
       if (trip && !addPanelBuilt) {
         addPanelBuilt = true;
-        buildAddPlacePanel();
+        buildAddPlacePanel({
+          trip,
+          tripId,
+          myUid,
+          mapClickState,
+          addPanelHolder,
+          onAdded: () => {
+            addPanelHolder.hidden = true;
+            addPanelToggle.setAttribute("aria-expanded", "false");
+          },
+        });
       }
       if (trip) renderList();
     },
-    (err) => loadErrorEl.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }))
+    (err) => onError(friendlyError(err))
   );
   const unsubUsers = watchUsers(
     (u) => {
