@@ -871,7 +871,7 @@ textarea:focus {
 .add-place-panel {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .location-picker {
@@ -881,6 +881,19 @@ textarea:focus {
   padding: var(--space-3);
   background: var(--surface-muted);
   border-radius: var(--radius);
+}
+
+/* Step labels (§7.6) read as a small heading, not a full section break —
+   the surrounding gap already spaces them from what's above and below. */
+.location-picker h4,
+.add-place-panel h4 {
+  margin-bottom: 0;
+}
+
+.location-pin-found {
+  margin: 0;
+  color: var(--success);
+  font-weight: 500;
 }
 
 .location-method {

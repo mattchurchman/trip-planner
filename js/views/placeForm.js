@@ -1,24 +1,36 @@
 import { addPlace, updatePlace } from "../store.js";
 import { el, setPending, friendlyError, field, dialogShell } from "../ui.js";
-import { safeUrl } from "../lib/links.js";
+import { safeUrl, googleMapsFindUrl } from "../lib/links.js";
 import { parseGoogleMapsUrl } from "../lib/mapsurl.js";
 import { nominatimSearch } from "../lookup.js";
 import { CATEGORIES } from "./places.js";
 
 /**
- * The three location-entry methods from §7.6: paste a Google Maps link, search
- * (Nominatim, scoped to the destination), or place on map. `mapClickState` is a
- * shared mutable flag/callback the page's Leaflet map click handler reads.
- * `onChange({lat, lng, googleMapsUrl, suggestedName?})` fires whenever a location is picked or cleared.
+ * The three location-entry methods from §7.6: find it on Google Maps then
+ * paste the link (Steps 1–2), search (Nominatim, scoped to the destination),
+ * or place on map — the latter two live under "Other ways to add a location".
+ * `mapClickState` is a shared mutable flag/callback the page's Leaflet map
+ * click handler reads. `onChange({lat, lng, googleMapsUrl, suggestedName?})`
+ * fires whenever a location is picked or cleared.
+ *
+ * Returns `{ primaryElement, otherWaysElement, getLocation, reset }` rather
+ * than one element so a caller with its own Step 3 in between (the Add place
+ * form) can put it there, per §7.6's order: Step 1, Step 2, Step 3, then
+ * "Other ways to add a location". Pass `stepLabels: true` for that add-form
+ * context to show the numbered step headings; the inline Set/Edit location
+ * panel (no Step 3 of its own) omits them but reuses the same Find button,
+ * seeded with `findText` — the place's current name (§7.6).
  */
-export function buildLocationPicker({ trip, mapClickState, onChange }) {
+export function buildLocationPicker({ trip, mapClickState, onChange, findText = "", onFindTextChange, stepLabels = false }) {
   let lat = null;
   let lng = null;
   let googleMapsUrl = null;
   let placingArmed = false;
+  const dest = trip && trip.destination;
 
   const statusEl = el("p", { className: "muted location-status" });
   const errorEl = el("div", { className: "field-error-holder" });
+  const pinFoundEl = el("p", { className: "location-pin-found", hidden: true });
 
   function updateStatus() {
     statusEl.textContent = lat != null && lng != null ? `Location set: ${lat.toFixed(5)}, ${lng.toFixed(5)}` : "No location set yet.";
@@ -33,17 +45,40 @@ export function buildLocationPicker({ trip, mapClickState, onChange }) {
     onChange({ lat, lng, googleMapsUrl, suggestedName });
   }
 
+  // Step 1 · Find it on Google Maps (§7.6, §9.2).
+  const findQueryInput = el("input", {
+    type: "text",
+    value: findText,
+    placeholder: "What are you looking for?",
+    attrs: { "aria-label": "What are you looking for?" },
+  });
+  const findLink = el("a", {
+    className: "btn btn-small",
+    href: googleMapsFindUrl(findText, dest && dest.city, dest && dest.country),
+    target: "_blank",
+    rel: "noopener noreferrer",
+    textContent: "Find on Google Maps",
+  });
+  findQueryInput.addEventListener("input", () => {
+    findLink.href = googleMapsFindUrl(findQueryInput.value, dest && dest.city, dest && dest.country);
+    if (onFindTextChange) onFindTextChange(findQueryInput.value);
+  });
+
+  // Step 2 · Paste the Google Maps link (§7.6, §9.3).
   const linkInput = el("input", { type: "text", placeholder: "Paste a Google Maps link", attrs: { "aria-label": "Google Maps link" } });
   const useLinkBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Use this link" });
   function tryParseLink() {
     if (!linkInput.value.trim()) return;
     errorEl.replaceChildren();
+    pinFoundEl.hidden = true;
     const result = parseGoogleMapsUrl(linkInput.value);
     if (result.error) {
       errorEl.replaceChildren(el("p", { className: "field-error", textContent: result.error }));
       return;
     }
     setLocation(result.lat, result.lng, safeUrl(linkInput.value), result.name);
+    pinFoundEl.textContent = result.name ? `✓ Pin found: ${result.name}` : "✓ Pin found";
+    pinFoundEl.hidden = false;
   }
   useLinkBtn.addEventListener("click", tryParseLink);
   // Auto-parse as soon as a link is pasted (§7.6) — a paste event fires before the
@@ -59,7 +94,6 @@ export function buildLocationPicker({ trip, mapClickState, onChange }) {
     resultsEl.replaceChildren();
     const query = searchInput.value.trim();
     if (!query) return;
-    const dest = trip.destination;
     const fullQuery = dest ? `${query}, ${dest.city}, ${dest.country}` : query;
     setPending(searchBtn, true, "Searching…");
     try {
@@ -134,15 +168,31 @@ export function buildLocationPicker({ trip, mapClickState, onChange }) {
     otherWaysToggle.setAttribute("aria-expanded", otherWaysHolder.hidden ? "false" : "true");
   });
 
-  const elRoot = el("div", { className: "location-picker" }, [
+  const primaryElement = el("div", { className: "location-picker" }, [
+    stepLabels ? el("h4", { textContent: "Step 1 · Find it on Google Maps" }) : null,
+    el("div", { className: "location-method" }, [findQueryInput, findLink]),
+    el("p", { className: "muted", textContent: "Find the place, copy the address from your browser's address bar, then paste it below." }),
+    stepLabels ? el("h4", { textContent: "Step 2 · Paste the Google Maps link" }) : null,
     el("div", { className: "location-method location-method-primary" }, [linkInput, useLinkBtn]),
+    pinFoundEl,
     el("div", { className: "location-status-row" }, [statusEl, clearBtn]),
     errorEl,
-    otherWaysToggle,
-    otherWaysHolder,
-  ]);
+  ].filter(Boolean));
 
-  return { element: elRoot, getLocation: () => ({ lat, lng, googleMapsUrl }), reset: () => setLocation(null, null, null, null) };
+  const otherWaysElement = el("div", {}, [otherWaysToggle, otherWaysHolder]);
+
+  return {
+    primaryElement,
+    otherWaysElement,
+    getLocation: () => ({ lat, lng, googleMapsUrl }),
+    reset: () => {
+      setLocation(null, null, null, null);
+      findQueryInput.value = "";
+      findLink.href = googleMapsFindUrl("", dest && dest.city, dest && dest.country);
+      pinFoundEl.hidden = true;
+      errorEl.replaceChildren();
+    },
+  };
 }
 
 export function editPlaceDialog(place) {
@@ -195,7 +245,8 @@ export function editPlaceDialog(place) {
 }
 
 /** The inline location editor on a place row (§7.6): a toggle button that reveals
- * a location picker pre-armed to update that place. */
+ * a location picker pre-armed to update that place, its Find button prefilled
+ * with the place's own name. */
 export function buildSetLocationInline({ place, trip, tripId, mapClickState, onError }) {
   const hasLocation = place.lat != null && place.lng != null;
   const toggleBtn = el("button", { type: "button", className: "btn btn-small", textContent: hasLocation ? "Edit location" : "Set location" });
@@ -206,6 +257,7 @@ export function buildSetLocationInline({ place, trip, tripId, mapClickState, onE
       const picker = buildLocationPicker({
         trip,
         mapClickState,
+        findText: place.name,
         onChange: async (payload) => {
           // A null location here is the explicit "Clear location" press — the
           // picker never fires onChange on its own — so removing a wrong pin works.
@@ -222,15 +274,16 @@ export function buildSetLocationInline({ place, trip, tripId, mapClickState, onE
           }
         },
       });
-      holder.appendChild(picker.element);
+      holder.append(picker.primaryElement, picker.otherWaysElement);
     }
   });
   return el("div", { className: "set-location-wrap" }, [toggleBtn, holder]);
 }
 
-/** The "Add place" form (§7.6), including its own location picker. Renders into
- * `addPanelHolder` and calls `onAdded()` after a successful add so the caller can
- * collapse the panel. */
+/** The "Add place" form (§7.6): Step 1 (find it on Google Maps), Step 2 (paste
+ * the link), Step 3 (details), then "Other ways to add a location". Renders
+ * into `addPanelHolder` and calls `onAdded()` after a successful add so the
+ * caller can collapse the panel. */
 export function buildAddPlacePanel({ trip, tripId, myUid, mapClickState, addPanelHolder, onAdded }) {
   const nameInput = el("input", { type: "text" });
   const categorySelect = el("select", {}, [
@@ -245,11 +298,29 @@ export function buildAddPlacePanel({ trip, tripId, myUid, mapClickState, addPane
   const errorHolder = el("div", { className: "field-error-holder" });
   const submitBtn = el("button", { type: "button", className: "btn btn-primary", textContent: "Add place" });
 
+  // Name stays synced to Step 1's search box as the user types (§7.6) until
+  // either they edit Name themselves, or Step 2 parses a real place name off
+  // a pasted link — either way that's a deliberate value, not to be clobbered
+  // by further typing in Step 1. Checking "is Name empty" alone would only
+  // ever copy the first keystroke, since the field stops being empty after that.
+  let nameAutoFilled = true;
+  nameInput.addEventListener("input", () => {
+    nameAutoFilled = false;
+  });
+
   const locationPicker = buildLocationPicker({
     trip,
     mapClickState,
+    stepLabels: true,
     onChange: (payload) => {
-      if (payload.suggestedName && !nameInput.value.trim()) nameInput.value = payload.suggestedName;
+      if (payload.suggestedName && nameAutoFilled) {
+        nameInput.value = payload.suggestedName;
+        nameAutoFilled = false;
+      }
+    },
+    // Step 1's search text doubles as a name suggestion once Step 3 comes into view (§7.6).
+    onFindTextChange: (text) => {
+      if (nameAutoFilled) nameInput.value = text;
     },
   });
 
@@ -288,6 +359,7 @@ export function buildAddPlacePanel({ trip, tripId, myUid, mapClickState, addPane
       linkInput.value = "";
       eventStartInput.value = "";
       eventEndInput.value = "";
+      nameAutoFilled = true;
       locationPicker.reset();
       onAdded();
     } catch (err) {
@@ -299,14 +371,15 @@ export function buildAddPlacePanel({ trip, tripId, myUid, mapClickState, addPane
 
   addPanelHolder.replaceChildren(
     el("div", { className: "add-place-panel card" }, [
+      locationPicker.primaryElement,
+      el("h4", { textContent: "Step 3 · Details" }),
       field("Name", nameInput),
       field("Category", categorySelect),
       field("Neighborhood", neighborhoodInput),
       field("Note", noteInput),
       field("Link", linkInput),
       el("div", { className: "field-row" }, [field("Event start", eventStartInput), field("Event end", eventEndInput)]),
-      el("h4", { textContent: "Location (optional)" }),
-      locationPicker.element,
+      locationPicker.otherWaysElement,
       errorHolder,
       submitBtn,
     ])

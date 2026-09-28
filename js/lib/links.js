@@ -57,6 +57,19 @@ export function googleMapsOpenUrl(name, city) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name}, ${city}`)}`;
 }
 
+/**
+ * Step 1 of Add place (§7.6, §9.2): search Google Maps for what the user typed,
+ * scoped to the destination. Joins the non-empty parts of text/city/country
+ * with ", " — with no text, this searches the destination itself.
+ */
+export function googleMapsFindUrl(text, city, country) {
+  const query = [text, city, country]
+    .map((part) => (part || "").trim())
+    .filter(Boolean)
+    .join(", ");
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}
+
 function coordString(loc) {
   return `${loc.lat},${loc.lng}`;
 }

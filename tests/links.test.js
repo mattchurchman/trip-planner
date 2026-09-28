@@ -8,6 +8,7 @@ import {
   airbnbUrl,
   googleSearchUrl,
   googleMapsOpenUrl,
+  googleMapsFindUrl,
   walkingRouteLinks,
 } from "../js/lib/links.js";
 
@@ -94,6 +95,27 @@ export const tests = [
     assert.equal(
       googleMapsOpenUrl("Time Out Market", "Lisbon"),
       "https://www.google.com/maps/search/?api=1&query=Time%20Out%20Market%2C%20Lisbon"
+    );
+  }],
+  ["googleMapsFindUrl joins text, city and country", () => {
+    assert.equal(
+      googleMapsFindUrl("tacos", "Lisbon", "Portugal"),
+      "https://www.google.com/maps/search/?api=1&query=tacos%2C%20Lisbon%2C%20Portugal"
+    );
+  }],
+  ["googleMapsFindUrl with no text searches just the destination", () => {
+    assert.equal(
+      googleMapsFindUrl("", "Lisbon", "Portugal"),
+      "https://www.google.com/maps/search/?api=1&query=Lisbon%2C%20Portugal"
+    );
+  }],
+  ["googleMapsFindUrl with no country has no trailing comma", () => {
+    assert.equal(googleMapsFindUrl("tacos", "Lisbon", ""), "https://www.google.com/maps/search/?api=1&query=tacos%2C%20Lisbon");
+  }],
+  ["googleMapsFindUrl encodes special characters", () => {
+    assert.equal(
+      googleMapsFindUrl("café & bar", "São Paulo", "Brazil"),
+      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent("café & bar, São Paulo, Brazil")}`
     );
   }],
   ["walkingRouteLinks with 2 places: single link, no waypoints", () => {
