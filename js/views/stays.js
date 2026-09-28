@@ -2,7 +2,7 @@ import { addStay, updateStay, deleteStay, voteOnStay, chooseStay, clearSelectedS
 import { el, confirmDialog, friendlyError, rankControl, field, dialogShell, renderWhenIdle } from "../ui.js";
 import { renderComments } from "./comments.js";
 import { sortByRank } from "../lib/votes.js";
-import { formatMoney } from "../lib/money.js";
+import { formatMoney, parseMoney } from "../lib/money.js";
 import { nightsBetween, nightsLabel } from "../lib/dates.js";
 import { latestEntry, perNightCents } from "../lib/totals.js";
 import { safeUrl, googleHotelsUrl, bookingUrl, airbnbUrl } from "../lib/links.js";
@@ -18,65 +18,259 @@ const PROVIDERS = [
   { value: "other", label: "Other" },
 ];
 
+// A provider link that never carries the listing's name (§7.7, §9.6) — named so
+// Step 2's result message can tell the traveler why they still need to type it.
+const NO_NAME_NOTE = {
+  airbnb: "Airbnb links don't include the listing name — type it below.",
+};
+
 function externalLinkRow(url, label) {
   return el("a", { className: "discover-link", href: url, target: "_blank", rel: "noopener noreferrer", textContent: label });
 }
 
-function stayFormDialog(existing, trip) {
-  return dialogShell("stay-dialog", (finish) => {
-    let stayLat = existing?.lat ?? null;
-    let stayLng = existing?.lng ?? null;
+/** The "Other ways to add a location" disclosure (§7.6 style, §7.7 Do #5):
+ * a Google Maps link, the only location method a stay has today. Shared shape
+ * between the add and edit dialogs, each with its own lat/lng state. */
+function buildLocationDisclosure({ getLat, getLng, setLocation, nameInput }) {
+  const mapsLinkInput = el("input", { type: "text", placeholder: "Paste a Google Maps link", attrs: { "aria-label": "Google Maps link for this stay" } });
+  const locationStatus = el("p", { className: "muted" });
+  const locationError = el("div", { className: "field-error-holder" });
 
-    const nameInput = el("input", { type: "text", value: existing?.name || "" });
-    const providerSelect = el(
-      "select",
-      {},
-      PROVIDERS.map((p) => el("option", { value: p.value, textContent: p.label, selected: p.value === (existing?.provider || "other") }))
-    );
-    const linkInput = el("input", { type: "text", value: existing?.link || "" });
-    const neighborhoodInput = el("input", { type: "text", value: existing?.neighborhood || "" });
-    const checkInInput = el("input", { type: "date", value: existing?.checkIn ?? trip.startDate ?? "" });
-    const checkOutInput = el("input", { type: "date", value: existing?.checkOut ?? trip.endDate ?? "" });
-    const guestsInput = el("input", { type: "number", min: "1", value: existing?.guests ?? ((trip.travelers || []).length || 1) });
-    const noteInput = el("textarea", { rows: 2, value: existing?.note || "" });
-    const mapsLinkInput = el("input", { type: "text", placeholder: "Paste a Google Maps link (optional)", attrs: { "aria-label": "Google Maps link for this stay" } });
-    const locationStatus = el("p", { className: "muted" });
-    const errorHolder = el("div", { className: "field-error-holder" });
-    const cancelBtn = el("button", { type: "button", className: "btn btn-secondary", textContent: "Cancel" });
-    const okBtn = el("button", { type: "submit", className: "btn btn-primary", textContent: existing ? "Save" : "Add" });
+  function updateStatus() {
+    const lat = getLat();
+    const lng = getLng();
+    locationStatus.textContent = lat != null ? `Location set: ${lat.toFixed(5)}, ${lng.toFixed(5)}` : "No location set.";
+  }
+  updateStatus();
 
-    function updateLocationStatus() {
-      locationStatus.textContent = stayLat != null ? `Location set: ${stayLat.toFixed(5)}, ${stayLng.toFixed(5)}` : "No location set.";
+  function tryParseLink() {
+    if (!mapsLinkInput.value.trim()) return;
+    locationError.replaceChildren();
+    const result = parseGoogleMapsUrl(mapsLinkInput.value);
+    if (result.error) {
+      locationError.replaceChildren(el("p", { className: "field-error", textContent: result.error }));
+      return;
     }
-    updateLocationStatus();
+    setLocation(result.lat, result.lng);
+    updateStatus();
+    if (result.name && !nameInput.value.trim()) nameInput.value = result.name;
+  }
+  mapsLinkInput.addEventListener("paste", () => setTimeout(tryParseLink, 0));
+  const useLinkBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Use this link" });
+  useLinkBtn.addEventListener("click", tryParseLink);
+
+  const toggle = el("button", { type: "button", className: "btn btn-link", textContent: "Other ways to add a location", attrs: { "aria-expanded": "false" } });
+  const holder = el("div", { className: "other-location-methods", hidden: true }, [
+    field("Location", el("div", { className: "location-method" }, [mapsLinkInput, useLinkBtn])),
+    locationStatus,
+    locationError,
+  ]);
+  toggle.addEventListener("click", () => {
+    holder.hidden = !holder.hidden;
+    toggle.setAttribute("aria-expanded", holder.hidden ? "false" : "true");
+  });
+
+  return el("div", {}, [toggle, holder]);
+}
+
+/**
+ * Add stay, link first (§7.7): Step 1 search Booking.com/Airbnb/Google Hotels,
+ * Step 2 paste the stay's link (parsed on paste/input, §9.6), Step 3 pre-filled
+ * details plus an optional "Price you saw". The stay's own map location moves
+ * under "Other ways to add a location" (Do #5). Resolves the new stay's fields
+ * plus `priceAmountCents`, or `null` on cancel.
+ */
+function addStayFormDialog(trip) {
+  return dialogShell("stay-dialog", (finish) => {
+    let stayLat = null;
+    let stayLng = null;
+    const dest = trip.destination;
+    const adults = (trip.travelers || []).length || 1;
+
+    const searchLinks = el("div", { className: "traveler-flights-actions" }, [
+      el("a", { className: "btn btn-small", href: googleHotelsUrl(dest ? dest.city : ""), target: "_blank", rel: "noopener noreferrer", textContent: "Search Google Hotels" }),
+      el("a", {
+        className: "btn btn-small",
+        href: bookingUrl({ city: dest ? dest.city : "", checkIn: trip.startDate, checkOut: trip.endDate, adults }),
+        target: "_blank",
+        rel: "noopener noreferrer",
+        textContent: "Search Booking.com",
+      }),
+      el("a", {
+        className: "btn btn-small",
+        href: airbnbUrl({ city: dest ? dest.city : "", checkIn: trip.startDate, checkOut: trip.endDate, adults }),
+        target: "_blank",
+        rel: "noopener noreferrer",
+        textContent: "Search Airbnb",
+      }),
+    ]);
+
+    const linkInput = el("input", { type: "text", placeholder: "Paste the stay's link", attrs: { "aria-label": "Stay link" } });
+    const parseResultEl = el("p", { className: "link-parse-result", hidden: true });
+
+    const nameInput = el("input", { type: "text" });
+    const providerSelect = el("select", {}, PROVIDERS.map((p) => el("option", { value: p.value, textContent: p.label, selected: p.value === "other" })));
+    const neighborhoodInput = el("input", { type: "text" });
+    const checkInInput = el("input", { type: "date", value: trip.startDate || "" });
+    const checkOutInput = el("input", { type: "date", value: trip.endDate || "" });
+    const guestsInput = el("input", { type: "number", min: "1", value: adults });
+    const noteInput = el("textarea", { rows: 2 });
+    const priceInput = el("input", { type: "text", placeholder: "e.g. 480.50" });
+
+    const defaults = {
+      provider: providerSelect.value,
+      checkIn: checkInInput.value,
+      checkOut: checkOutInput.value,
+      guests: guestsInput.value,
+    };
+    function fillIfDefault(input, key, value) {
+      if (!value) return false;
+      if (input.value === "" || input.value === defaults[key]) {
+        input.value = String(value);
+        return true;
+      }
+      return false;
+    }
+
     function tryParseLink() {
-      if (!mapsLinkInput.value.trim()) return;
-      errorHolder.replaceChildren();
-      const result = parseGoogleMapsUrl(mapsLinkInput.value);
-      if (result.error) {
-        errorHolder.replaceChildren(el("p", { className: "field-error", textContent: result.error }));
+      if (!linkInput.value.trim()) return;
+      const parsed = parseStayLink(linkInput.value);
+      if (!parsed.provider) {
+        parseResultEl.className = "link-parse-result";
+        parseResultEl.textContent = "Couldn't read this link — fill in the details below.";
+        parseResultEl.hidden = false;
         return;
       }
-      stayLat = result.lat;
-      stayLng = result.lng;
-      updateLocationStatus();
-      if (result.name && !nameInput.value.trim()) nameInput.value = result.name;
-    }
-    mapsLinkInput.addEventListener("paste", () => setTimeout(tryParseLink, 0));
-    const useLinkBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Use this link" });
-    useLinkBtn.addEventListener("click", tryParseLink);
+      const filledProvider = fillIfDefault(providerSelect, "provider", parsed.provider);
+      let filledName = false;
+      if (parsed.name && !nameInput.value.trim()) {
+        nameInput.value = parsed.name;
+        filledName = true;
+      }
+      const filledCheckIn = fillIfDefault(checkInInput, "checkIn", parsed.checkIn);
+      const filledCheckOut = fillIfDefault(checkOutInput, "checkOut", parsed.checkOut);
+      const filledGuests = fillIfDefault(guestsInput, "guests", parsed.guests);
 
-    // Auto-fill whatever a pasted Booking.com/Airbnb/Google Hotels link reveals;
-    // anything it can't determine is left for the user to fill in by hand.
-    function tryParseStayLink() {
-      const parsed = parseStayLink(linkInput.value);
-      if (parsed.provider) providerSelect.value = parsed.provider;
-      if (parsed.name && !nameInput.value.trim()) nameInput.value = parsed.name;
-      if (parsed.checkIn) checkInInput.value = parsed.checkIn;
-      if (parsed.checkOut) checkOutInput.value = parsed.checkOut;
-      if (parsed.guests) guestsInput.value = parsed.guests;
+      const filledParts = [];
+      if (filledProvider) filledParts.push("provider");
+      if (filledName) filledParts.push("name");
+      if (filledCheckIn || filledCheckOut) filledParts.push("dates");
+      if (filledGuests) filledParts.push("guests");
+
+      const sentences = [];
+      if (filledParts.length > 0) sentences.push(`✓ Filled in: ${filledParts.join(", ")}.`);
+      if (!parsed.name && NO_NAME_NOTE[parsed.provider]) sentences.push(NO_NAME_NOTE[parsed.provider]);
+      const success = filledParts.length > 0;
+      if (sentences.length === 0) sentences.push("Couldn't read this link — fill in the details below.");
+
+      parseResultEl.className = success ? "link-parse-result link-parse-success" : "link-parse-result";
+      parseResultEl.textContent = sentences.join(" ");
+      parseResultEl.hidden = false;
     }
-    linkInput.addEventListener("paste", () => setTimeout(tryParseStayLink, 0));
+    linkInput.addEventListener("paste", () => setTimeout(tryParseLink, 0));
+    linkInput.addEventListener("input", tryParseLink);
+
+    const locationDisclosure = buildLocationDisclosure({
+      getLat: () => stayLat,
+      getLng: () => stayLng,
+      setLocation: (lat, lng) => {
+        stayLat = lat;
+        stayLng = lng;
+      },
+      nameInput,
+    });
+
+    const errorHolder = el("div", { className: "field-error-holder" });
+    const cancelBtn = el("button", { type: "button", className: "btn btn-secondary", textContent: "Cancel" });
+    const okBtn = el("button", { type: "submit", className: "btn btn-primary", textContent: "Add" });
+
+    const form = el("form", { method: "dialog", className: "stay-form" }, [
+      el("h4", { textContent: "Step 1 · Find a place to stay" }),
+      searchLinks,
+
+      el("h4", { textContent: "Step 2 · Paste the stay's link" }),
+      linkInput,
+      parseResultEl,
+
+      el("h4", { textContent: "Step 3 · Details" }),
+      field("Name", nameInput),
+      field("Provider", providerSelect),
+      field("Neighborhood", neighborhoodInput),
+      el("div", { className: "field-row" }, [field("Check-in", checkInInput), field("Check-out", checkOutInput)]),
+      field("Guests", guestsInput),
+      field("Note", noteInput),
+      field("Price you saw (total for the stay)", priceInput),
+      locationDisclosure,
+      errorHolder,
+      el("div", { className: "dialog-actions" }, [cancelBtn, okBtn]),
+    ]);
+    cancelBtn.addEventListener("click", () => finish(null));
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      errorHolder.replaceChildren();
+      const name = nameInput.value.trim();
+      if (!name) {
+        errorHolder.replaceChildren(el("p", { className: "field-error", textContent: "Name is required." }));
+        return;
+      }
+      if (checkInInput.value && checkOutInput.value && checkOutInput.value <= checkInInput.value) {
+        errorHolder.replaceChildren(el("p", { className: "field-error", textContent: "Check-out must be after check-in." }));
+        return;
+      }
+      let priceAmountCents = null;
+      if (priceInput.value.trim()) {
+        priceAmountCents = parseMoney(priceInput.value);
+        if (priceAmountCents === null || priceAmountCents <= 0) {
+          errorHolder.replaceChildren(el("p", { className: "field-error", textContent: "Enter a valid amount greater than $0." }));
+          return;
+        }
+      }
+      finish({
+        name,
+        provider: providerSelect.value,
+        link: linkInput.value.trim() || null,
+        neighborhood: neighborhoodInput.value.trim(),
+        checkIn: checkInInput.value || null,
+        checkOut: checkOutInput.value || null,
+        guests: Math.max(1, parseInt(guestsInput.value, 10) || 1),
+        note: noteInput.value.trim(),
+        lat: stayLat,
+        lng: stayLng,
+        priceAmountCents,
+      });
+    });
+    return { form, focusEl: linkInput };
+  });
+}
+
+/** Edit an existing stay: the plain details form, unchanged by this task except
+ * that its map location now sits under "Other ways to add a location" (Do #5). */
+function editStayFormDialog(stay, trip) {
+  return dialogShell("stay-dialog", (finish) => {
+    let stayLat = stay.lat ?? null;
+    let stayLng = stay.lng ?? null;
+
+    const nameInput = el("input", { type: "text", value: stay.name || "" });
+    const providerSelect = el("select", {}, PROVIDERS.map((p) => el("option", { value: p.value, textContent: p.label, selected: p.value === (stay.provider || "other") })));
+    const linkInput = el("input", { type: "text", value: stay.link || "" });
+    const neighborhoodInput = el("input", { type: "text", value: stay.neighborhood || "" });
+    const checkInInput = el("input", { type: "date", value: stay.checkIn ?? trip.startDate ?? "" });
+    const checkOutInput = el("input", { type: "date", value: stay.checkOut ?? trip.endDate ?? "" });
+    const guestsInput = el("input", { type: "number", min: "1", value: stay.guests ?? ((trip.travelers || []).length || 1) });
+    const noteInput = el("textarea", { rows: 2, value: stay.note || "" });
+    const errorHolder = el("div", { className: "field-error-holder" });
+    const cancelBtn = el("button", { type: "button", className: "btn btn-secondary", textContent: "Cancel" });
+    const okBtn = el("button", { type: "submit", className: "btn btn-primary", textContent: "Save" });
+
+    const locationDisclosure = buildLocationDisclosure({
+      getLat: () => stayLat,
+      getLng: () => stayLng,
+      setLocation: (lat, lng) => {
+        stayLat = lat;
+        stayLng = lng;
+      },
+      nameInput,
+    });
 
     const form = el("form", { method: "dialog", className: "stay-form" }, [
       field("Name", nameInput),
@@ -86,8 +280,7 @@ function stayFormDialog(existing, trip) {
       el("div", { className: "field-row" }, [field("Check-in", checkInInput), field("Check-out", checkOutInput)]),
       field("Guests", guestsInput),
       field("Note", noteInput),
-      field("Location", el("div", { className: "location-method" }, [mapsLinkInput, useLinkBtn])),
-      locationStatus,
+      locationDisclosure,
       errorHolder,
       el("div", { className: "dialog-actions" }, [cancelBtn, okBtn]),
     ]);
@@ -137,17 +330,21 @@ export function createStaysSection({ tripId, myUid, onError }) {
 
   addStayBtn.addEventListener("click", async () => {
     if (currentStays.length >= 10) return;
-    const result = await stayFormDialog(null, currentTrip);
+    const result = await addStayFormDialog(currentTrip);
     if (!result) return;
+    const { priceAmountCents, ...fields } = result;
+    const firstPriceEntry = priceAmountCents
+      ? { id: crypto.randomUUID(), amountCents: priceAmountCents, checkedAt: new Date().toISOString(), byUid: myUid, note: "" }
+      : undefined;
     try {
-      await addStay(tripId, result, myUid);
+      await addStay(tripId, { ...fields, firstPriceEntry }, myUid);
     } catch (err) {
       onError(friendlyError(err));
     }
   });
 
   async function openEditStayDialog(stay, trip) {
-    const result = await stayFormDialog(stay, trip);
+    const result = await editStayFormDialog(stay, trip);
     if (!result) return;
     try {
       await updateStay(tripId, stay.id, result);

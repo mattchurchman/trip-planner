@@ -319,7 +319,9 @@ export function addFlight(tripId, fields, uid) {
       returnDetails: fields.returnDetails || "",
       link: fields.link || null,
       notes: fields.notes || "",
-      prices: [],
+      // Optional "Price you saw" from the add form (§7.7), already a full PriceEntry
+      // built by the caller (same shape as pricePanel.js's Log price).
+      prices: fields.firstPriceEntry ? [fields.firstPriceEntry] : [],
     },
     uid
   );
@@ -361,7 +363,9 @@ export function addStay(tripId, fields, uid) {
       checkOut: fields.checkOut || null,
       guests: fields.guests || 1,
       note: fields.note || "",
-      prices: [],
+      // Optional "Price you saw" from the add form (§7.7), already a full PriceEntry
+      // built by the caller (same shape as pricePanel.js's Log price).
+      prices: fields.firstPriceEntry ? [fields.firstPriceEntry] : [],
       votes: {},
     },
     uid

@@ -32,14 +32,20 @@ export const tests = [
     assert.equal(result.checkIn, null);
     assert.equal(result.guests, null);
   }],
-  ["parseStayLink: Google Hotels URL detects the provider only", () => {
+  ["parseStayLink: Google Hotels URL with no q param detects the provider only", () => {
     const result = parseStayLink("https://www.google.com/travel/hotels/entity/abc123");
     assert.equal(result.provider, "google_hotels");
     assert.equal(result.name, null);
   }],
-  ["parseStayLink: unrecognized host returns provider null so the caller keeps the current choice", () => {
+  ["parseStayLink: Google Hotels URL reads the name from q when present", () => {
+    const result = parseStayLink("https://www.google.com/travel/hotels/entity/abc123?q=Casa+Alfama");
+    assert.equal(result.provider, "google_hotels");
+    assert.equal(result.name, "Casa Alfama");
+  }],
+  ["parseStayLink: any other valid link is provider 'other'", () => {
     const result = parseStayLink("https://www.marriott.com/hotels/travel/lisbon");
-    assert.equal(result.provider, null);
+    assert.equal(result.provider, "other");
+    assert.equal(result.name, null);
   }],
   ["parseStayLink: malformed date query params are ignored", () => {
     const result = parseStayLink("https://www.booking.com/hotel/pt/casa-alfama.html?checkin=not-a-date");

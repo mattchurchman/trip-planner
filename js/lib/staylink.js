@@ -52,6 +52,9 @@ export function parseStayLink(text) {
     if (adults > 0) result.guests = adults;
   } else if (hostname.endsWith("google.com") && url.pathname.includes("/travel/hotels")) {
     result.provider = "google_hotels";
+    result.name = firstParam(url, ["q"]);
+  } else {
+    result.provider = "other";
   }
 
   return result;

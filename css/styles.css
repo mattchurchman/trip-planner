@@ -1130,6 +1130,23 @@ textarea:focus {
   flex-wrap: wrap;
 }
 
+/* Step labels in the Add flight option / Add stay dialogs (§7.7) read as a
+   small heading — the form's own field spacing already separates them. */
+.flight-form h4,
+.stay-form h4 {
+  margin-bottom: 0;
+}
+
+.link-parse-result {
+  margin: 4px 0 var(--space-2);
+  color: var(--muted);
+  font-size: 0.9em;
+}
+
+.link-parse-result.link-parse-success {
+  color: var(--success);
+}
+
 .flight-card,
 .stay-card {
   display: flex;
