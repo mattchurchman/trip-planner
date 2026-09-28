@@ -1,9 +1,12 @@
 // Pure: read coordinates and names from Google Maps URLs. See SPEC.md §9.3.
 import { safeUrl } from "./links.js";
 
+// Only google.com / maps.google.com and real country domains (google.de, google.co.uk,
+// google.com.au). The suffix shape is pinned deliberately: a loose "anything after
+// google." also matches an attacker's google.evil.com, whose coordinates and link would
+// then be saved onto a place and shown to the group as "Open in Google Maps" (§9.3).
 function isGoogleHost(hostname) {
-  if (hostname === "google.com" || hostname === "www.google.com" || hostname === "maps.google.com") return true;
-  return /^(www\.)?google\.[a-z.]+$/.test(hostname);
+  return /^(www\.|maps\.)?google\.([a-z]{2}|com|co\.[a-z]{2}|com\.[a-z]{2})$/.test(hostname);
 }
 
 function extractName(url) {

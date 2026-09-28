@@ -21,7 +21,7 @@ import {
   logPriceEntry,
   deletePriceEntry,
 } from "../store.js";
-import { el, svgEl, setPending, confirmDialog, friendlyError, rankControl, field, dialogShell } from "../ui.js";
+import { el, svgEl, setPending, confirmDialog, friendlyError, rankControl, field, dialogShell, renderWhenIdle } from "../ui.js";
 import { renderComments } from "./comments.js";
 import { sortByRank } from "../lib/votes.js";
 import { parseMoney, formatMoney } from "../lib/money.js";
@@ -88,8 +88,13 @@ function buildPricePanel({ tripId, subcollection, docId, prices, myUid, usersByI
     summaryParts.push(el("p", { className: "muted", textContent: "No price logged yet." }));
   }
 
-  const amountInput = el("input", { type: "text", placeholder: "Amount", value: latest ? (latest.amountCents / 100).toFixed(2) : "" });
-  const noteInput = el("input", { type: "text", placeholder: "Note (optional)" });
+  const amountInput = el("input", {
+    type: "text",
+    placeholder: "Amount",
+    value: latest ? (latest.amountCents / 100).toFixed(2) : "",
+    attrs: { "aria-label": "Price you checked" },
+  });
+  const noteInput = el("input", { type: "text", placeholder: "Note (optional)", attrs: { "aria-label": "Note about this price" } });
   const logBtn = el("button", { type: "button", className: "btn btn-small btn-primary", textContent: "Log price" });
   logBtn.addEventListener("click", async () => {
     errorHolder.replaceChildren();
@@ -110,10 +115,16 @@ function buildPricePanel({ tripId, subcollection, docId, prices, myUid, usersByI
     }
   });
 
-  const historyToggle = el("button", { type: "button", className: "btn btn-link", textContent: `History (${prices.length})` });
+  const historyToggle = el("button", {
+    type: "button",
+    className: "btn btn-link",
+    textContent: `History (${prices.length})`,
+    attrs: { "aria-expanded": "false" },
+  });
   const historyList = el("ul", { className: "price-history", hidden: true });
   historyToggle.addEventListener("click", () => {
     historyList.hidden = !historyList.hidden;
+    historyToggle.setAttribute("aria-expanded", historyList.hidden ? "false" : "true");
   });
   historyList.append(
     ...[...prices]
@@ -215,7 +226,7 @@ function stayFormDialog(existing, trip) {
     const checkOutInput = el("input", { type: "date", value: existing?.checkOut ?? trip.endDate ?? "" });
     const guestsInput = el("input", { type: "number", min: "1", value: existing?.guests ?? ((trip.travelers || []).length || 1) });
     const noteInput = el("textarea", { rows: 2, value: existing?.note || "" });
-    const mapsLinkInput = el("input", { type: "text", placeholder: "Paste a Google Maps link (optional)" });
+    const mapsLinkInput = el("input", { type: "text", placeholder: "Paste a Google Maps link (optional)", attrs: { "aria-label": "Google Maps link for this stay" } });
     const locationStatus = el("p", { className: "muted" });
     const errorHolder = el("div", { className: "field-error-holder" });
     const cancelBtn = el("button", { type: "button", className: "btn btn-secondary", textContent: "Cancel" });
@@ -676,10 +687,20 @@ export function renderTravelPage(container, tripId, myUid) {
     totalsCardEl.replaceChildren(...body);
   }
 
+  // Price amounts, notes and comment drafts live inside these cards, so each
+  // section waits until the user has stopped typing before rebuilding (§8).
+  function renderFlightsWhenIdle() {
+    renderWhenIdle(flightsSectionEl, renderFlightsSection);
+  }
+
+  function renderStaysWhenIdle() {
+    renderWhenIdle(staysListEl, renderStaysSection);
+  }
+
   function rerenderAll() {
     if (!trip) return;
-    renderFlightsSection();
-    renderStaysSection();
+    renderFlightsWhenIdle();
+    renderStaysWhenIdle();
     renderCostsSection();
     renderTotalsCard();
   }
@@ -704,7 +725,7 @@ export function renderTravelPage(container, tripId, myUid) {
     (f) => {
       flights = f;
       if (trip) {
-        renderFlightsSection();
+        renderFlightsWhenIdle();
         renderTotalsCard();
       }
     },
@@ -715,7 +736,7 @@ export function renderTravelPage(container, tripId, myUid) {
     (s) => {
       stays = s;
       if (trip) {
-        renderStaysSection();
+        renderStaysWhenIdle();
         renderTotalsCard();
       }
     },

@@ -9,9 +9,13 @@ import {
   deleteCandidate,
   voteOnCandidate,
   adoptUnassignedPlaces,
+  getTravelerFlights,
+  removeTraveler,
+  deleteFlight,
 } from "../store.js";
-import { el, setPending, confirmDialog, friendlyError, rankControl, copyLinkButton, field, dialogShell } from "../ui.js";
+import { el, setPending, confirmDialog, friendlyError, rankControl, copyLinkButton, field, dialogShell, renderWhenIdle } from "../ui.js";
 import { renderComments } from "./comments.js";
+import { pendingDestinationPin } from "./places.js";
 import { sortByRank } from "../lib/votes.js";
 import {
   safeUrl,
@@ -26,7 +30,13 @@ import {
 
 const STATUSES = ["exploring", "planning", "booked", "done"];
 
+let lastNominatimAt = 0;
+
 async function nominatimSearch(query) {
+  // Nominatim's usage policy allows at most one request per second (§9.4).
+  const wait = Math.max(0, 1000 - (Date.now() - lastNominatimAt));
+  if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+  lastNominatimAt = Date.now();
   const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(query)}`;
   const response = await fetch(url);
   if (!response.ok) throw new Error("Location search failed. Try again in a moment.");
@@ -77,16 +87,6 @@ function candidateFormDialog(existing) {
     });
     return { form, focusEl: cityInput };
   });
-}
-
-/** True only when the user is actively typing/selecting in a form control here —
- * not just when focus happens to be resting on a button inside the container
- * (e.g. right after a dialog it opened closes). Used to avoid wiping an
- * in-progress edit on a live update (§8) without also freezing the UI after
- * an action completes. */
-function isEditingInside(container) {
-  const active = document.activeElement;
-  return container.contains(active) && ["INPUT", "TEXTAREA", "SELECT"].includes(active.tagName);
 }
 
 function externalLinkRow(url, label) {
@@ -143,7 +143,6 @@ export function renderOverviewPage(container, tripId, myUid) {
   });
 
   function renderTripDetails() {
-    if (isEditingInside(tripDetailsEl)) return; // never wipe an active edit (§8)
     const fieldError = el("div", { className: "field-error-holder" });
     const nameInput = el("input", { type: "text", value: trip.name });
     const statusSelect = el(
@@ -208,9 +207,15 @@ export function renderOverviewPage(container, tripId, myUid) {
   }
 
   function travelerRow(traveler) {
-    const nameInput = el("input", { type: "text", value: traveler.name });
-    const cityInput = el("input", { type: "text", value: traveler.homeCity, placeholder: "Home city" });
-    const airportInput = el("input", { type: "text", value: traveler.homeAirport, placeholder: "Airport", maxLength: 4 });
+    const nameInput = el("input", { type: "text", value: traveler.name, attrs: { "aria-label": "Traveler name" } });
+    const cityInput = el("input", { type: "text", value: traveler.homeCity, placeholder: "Home city", attrs: { "aria-label": `Home city for ${traveler.name}` } });
+    const airportInput = el("input", {
+      type: "text",
+      value: traveler.homeAirport,
+      placeholder: "Airport",
+      maxLength: 4,
+      attrs: { "aria-label": `Home airport for ${traveler.name}` },
+    });
 
     function commit(patch) {
       const travelers = trip.travelers.map((t) => (t.id === traveler.id ? { ...t, ...patch } : t));
@@ -234,10 +239,19 @@ export function renderOverviewPage(container, tripId, myUid) {
       const confirmed = await confirmDialog(`Remove ${traveler.name}?`);
       if (!confirmed) return;
       const travelers = trip.travelers.filter((t) => t.id !== traveler.id);
-      const selectedFlights = { ...(trip.selectedFlights || {}) };
-      delete selectedFlights[traveler.id];
       try {
-        await updateTripFields(tripId, { travelers, selectedFlights });
+        // Their flight options would otherwise be orphaned: the Flights tab lists
+        // options per traveler, so nobody could see or delete them afterwards (§7.5).
+        const theirFlights = await getTravelerFlights(tripId, traveler.id);
+        if (theirFlights.length > 0) {
+          const alsoDelete = await confirmDialog(
+            `Also delete ${theirFlights.length} flight option${theirFlights.length === 1 ? "" : "s"} saved for ${traveler.name}?`
+          );
+          if (alsoDelete) {
+            for (const flight of theirFlights) await deleteFlight(tripId, flight.id);
+          }
+        }
+        await removeTraveler(tripId, travelers, traveler.id);
       } catch (err) {
         travelerError.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
       }
@@ -285,7 +299,6 @@ export function renderOverviewPage(container, tripId, myUid) {
   }
 
   function renderTravelers() {
-    if (isEditingInside(travelersEl)) return; // never wipe an active edit (§8)
     const addBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Add traveler" });
     addBtn.addEventListener("click", async () => {
       const result = await addTravelerDialog();
@@ -416,11 +429,16 @@ export function renderOverviewPage(container, tripId, myUid) {
     const dest = trip.destination;
     if (dest) {
       if (dest.lat == null || dest.lng == null) {
+        const setOnMapBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Set on map" });
+        setOnMapBtn.addEventListener("click", () => {
+          pendingDestinationPin.tripId = tripId;
+          location.hash = `#/trip/${tripId}/places`;
+        });
         rows.push(
-          el("p", {
-            className: "field-error",
-            textContent: "Location needed for this destination — this will be set once the Places map is built (Phase 2).",
-          })
+          el("div", { className: "location-needed" }, [
+            el("p", { className: "field-error", textContent: "Location needed for this destination." }),
+            setOnMapBtn,
+          ])
         );
       }
       for (const traveler of trip.travelers || []) {
@@ -455,11 +473,13 @@ export function renderOverviewPage(container, tripId, myUid) {
     discoverEl.replaceChildren(el("h2", { textContent: "Discover" }), ...rows);
   }
 
+  // Each section defers its own rebuild while someone is typing in it (§8), so a
+  // live update to one never disturbs an edit in progress in another.
   function rerender() {
     if (!trip) return;
-    renderTripDetails();
-    renderTravelers();
-    renderCandidates();
+    renderWhenIdle(tripDetailsEl, renderTripDetails);
+    renderWhenIdle(travelersEl, renderTravelers);
+    renderWhenIdle(candidatesEl, renderCandidates);
     renderDiscover();
   }
 

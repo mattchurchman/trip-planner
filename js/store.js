@@ -128,6 +128,22 @@ export function updateTravelers(tripId, travelers) {
   return updateTripFields(tripId, { travelers });
 }
 
+/** One-time read of a traveler's flight options, used when removing them (§7.5). */
+export async function getTravelerFlights(tripId, travelerId) {
+  const flightsQuery = query(collection(db, "trips", tripId, "flights"), where("travelerId", "==", travelerId));
+  const snapshot = await getDocs(flightsQuery);
+  return snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+}
+
+/** Removes a traveler, dropping only their own selectedFlights entry in the same
+ * write so a teammate's concurrent Choose elsewhere in the map isn't clobbered (§7.5). */
+export function removeTraveler(tripId, travelers, travelerId) {
+  return updateTripFields(tripId, {
+    travelers,
+    [`selectedFlights.${travelerId}`]: deleteField(),
+  });
+}
+
 // Generic helpers shared by the ranked, commentable subcollections (candidates, places, ...).
 function watchSubcollection(tripId, name, onChange, onError) {
   return onSnapshot(

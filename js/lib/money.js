@@ -8,7 +8,9 @@
 export function parseMoney(input) {
   if (typeof input !== "string") return null;
   let text = input.replace(/\s+/g, "");
-  text = text.replace(/^[^\d.]+/, "");
+  // Strip a leading currency symbol but never a sign, so "-5" stays negative and
+  // fails the test below instead of being silently read as $5.
+  text = text.replace(/^[^\d.-]+/, "");
   text = text.replace(/,/g, "");
   if (!/^\d+(\.\d{1,2})?$/.test(text)) return null;
   const [wholePart, fractionPart = ""] = text.split(".");

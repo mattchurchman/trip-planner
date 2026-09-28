@@ -304,6 +304,7 @@ textarea:focus {
 .tab {
   padding: 8px 14px;
   margin-bottom: -1px;
+  white-space: nowrap;
   color: var(--muted);
   font-weight: 500;
   border-radius: var(--radius-sm) var(--radius-sm) 0 0;
@@ -338,6 +339,12 @@ textarea:focus {
   max-width: 360px;
   width: calc(100% - 32px);
   box-shadow: var(--shadow-lift);
+}
+
+/* Form dialogs carry up to a dozen fields, several paired side by side; the
+   360px confirm/prompt width leaves them unusably cramped. */
+.app-dialog-form {
+  max-width: 520px;
 }
 
 .app-dialog::backdrop {
@@ -412,10 +419,14 @@ textarea:focus {
 .field-row {
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
+/* min-width:0 lets paired date inputs shrink; flex items default to their
+   intrinsic width, which overflows a narrow phone and the dialogs. */
 .field-row .field {
-  flex: 1;
+  flex: 1 1 160px;
+  min-width: 0;
 }
 
 .muted {
@@ -575,6 +586,21 @@ textarea:focus {
   flex-wrap: wrap;
 }
 
+.location-needed {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.location-needed p {
+  margin: 0;
+}
+
+.destination-pin-hint {
+  margin: 0 0 12px;
+}
+
 .discover-link {
   flex: 1;
 }
@@ -715,6 +741,14 @@ textarea:focus {
   border-radius: var(--radius);
 }
 
+.filter-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9em;
+  color: var(--muted);
+}
+
 .checkbox-label {
   display: inline-flex;
   align-items: center;
@@ -765,6 +799,27 @@ textarea:focus {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.place-name-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.place-name-btn:hover {
+  color: var(--accent);
+}
+
+.place-name-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }
 
 .category-chip {
@@ -972,6 +1027,9 @@ textarea:focus {
 .totals-row {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
   padding: 4px 0;
 }
 
@@ -1275,5 +1333,24 @@ textarea:focus {
   .trips-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  /* The five tab labels total ~370px, wider than a 360px phone. Scroll the bar
+     itself rather than letting the page scroll sideways (§4). */
+  .tab-bar {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .tab-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .places-header,
+  .stays-header,
+  .days-header,
+  .candidates-header {
+    flex-wrap: wrap;
   }
 }

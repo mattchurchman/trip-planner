@@ -45,6 +45,20 @@ export const tests = [
     assert.equal(result.lat, null);
     assert.equal(result.error, "That doesn't look like a Google Maps link.");
   }],
+  ["parseGoogleMapsUrl: a look-alike host like google.evil.com is rejected", () => {
+    for (const host of ["google.evil.com", "www.google.attacker.io", "google.ev.de", "notgoogle.com"]) {
+      const result = parseGoogleMapsUrl(`https://${host}/maps/place/Nice+Cafe/@38.7,-9.1,17z`);
+      assert.equal(result.lat, null, `${host} should not yield coordinates`);
+      assert.equal(result.error, "That doesn't look like a Google Maps link.");
+    }
+  }],
+  ["parseGoogleMapsUrl: real Google country domains are accepted", () => {
+    for (const host of ["google.co.uk", "www.google.de", "google.com.au", "maps.google.com"]) {
+      const result = parseGoogleMapsUrl(`https://${host}/maps/place/Nice+Cafe/@38.7,-9.1,17z`);
+      assert.equal(result.lat, 38.7, `${host} should parse`);
+      assert.equal(result.error, null);
+    }
+  }],
   ["parseGoogleMapsUrl: out-of-range coordinates are treated as no location", () => {
     const result = parseGoogleMapsUrl("https://www.google.com/maps/@200,200,15z");
     assert.equal(result.lat, null);

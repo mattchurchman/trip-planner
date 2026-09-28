@@ -115,6 +115,30 @@ export function promptDialog(message, defaultValue = "") {
   });
 }
 
+/**
+ * Renders now, or waits until the user has finished typing inside `container`
+ * (§8: a live update must never wipe an in-progress edit). Deferring rather than
+ * simply skipping matters — a skipped render would otherwise leave the section
+ * stale until some later snapshot happens to arrive while nothing is focused.
+ */
+export function renderWhenIdle(container, render) {
+  const active = document.activeElement;
+  const editing = container.contains(active) && ["INPUT", "TEXTAREA", "SELECT"].includes(active.tagName);
+  if (!editing) {
+    render();
+    return;
+  }
+  if (container.dataset.renderDeferred) return;
+  container.dataset.renderDeferred = "1";
+  container.addEventListener("focusout", function whenDone(event) {
+    // Focus moving to another control in the same section is still editing.
+    if (container.contains(event.relatedTarget)) return;
+    container.removeEventListener("focusout", whenDone);
+    delete container.dataset.renderDeferred;
+    render();
+  });
+}
+
 /** A labeled form field: a <label> wrapping a caption span and the given input/select/textarea. */
 export function field(labelText, input) {
   return el("label", { className: "field" }, [el("span", { textContent: labelText }), input]);
@@ -127,7 +151,7 @@ export function field(labelText, input) {
  */
 export function dialogShell(className, buildForm) {
   return new Promise((resolve) => {
-    const dialog = el("dialog", { className: `app-dialog ${className}` });
+    const dialog = el("dialog", { className: `app-dialog app-dialog-form ${className}` });
     const { form, focusEl } = buildForm((result) => {
       dialog.close();
       dialog.remove();

@@ -18,6 +18,7 @@ const TABS = [
 
 const root = document.getElementById("app");
 let tripWatchers = [];
+let removeRouter = null;
 
 function clearTripWatchers() {
   for (const unsubscribe of tripWatchers) unsubscribe();
@@ -95,6 +96,7 @@ function renderTripShell(main, tripId, myUid, tabKey) {
         className: `tab${tab.key === tabKey ? " tab-active" : ""}`,
         href: `#/trip/${tripId}/${tab.key}`,
         textContent: tab.label,
+        attrs: tab.key === tabKey ? { "aria-current": "page" } : {},
       })
     )
   );
@@ -141,8 +143,16 @@ function route(user, main) {
 function startApp(user) {
   const main = el("main", { className: "app-main" });
   root.replaceChildren(renderTopBar(user), main);
+  // Signing out and back in runs this again; without dropping the old listener
+  // the previous one keeps routing into a detached <main> and re-subscribing.
+  if (removeRouter) removeRouter();
+  const onHashChange = () => route(user, main);
+  window.addEventListener("hashchange", onHashChange);
+  removeRouter = () => {
+    window.removeEventListener("hashchange", onHashChange);
+    removeRouter = null;
+  };
   route(user, main);
-  window.addEventListener("hashchange", () => route(user, main));
 }
 
 async function handleSignedIn(user) {
@@ -173,6 +183,7 @@ function init() {
   }
   onAuthStateChanged(auth, (user) => {
     clearTripWatchers();
+    if (removeRouter) removeRouter();
     root.replaceChildren();
     if (user) {
       handleSignedIn(user);

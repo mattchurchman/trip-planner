@@ -1,5 +1,5 @@
-import { watchTrip, watchUsers, watchPlaces, addPlace, updatePlace, deletePlace, voteOnPlace, watchStays, watchDays } from "../store.js";
-import { el, setPending, confirmDialog, friendlyError, rankControl, field, dialogShell } from "../ui.js";
+import { watchTrip, watchUsers, watchPlaces, addPlace, updatePlace, deletePlace, voteOnPlace, watchStays, watchDays, updateTripFields } from "../store.js";
+import { el, setPending, confirmDialog, friendlyError, rankControl, field, dialogShell, renderWhenIdle } from "../ui.js";
 import { renderComments } from "./comments.js";
 import { renderExportSection } from "./exportSection.js";
 import { sortByRank, notRankedByMe, voteSummary, toMillis } from "../lib/votes.js";
@@ -22,7 +22,21 @@ const CATEGORIES = [
 ];
 const CATEGORY_COLOR = Object.fromEntries(CATEGORIES.map((c) => [c.label, c.color]));
 
+/**
+ * Armed by the Overview tab's "Set on map" action when a chosen destination has no
+ * coordinates (§7.5). The next click on this tab's map sets them. Module state rather
+ * than storage because switching tabs rebuilds the view but never reloads the page.
+ */
+export const pendingDestinationPin = { tripId: null };
+
+let lastNominatimAt = 0;
+
 async function nominatimSearch(query, limit = 5) {
+  // Nominatim's usage policy allows at most one request per second (§9.4), so
+  // queue rather than fire on every press.
+  const wait = Math.max(0, 1000 - (Date.now() - lastNominatimAt));
+  if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+  lastNominatimAt = Date.now();
   const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=${limit}&q=${encodeURIComponent(query)}`;
   const response = await fetch(url);
   if (!response.ok) throw new Error("Search failed. Try again in a moment.");
@@ -81,7 +95,7 @@ function buildLocationPicker({ trip, mapClickState, onChange }) {
     onChange({ lat, lng, googleMapsUrl, suggestedName });
   }
 
-  const linkInput = el("input", { type: "text", placeholder: "Paste a Google Maps link" });
+  const linkInput = el("input", { type: "text", placeholder: "Paste a Google Maps link", attrs: { "aria-label": "Google Maps link" } });
   const useLinkBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Use this link" });
   function tryParseLink() {
     if (!linkInput.value.trim()) return;
@@ -99,7 +113,7 @@ function buildLocationPicker({ trip, mapClickState, onChange }) {
   // fallback for a manually typed/edited link.
   linkInput.addEventListener("paste", () => setTimeout(tryParseLink, 0));
 
-  const searchInput = el("input", { type: "text", placeholder: "Search by name" });
+  const searchInput = el("input", { type: "text", placeholder: "Search by name", attrs: { "aria-label": "Search for a place by name" } });
   const searchBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Search" });
   const resultsEl = el("ul", { className: "search-results" });
   searchBtn.addEventListener("click", async () => {
@@ -135,22 +149,43 @@ function buildLocationPicker({ trip, mapClickState, onChange }) {
   });
 
   const placeOnMapBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Place on map" });
+  function disarmPlacing() {
+    placingArmed = false;
+    placeOnMapBtn.textContent = "Place on map";
+    placeOnMapBtn.setAttribute("aria-pressed", "false");
+    mapClickState.armed = false;
+    mapClickState.onPick = null;
+    mapClickState.disarm = null;
+  }
+  placeOnMapBtn.setAttribute("aria-pressed", "false");
   placeOnMapBtn.addEventListener("click", () => {
-    placingArmed = !placingArmed;
-    placeOnMapBtn.textContent = placingArmed ? "Click the map…" : "Place on map";
-    mapClickState.armed = placingArmed;
+    if (placingArmed) {
+      disarmPlacing();
+      return;
+    }
+    // Only one picker can own the map's next click; cancel whoever had it so
+    // their button doesn't stay stuck reading "Click the map…".
+    if (mapClickState.disarm) mapClickState.disarm();
+    placingArmed = true;
+    placeOnMapBtn.textContent = "Click the map…";
+    placeOnMapBtn.setAttribute("aria-pressed", "true");
+    mapClickState.armed = true;
+    mapClickState.disarm = disarmPlacing;
     mapClickState.onPick = (latlng) => {
       setLocation(latlng.lat, latlng.lng, null, null);
-      placingArmed = false;
-      placeOnMapBtn.textContent = "Place on map";
-      mapClickState.armed = false;
+      disarmPlacing();
     };
   });
 
   const clearBtn = el("button", { type: "button", className: "btn btn-small btn-secondary", textContent: "Clear location" });
   clearBtn.addEventListener("click", () => setLocation(null, null, null, null));
 
-  const otherWaysToggle = el("button", { type: "button", className: "btn btn-link", textContent: "Other ways to add a location" });
+  const otherWaysToggle = el("button", {
+    type: "button",
+    className: "btn btn-link",
+    textContent: "Other ways to add a location",
+    attrs: { "aria-expanded": "false" },
+  });
   const otherWaysHolder = el("div", { className: "other-location-methods", hidden: true }, [
     el("div", { className: "location-method" }, [searchInput, searchBtn]),
     resultsEl,
@@ -158,6 +193,7 @@ function buildLocationPicker({ trip, mapClickState, onChange }) {
   ]);
   otherWaysToggle.addEventListener("click", () => {
     otherWaysHolder.hidden = !otherWaysHolder.hidden;
+    otherWaysToggle.setAttribute("aria-expanded", otherWaysHolder.hidden ? "false" : "true");
   });
 
   const elRoot = el("div", { className: "location-picker" }, [
@@ -235,13 +271,13 @@ export function renderPlacesPage(container, tripId, myUid) {
   let addPanelBuilt = false;
   let showStays = true;
   const markersById = new Map();
-  const mapClickState = { armed: false, onPick: null };
+  const mapClickState = { armed: false, onPick: null, disarm: null };
   const filters = { categories: new Set(), neighborhood: "", search: "", notRankedOnly: false, eventsOnly: false };
   let sortMode = "rank";
   let lastNeighborhoodsKey = "";
 
   const loadErrorEl = el("div", { className: "field-error-holder" });
-  const addPanelToggle = el("button", { type: "button", className: "btn btn-primary", textContent: "Add place" });
+  const addPanelToggle = el("button", { type: "button", className: "btn btn-primary", textContent: "Add place", attrs: { "aria-expanded": "false" } });
   const addPanelHolder = el("div", { className: "add-place-holder", hidden: true });
   const filtersEl = el("div", { className: "places-filters card" });
   const rankCountEl = el("p", { className: "muted rank-count" });
@@ -249,16 +285,19 @@ export function renderPlacesPage(container, tripId, myUid) {
   const mapEl = el("div", { className: "places-map" });
   const listMapWrap = el("div", { className: "places-list-map" }, [listEl, mapEl]);
   const noDestinationEl = el("p", { className: "empty-state", textContent: "Choose a destination on the Overview tab to start adding places.", hidden: true });
+  const destinationPinHintEl = el("p", { className: "field-error destination-pin-hint", hidden: true });
   const exportSectionHolder = el("div", { className: "export-section-holder" });
 
   addPanelToggle.addEventListener("click", () => {
     addPanelHolder.hidden = !addPanelHolder.hidden;
+    addPanelToggle.setAttribute("aria-expanded", addPanelHolder.hidden ? "false" : "true");
   });
 
   container.replaceChildren(
     loadErrorEl,
     el("div", { className: "places-header" }, [el("h2", { textContent: "Places" }), addPanelToggle]),
     noDestinationEl,
+    destinationPinHintEl,
     addPanelHolder,
     filtersEl,
     rankCountEl,
@@ -337,15 +376,20 @@ export function renderPlacesPage(container, tripId, myUid) {
     renderList();
   });
 
+  /** An inline filter control with a visible caption (§4: every control is labeled). */
+  function filterLabel(caption, control) {
+    return el("label", { className: "filter-label" }, [el("span", { textContent: caption }), control]);
+  }
+
   filtersEl.replaceChildren(
     categoryChipsEl,
     el("div", { className: "filters-row" }, [
-      neighborhoodSelect,
-      searchInput,
+      filterLabel("Neighborhood", neighborhoodSelect),
+      filterLabel("Search", searchInput),
       el("label", { className: "checkbox-label" }, [notRankedCheckbox, " Not ranked by me"]),
       el("label", { className: "checkbox-label" }, [eventsCheckbox, " Events during trip dates"]),
       el("label", { className: "checkbox-label" }, [showStaysCheckbox, " Show stays"]),
-      sortSelect,
+      filterLabel("Sort by", sortSelect),
     ])
   );
 
@@ -383,9 +427,31 @@ export function renderPlacesPage(container, tripId, myUid) {
     markerLayer = window.L.layerGroup().addTo(map);
     stayMarkerLayer = window.L.layerGroup().addTo(map);
     map.setView([20, 0], 2);
-    map.on("click", (e) => {
+    map.on("click", async (e) => {
+      if (pendingDestinationPin.tripId === tripId) {
+        pendingDestinationPin.tripId = null;
+        try {
+          await updateTripFields(tripId, {
+            destination: { ...trip.destination, lat: e.latlng.lat, lng: e.latlng.lng },
+          });
+          mapCentered = false;
+        } catch (err) {
+          loadErrorEl.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
+        }
+        renderDestinationPinHint();
+        return;
+      }
       if (mapClickState.armed && mapClickState.onPick) mapClickState.onPick(e.latlng);
     });
+  }
+
+  /** The prompt shown while "Set on map" is armed from the Overview tab (§7.5). */
+  function renderDestinationPinHint() {
+    const armed = pendingDestinationPin.tripId === tripId;
+    destinationPinHintEl.hidden = !armed;
+    if (armed) {
+      destinationPinHintEl.textContent = "Click the map to set this destination's location.";
+    }
   }
 
   /** Stays with coordinates appear as larger markers on this map (§7.7), toggled by "Show stays". */
@@ -463,12 +529,14 @@ export function renderPlacesPage(container, tripId, myUid) {
           trip,
           mapClickState,
           onChange: async (payload) => {
-            if (payload.lat == null) return;
+            // A null location here is the explicit "Clear location" press — the
+            // picker never fires onChange on its own — so removing a wrong pin works.
+            const cleared = payload.lat == null;
             try {
               await updatePlace(tripId, place.id, {
                 lat: payload.lat,
                 lng: payload.lng,
-                googleMapsUrl: payload.googleMapsUrl || place.googleMapsUrl || null,
+                googleMapsUrl: cleared ? null : payload.googleMapsUrl || place.googleMapsUrl || null,
               });
               holder.hidden = true;
             } catch (err) {
@@ -530,13 +598,33 @@ export function renderPlacesPage(container, tripId, myUid) {
     });
     placeCommentUnsubscribes.push(commentsUnsub);
 
+    function panToMarker() {
+      if (!hasLocation || !map) return;
+      const marker = markersById.get(place.id);
+      if (!marker) return;
+      map.panTo(marker.getLatLng());
+      marker.openPopup();
+    }
+
+    // Keyboard users can't reach the row's click-to-pan, so the name itself is the
+    // control when there's a pin to pan to (§4: reachable by keyboard).
+    const nameEl = hasLocation
+      ? el("button", {
+          type: "button",
+          className: "place-name-btn",
+          textContent: place.name,
+          attrs: { "aria-label": `${place.name} — show on map` },
+          onclick: panToMarker,
+        })
+      : el("strong", { textContent: place.name });
+
     const row = el(
       "article",
       { className: "card place-row", attrs: { "data-place-id": place.id } },
       [
         el("div", { className: "place-row-title" }, [
           el("span", { className: "category-chip", textContent: place.category, style: `background:${CATEGORY_COLOR[place.category] || CATEGORY_COLOR.Other}` }),
-          el("strong", { textContent: place.name }),
+          nameEl,
         ]),
         el("p", { className: "muted", textContent: place.neighborhood || "" }),
         ...details,
@@ -551,15 +639,28 @@ export function renderPlacesPage(container, tripId, myUid) {
 
     row.addEventListener("click", (event) => {
       if (event.target.closest("button, a, input, textarea, select")) return;
-      if (!hasLocation || !map) return;
-      const marker = markersById.get(place.id);
-      if (marker) {
-        map.panTo(marker.getLatLng());
-        marker.openPopup();
-      }
+      panToMarker();
     });
 
     return row;
+  }
+
+  /** Current filtered set. Recomputed on demand so a deferred row rebuild
+   * (renderWhenIdle) still renders the newest data rather than a stale snapshot. */
+  function currentFiltered() {
+    const placesForDestination = places.filter((p) => p.destinationId === trip.destinationId);
+    return applyFiltersAndSort(placesForDestination, { filters, sortMode, trip, myUid });
+  }
+
+  function renderRows() {
+    for (const unsub of placeCommentUnsubscribes) unsub();
+    placeCommentUnsubscribes = [];
+    const filtered = currentFiltered();
+    if (filtered.length === 0) {
+      listEl.replaceChildren(el("p", { className: "empty-state", textContent: "No places match these filters." }));
+    } else {
+      listEl.replaceChildren(...filtered.map(renderPlaceRow));
+    }
   }
 
   function renderList() {
@@ -578,11 +679,12 @@ export function renderPlacesPage(container, tripId, myUid) {
     }
 
     ensureMap();
+    renderDestinationPinHint();
     updateNeighborhoodOptions();
 
     const placesForDestination = places.filter((p) => p.destinationId === trip.destinationId);
     exportSectionHolder.replaceChildren(renderExportSection({ trip, places: placesForDestination, days }));
-    const filtered = applyFiltersAndSort(placesForDestination, { filters, sortMode, trip, myUid });
+    const filtered = currentFiltered();
     const notRankedCount = notRankedByMe(placesForDestination, myUid).length;
     rankCountEl.textContent =
       notRankedCount > 0
@@ -591,14 +693,9 @@ export function renderPlacesPage(container, tripId, myUid) {
           ? "You've ranked every place."
           : "";
 
-    for (const unsub of placeCommentUnsubscribes) unsub();
-    placeCommentUnsubscribes = [];
-
-    if (filtered.length === 0) {
-      listEl.replaceChildren(el("p", { className: "empty-state", textContent: "No places match these filters." }));
-    } else {
-      listEl.replaceChildren(...filtered.map(renderPlaceRow));
-    }
+    // Rows carry comment drafts and open location pickers, so hold the rebuild
+    // until the user stops typing (§8). Markers below refresh either way.
+    renderWhenIdle(listEl, renderRows);
 
     if (markerLayer) {
       markerLayer.clearLayers();
@@ -683,6 +780,7 @@ export function renderPlacesPage(container, tripId, myUid) {
         eventEndInput.value = "";
         locationPicker.reset();
         addPanelHolder.hidden = true;
+        addPanelToggle.setAttribute("aria-expanded", "false");
       } catch (err) {
         errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
       } finally {

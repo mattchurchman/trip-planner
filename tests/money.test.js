@@ -20,6 +20,12 @@ export const tests = [
   ["parseMoney accepts a plain integer", () => {
     assert.equal(parseMoney("1234"), 123400);
   }],
+  ["parseMoney rejects a negative amount instead of flipping its sign", () => {
+    assert.equal(parseMoney("-5"), null);
+    assert.equal(parseMoney("-12.50"), null);
+    assert.equal(parseMoney("-$5"), null);
+    assert.equal(parseMoney("$-5"), null);
+  }],
   ["formatMoney formats cents as currency", () => {
     assert.equal(formatMoney(123456, "USD", "en-US"), "$1,234.56");
   }],

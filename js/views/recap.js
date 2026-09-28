@@ -13,7 +13,7 @@ import {
   publishRecap,
   unpublishRecap,
 } from "../store.js";
-import { el, setPending, confirmDialog, promptDialog, friendlyError, copyLinkButton } from "../ui.js";
+import { el, setPending, confirmDialog, promptDialog, friendlyError, copyLinkButton, renderWhenIdle } from "../ui.js";
 import { safeUrl } from "../lib/links.js";
 import { parseMoney, formatMoney } from "../lib/money.js";
 import { computeTotals } from "../lib/totals.js";
@@ -21,11 +21,6 @@ import { buildPublicRecap, nextTimePlaces, noOneReacted } from "../lib/recap.js"
 
 const REACTIONS = ["loved", "fine", "skipped"];
 const REACTION_LABELS = { loved: "Loved", fine: "Fine", skipped: "Skipped" };
-
-function isEditingInside(container) {
-  const active = document.activeElement;
-  return container.contains(active) && ["INPUT", "TEXTAREA", "SELECT"].includes(active.tagName);
-}
 
 function publicRecapUrl(tripId) {
   const root = `${location.origin}/${location.pathname.split("/")[1]}/`;
@@ -52,6 +47,7 @@ export function renderRecapPage(container, tripId, myUid) {
   let flights = [];
   let stays = [];
   let costs = [];
+  let allPlaces = [];
   let publicRecap = null;
 
   const loadErrorEl = el("div", { className: "field-error-holder" });
@@ -73,8 +69,12 @@ export function renderRecapPage(container, tripId, myUid) {
   );
 
   function renderAlbum() {
-    if (isEditingInside(albumSectionEl)) return;
-    const input = el("input", { type: "text", value: trip.albumUrl || "", placeholder: "Paste a Google Photos or iCloud shared album link" });
+    const input = el("input", {
+      type: "text",
+      value: trip.albumUrl || "",
+      placeholder: "Paste a Google Photos or iCloud shared album link",
+      attrs: { "aria-label": "Shared photo album link" },
+    });
     const errorHolder = el("div", { className: "field-error-holder" });
     input.addEventListener("change", () => {
       errorHolder.replaceChildren();
@@ -130,8 +130,20 @@ export function renderRecapPage(container, tripId, myUid) {
       })
     );
 
-    const noteInput = el("input", { type: "text", placeholder: "Note (optional)", value: myReaction?.note || "", disabled: !myReaction });
-    const photoInput = el("input", { type: "text", placeholder: "Photo link (optional)", value: myReaction?.photoUrl || "", disabled: !myReaction });
+    const noteInput = el("input", {
+      type: "text",
+      placeholder: "Note (optional)",
+      value: myReaction?.note || "",
+      disabled: !myReaction,
+      attrs: { "aria-label": `Your note about ${place.name}` },
+    });
+    const photoInput = el("input", {
+      type: "text",
+      placeholder: "Photo link (optional)",
+      value: myReaction?.photoUrl || "",
+      disabled: !myReaction,
+      attrs: { "aria-label": `Photo link for ${place.name}` },
+    });
     function saveDetails() {
       if (!myReaction) return;
       setPlaceReaction(tripId, place.id, myUid, {
@@ -147,7 +159,6 @@ export function renderRecapPage(container, tripId, myUid) {
   }
 
   function renderReactions() {
-    if (isEditingInside(reactionsListEl)) return;
     if (places.length === 0) {
       reactionsListEl.replaceChildren(el("p", { className: "empty-state", textContent: "No places to react to yet." }));
       return;
@@ -206,7 +217,6 @@ export function renderRecapPage(container, tripId, myUid) {
   }
 
   function renderActualSpend() {
-    if (isEditingInside(actualSpendEl)) return;
     const flightsById = Object.fromEntries(flights.map((f) => [f.id, f]));
     const stay = stays.find((s) => s.id === trip.selectedStayId) || null;
     const result = computeTotals({
@@ -220,7 +230,12 @@ export function renderRecapPage(container, tripId, myUid) {
     const rows = (trip.travelers || []).map((traveler) => {
       const plannedCents = result.travelerTotals.find((t) => t.travelerId === traveler.id)?.totalCents || 0;
       const actualCents = (trip.actualSpendCents || {})[traveler.id];
-      const actualInput = el("input", { type: "text", placeholder: "Actual spend", value: actualCents != null ? (actualCents / 100).toFixed(2) : "" });
+      const actualInput = el("input", {
+        type: "text",
+        placeholder: "Actual spend",
+        value: actualCents != null ? (actualCents / 100).toFixed(2) : "",
+        attrs: { "aria-label": `Actual spend for ${traveler.name}` },
+      });
       const errorHolder = el("div", { className: "field-error-holder" });
       actualInput.addEventListener("change", () => {
         errorHolder.replaceChildren();
@@ -294,10 +309,13 @@ export function renderRecapPage(container, tripId, myUid) {
 
   function rerenderAll() {
     if (!trip) return;
-    renderAlbum();
-    renderReactions();
+    // Re-derive here rather than in the places listener: that snapshot can land
+    // before the trip's, when trip.destinationId isn't known yet.
+    places = allPlaces.filter((place) => place.destinationId === trip.destinationId);
+    renderWhenIdle(albumSectionEl, renderAlbum);
+    renderWhenIdle(reactionsListEl, renderReactions);
     renderNextTime();
-    renderActualSpend();
+    renderWhenIdle(actualSpendEl, renderActualSpend);
     renderPublish();
   }
 
@@ -319,7 +337,7 @@ export function renderRecapPage(container, tripId, myUid) {
   const unsubPlaces = watchPlaces(
     tripId,
     (p) => {
-      places = trip ? p.filter((place) => place.destinationId === trip.destinationId) : p;
+      allPlaces = p;
       rerenderAll();
     },
     (err) => loadErrorEl.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }))
@@ -328,7 +346,7 @@ export function renderRecapPage(container, tripId, myUid) {
     tripId,
     (f) => {
       flights = f;
-      if (trip) renderActualSpend();
+      if (trip) renderWhenIdle(actualSpendEl, renderActualSpend);
     },
     () => {}
   );
@@ -336,7 +354,7 @@ export function renderRecapPage(container, tripId, myUid) {
     tripId,
     (s) => {
       stays = s;
-      if (trip) renderActualSpend();
+      if (trip) renderWhenIdle(actualSpendEl, renderActualSpend);
     },
     () => {}
   );
@@ -344,7 +362,7 @@ export function renderRecapPage(container, tripId, myUid) {
     tripId,
     (c) => {
       costs = c;
-      if (trip) renderActualSpend();
+      if (trip) renderWhenIdle(actualSpendEl, renderActualSpend);
     },
     () => {}
   );
