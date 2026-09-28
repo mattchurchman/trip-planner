@@ -88,7 +88,11 @@ Go through the **Owner check** list for Phase 0 in `PHASES.md` on the live site.
 
 ---
 
-## 3. Building each remaining phase
+## 3. Improving the app (current)
+
+The original phases are all built. Improvements now live as small task files in `docs/tasks/`. Open `docs/tasks/README.md` for the list, which model to use for each, and the one-line message that starts a task. The loop is the same as below: fresh session, one task, click through its Owner check, move on.
+
+## 3b. Building each remaining phase (history)
 
 For phases 1 through 6 (and optionally 7), the loop is:
 

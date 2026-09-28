@@ -1,8 +1,8 @@
 # Trip Planner — Specification
 
-Spec version: **1.4** (September 2026)
+Spec version: **2.0** (September 2026)
 
-This is the source of truth for what the app is and how it works. The build phases are in `PHASES.md`, and the working rules for the building model are in `CLAUDE.md`. If code and this spec disagree, the spec wins unless the owner approves a change and this file is updated in the same commit.
+This is the source of truth for what the app is and how it works. The original build phases are in `PHASES.md` (all built); current work is in `docs/tasks/`. The working rules for the building model are in `CLAUDE.md`. If code and this spec disagree, the spec wins unless the owner approves a change and this file is updated in the same commit.
 
 ---
 
@@ -21,7 +21,7 @@ The group's process, which the app follows:
 
 ## 2. Hard constraints
 
-- **Cost is $0 with no credit card anywhere.** Use only: GitHub Pages (hosting), the Firebase **Spark** plan (Authentication and Cloud Firestore only), Leaflet with OpenStreetMap tiles, and OpenStreetMap Nominatim for occasional place search. Never use Firebase Cloud Storage, Cloud Functions, Firebase Hosting features that need Blaze, the Google Maps JavaScript API, the Places API, or any paid or keyed API.
+- **Cost is $0 with no credit card anywhere.** Use only: GitHub Pages (hosting), the Firebase **Spark** plan (Authentication and Cloud Firestore only), Leaflet with OpenStreetMap tiles, OpenStreetMap Nominatim for occasional place search, and the public Wikipedia page-summary API for destination photos (§9.7). Never use Firebase Cloud Storage, Cloud Functions, Firebase Hosting features that need Blaze, the Google Maps JavaScript API, the Places API, or any paid or keyed API.
 - **No live price data.** No flight or hotel price API, no scraping, no fake or sample prices. Every price is typed in by a person after checking it themselves.
 - **No photo uploads.** Photos live in an external shared album; the app stores links only.
 - **Only approved people** (an allowlist of email addresses) can read or write anything, except a recap page that has been deliberately published.
@@ -38,6 +38,8 @@ The group's process, which the app follows:
 | Firebase SDK | Modular Firebase Web SDK loaded from `https://www.gstatic.com/firebasejs/<VERSION>/…`. Pin one exact version. Only `js/firebase.js` imports from the CDN; every other file imports from `./firebase.js` |
 | Map | Leaflet **1.9.4** from `https://unpkg.com/leaflet@1.9.4/dist/` with OpenStreetMap standard tiles `https://tile.openstreetmap.org/{z}/{x}/{y}.png` and the attribution `© OpenStreetMap contributors` |
 | Place search | Nominatim (section 9.4), only when the user presses a Search button |
+| Destination photos | Wikipedia REST page summary (section 9.7); no key, no account |
+| Fonts | Google Fonts: Fraunces (headings) and Inter (everything else) |
 | Tests | `node tests/run-tests.js` using Node's built-in `assert`; no test libraries |
 
 ### 3.1 File layout
@@ -50,22 +52,34 @@ help.html             static "how to use this app" page for travelers; no sign-i
 package.json          {"type": "module", "private": true}  (no dependencies)
 firestore.rules       security rules (owner pastes into the Firebase console)
 css/styles.css
+img/logo.svg          app logo (top bar, sign-in card, recap page)
+img/favicon.svg       browser-tab icon (same artwork as logo.svg)
 js/firebase-config.js the owner's Firebase web config (public values; safe to commit)
 js/firebase.js        initializes Firebase, re-exports the functions the app uses
 js/app.js             auth gate, router, top bar
 js/store.js           all Firestore reads, writes and listeners
 js/ui.js              shared DOM helpers (el(), status messages, confirm, rank control)
+js/lookup.js          the only file that calls outside services with fetch(): Nominatim (§9.4) and Wikipedia (§9.7)
 js/lib/money.js       pure: parse, format, split
 js/lib/dates.js       pure: date math and formatting
 js/lib/votes.js       pure: ranking scores and summaries
 js/lib/links.js       pure: external link builders and URL safety
 js/lib/mapsurl.js     pure: read coordinates and names from Google Maps URLs
+js/lib/flightlink.js  pure: read airports and dates from Google Flights URLs (§9.6)
+js/lib/staylink.js    pure: read provider, name, dates and guests from stay links (§9.6)
+js/lib/photos.js      pure: build Wikipedia lookup URLs and pick a usable photo (§9.7)
+js/lib/selection.js   pure: read chosen flights/stays, including the pre-2.0 shapes (§5.3)
 js/lib/totals.js      pure: latest price, deltas, per-traveler totals
 js/lib/exporters.js   pure: CSV and KML generation
 js/views/trips.js     trips list
-js/views/overview.js  trip overview, travelers, candidates, discover links
-js/views/places.js    places list and map
-js/views/travel.js    flights, stays, shared costs, totals
+js/views/overview.js  trip overview, travelers, discover links
+js/views/candidates.js candidate destination cards and form (§7.5)
+js/views/places.js    places list, filters and map
+js/views/placeForm.js add/edit place form and the location picker (§7.6)
+js/views/travel.js    Flights & stays tab shell, shared costs, totals card
+js/views/flights.js   flight options per traveler (§7.7)
+js/views/stays.js     stay options (§7.7)
+js/views/pricePanel.js price panel shared by flights and stays (§7.8)
 js/views/days.js      day plans
 js/views/recap.js     recap editing and publishing
 js/views/comments.js  comment thread component
@@ -83,15 +97,52 @@ Files under `js/lib/` must not touch the DOM or import Firebase, so Node can tes
 
 ## 4. Look and feel
 
-Aim for a calm but polished, modern travel-app feel — Google's travel tools as the starting point, with more visual depth.
+**Direction: warm and adventurous** — sunset terracotta and deep teal on warm sand, like a modern travel poster. Calm enough to read for a long time; the color comes from photos, accents and badges, not from filling every surface.
 
-- White cards with a soft drop shadow (not just a flat border) on a light, faintly gradient page (`#f4f6fb`), Inter as the display font (system font stack as fallback), dark text (`#1a2233`), 12 px rounded corners.
-- One accent color used two ways: a solid blue (`#2f5eff`) for text, borders and outlines, and a blue-to-violet gradient for filled/primary elements (primary buttons, "chosen" badges, the pressed rank button, the avatar-initial circle).
-- Cards lift slightly (deeper shadow) on hover to signal they're interactive. Buttons and links have hover/active states with a short (~160 ms) transition — nothing snaps instantly.
-- Links are medium-weight and colored by default (not just on hover); one opened in a new tab gets a small "↗" suffix so external links are recognizable at a glance.
-- Top bar: sticky at the top of the page with a soft shadow, app name, a **Help** link (opens `help.html` in a new tab), signed-in user's avatar or initial, **Sign out**.
-- Trip page: trip name and a pill-shaped status badge at the top, with tabs **Overview · Places · Flights & stays · Days · Recap** (active tab shown with an underline + accent color, others get a light hover highlight). Only show tabs whose phase has been built.
+**Color tokens.** Define these once as CSS custom properties on `:root` in `css/styles.css` and use only the tokens elsewhere (category colors below are the one exception). Contrast ratios in brackets were checked against the background they sit on; don't swap a color without re-checking it reaches 4.5:1 for text.
+
+| Token | Value | Use |
+|---|---|---|
+| `--bg` | `#faf6f0` | page background (warm sand) |
+| `--surface` | `#ffffff` | cards, dialogs, top bar |
+| `--surface-muted` | `#f3ece2` | inset areas: form sections, empty states, table headers |
+| `--text` | `#1f2a2e` | body text [13.6:1 on bg] |
+| `--muted` | `#6b6f6a` | secondary text, labels [4.7:1 on bg] |
+| `--primary` | `#b4472f` | terracotta: primary buttons (white text [5.4:1]), links, focus rings, active tab |
+| `--primary-hover` | `#9a3a25` | hover/pressed state of primary |
+| `--primary-soft` | `#fbe9e3` | pressed rank button background, highlighted row |
+| `--secondary` | `#1f5f5b` | deep teal: "Chosen" badges, status pill, secondary buttons' text/border [7.4:1] |
+| `--secondary-soft` | `#e3efed` | background behind teal badges |
+| `--sun` | `#f2a541` | small highlights only (New low badge, logo) — never text on white |
+| `--border` | `#eadfd3` | card and input borders |
+| `--danger` | `#b3261e` | errors and destructive buttons |
+| `--success` | `#1e7a46` | success messages |
+| `--hero-gradient` | `linear-gradient(135deg, #f2a541, #c8553d)` | decorative only: logo, photo placeholders, sign-in card header. Never put body text on it |
+
+**Type.** Load Fraunces (weights 600, 700) and Inter (400, 500, 600) in one Google Fonts `<link>` with `display=swap`.
+
+| Element | Font | Size / line height | Weight |
+|---|---|---|---|
+| Trip name (page `h1`) | Fraunces | 2rem / 1.15 (1.625rem on phones) | 700 |
+| Section heading (`h2`, e.g. "Destination ideas") | Fraunces | 1.375rem / 1.25 | 600 |
+| Card title (`h3`, e.g. a city or place name) | Inter | 1.0625rem / 1.3 | 600 |
+| Field label, small caps-style label | Inter | 0.75rem / 1.3, uppercase, letter-spacing 0.06em | 600, `--muted` |
+| Body | Inter | 0.9375rem / 1.55 | 400 |
+
+Every section heading sits with its main action on the same row (heading left, button right; stacked on phones). Use exactly one `h1` per page, and don't skip heading levels.
+
+**Spacing.** Use a 4 px scale (4, 8, 12, 16, 24, 32, 48) through tokens `--space-1` … `--space-7`. Cards have 16 px padding (20 px on desktop), 16 px gaps between cards, 32 px between page sections. Radius: 14 px for cards, 10 px for buttons and inputs, 999 px for pills.
+
+**Surfaces and motion.** Cards are white with a 1 px `--border` and a soft shadow; interactive cards lift slightly on hover. Transitions are ~160 ms; respect `prefers-reduced-motion` by turning them off.
+
+**Brand.** `img/logo.svg` (a white map pin and low sun over teal hills on a sunset square) appears at 28 px beside the words "Trip Planner" (Fraunces 700) in the top bar, at 64 px on the sign-in card, and on `recap.html` and `help.html`. Every HTML page links `img/favicon.svg` as its icon (`<link rel="icon" type="image/svg+xml" href="./img/favicon.svg">`) and sets `<meta name="theme-color" content="#1f5f5b">` so phone browsers tint their toolbar teal. Each page's `<title>` names where you are: "Trip Planner", "<trip name> · Trip Planner", "Help · Trip Planner", "<trip name> recap · Trip Planner".
+
+**Layout.**
+- Top bar: sticky, white, soft shadow; logo + name on the left; **Help** (opens `help.html` in a new tab), the signed-in user's avatar or initial, and **Sign out** on the right.
+- Trip page: trip name and a pill-shaped status badge at the top, then tabs **Overview · Places · Flights & stays · Days · Recap** (active tab: `--primary` text with a 3 px underline; others get a light hover background).
 - Desktop: list and map side by side on the Places tab. Phone (under 760 px): one column, map above list, all controls reachable, no horizontal scrolling.
+- Links are colored `--primary`, weight 500; a link that opens a new tab ends with a small "↗".
+- Buttons: primary (solid `--primary`, white text), secondary (white, `--secondary` border and text), quiet (text only), danger (text `--danger`, solid only inside a confirmation dialog). One primary button per card or form.
 - Category colors, used on map markers and list chips:
 
 | Category | Color |
@@ -163,8 +214,10 @@ travelers: [ {
   homeCity: string,
   homeAirport: string                // IATA code or ""
 } ]
-selectedFlights: { [travelerId]: flightId }   // map; may be empty
-selectedStayId: string | null
+selectedFlights: { [travelerId]: [flightId] } // map of arrays; a traveler may choose several
+                                      // flights (e.g. extra legs); may be empty
+selectedStayIds: [stayId]            // the group may choose several stays (e.g. a second
+                                      // area or a side trip); may be empty
 albumUrl: string | null              // shared photo album (Phase 6)
 actualSpendCents: { [travelerId]: integer }   // Phase 6; may be empty
 createdBy: uid
@@ -172,7 +225,11 @@ createdAt: timestamp
 updatedAt: timestamp
 ```
 
-A new trip starts with `status: "exploring"`, `currency: "USD"`, empty `notes`, `destination: null`, null dates, one traveler (the creator, linked by uid, with empty home fields), and empty maps.
+A new trip starts with `status: "exploring"`, `currency: "USD"`, empty `notes`, `destination: null`, null dates, one traveler (the creator, linked by uid, with empty home fields), empty maps, and `selectedStayIds: []`.
+
+**Choosing several (since 2.0).** Add or remove one choice at a time with `arrayUnion` / `arrayRemove` on `selectedFlights.<travelerId>` or `selectedStayIds`, so two people choosing at once never overwrite each other.
+
+**Trips made before 2.0** may still hold the old shapes: a `selectedFlights` value that is a single flight id string, and a `selectedStayId` string field. `js/lib/selection.js` reads both shapes (a string counts as a one-item list; `selectedStayId` is merged into the stay list). The first time someone changes a legacy value, write the whole field as a list (`selectedFlights.<travelerId>: [old, new]`, or `selectedStayIds: [old, new]` plus `selectedStayId: deleteField()`) instead of using `arrayUnion`, because `arrayUnion` on a string would silently discard the old choice.
 
 ### 5.4 Subcollections of a trip
 
@@ -188,7 +245,13 @@ link: string | null                  // e.g. a Google Flights link someone found
 lat: number | null, lng: number | null
 airport: string                      // IATA or ""
 votes: { [uid]: "must" | "nice" | "skip" }
+photo: null | {                      // destination photo from Wikipedia (§9.7)
+  url: string,                       // https://upload.wikimedia.org/… image
+  pageUrl: string                    // the Wikipedia article, for the credit link
+}
 ```
+
+`photo` is the one field that may be **missing**: missing means "not looked up yet", `null` means "looked up, nothing usable found". Candidates made before 2.0 have no `photo` field; the card looks it up once and saves the result (§7.5).
 
 **`places/{id}`**
 ```
@@ -376,7 +439,14 @@ Any candidate, place, flight, stay, or the trip itself can have a thread. Show t
 
 - Editable: trip name (non-blank), status, start and end dates (end not before start), currency (three uppercase letters), notes.
 - **Travelers:** add a traveler by choosing an app member or typing a name; edit name, home city and home airport; remove with confirmation. At least one traveler must remain. Removing a traveler also deletes that traveler's entry in `selectedFlights`, and asks whether to delete their flight options.
-- **Candidate destinations** (shown prominently while exploring, collapsed afterward): add, edit, delete, rank, comment. Each card shows city, country, why, rough price note, date idea and link.
+- **Candidate destinations** (shown prominently while exploring, collapsed afterward): add, edit, delete, rank, comment. Cards sit in a responsive grid (`repeat(auto-fill, minmax(280px, 1fr))`, one column on phones). Each card, top to bottom:
+  1. **Photo banner**, 16:9, `object-fit: cover`, `alt="<city>, <country>"`, `loading="lazy"`, with a small "Photo: Wikipedia ↗" credit linking to `photo.pageUrl` in the bottom corner. When `photo` is `null`, or the image fails to load, show the same-size banner in `--hero-gradient` with the city's first letter large in white Fraunces — never a broken-image icon. While a lookup is running, show the gradient banner.
+  2. **Title row:** city as `h3`, country beneath in `--muted`; a teal "Chosen" pill if this is the trip's current destination.
+  3. **Labeled details**, as a definition list (`<dl>`) with the small uppercase label style from §4: **Why go**, **Rough price**, **When**, **Link** ("Open link ↗"). Hide a row when its value is empty; if all four are empty, show "No details yet — use Edit to add some." in `--muted`.
+  4. **Ranking** row: the rank control and its summary.
+  5. **Actions** row: **Choose this destination** (primary; hidden on the chosen card), **Edit** and **Delete** (quiet).
+  6. **Comments**, collapsed to a count.
+- **Photo lookups.** When a candidate is added, or edited so that its city or country changed, look up a photo (§9.7) after saving and write `photo` with a single-field update. When a card renders with `photo` missing, look it up once (at most one lookup running per candidate per page load) and save the result. A failed network request saves nothing, so it's retried next visit. Photo lookups never block saving and never show an error to the user.
 - **Choose this destination** on a candidate sets `trip.destination` from the candidate and `trip.destinationId` to the candidate's id. If the candidate has no coordinates, run a Nominatim search for "city, country" and use the first result. If nothing is found, store `lat` and `lng` as `null` and show a "Location needed" note with a **Set on map** action (the next click on the Places map sets the destination's coordinates). While the destination has no coordinates, the map centers on the trip's pins, or shows the whole world if there are none. It then sets status to `planning` if it was `exploring`. The group can change the destination later — existing places aren't deleted, just hidden on the Places tab (§7.6) until that destination is chosen again.
 - **Discover** panel of external links (section 9.1). While exploring it shows Google Flights Explore. Once a destination exists, it also shows per-traveler flight searches, stay searches, and idea searches.
 
@@ -386,32 +456,43 @@ Any candidate, place, flight, stay, or the trip itself can have a thread. Show t
 - Only places whose `destinationId` matches the trip's current `destinationId` are shown, listed, mapped, counted or exported. Places from a previously-chosen destination are not deleted — they reappear if that destination is chosen again (§7.5).
 - A list and a Leaflet map showing the same filtered set.
 - Filters: category (multi-select chips), neighborhood (dropdown built from existing values), text search on name and note, **Not ranked by me**, and "Events during trip dates". Sort: Ranking (default), Newest, Neighborhood, Category.
-- **Add place** form: name (required), category (required), neighborhood, note, link, event start and end, and a location in one of three ways, with pasting a link presented as the primary/recommended method since it alone captures an exact name, coordinates and a reusable link:
-  1. **Paste a Google Maps link** (recommended). Parses automatically as soon as it's pasted, using section 9.3. If coordinates are found, fill them in and, if the name field is empty, fill in the name.
+- **Add place** form, in this order — the Google Maps link comes first because it alone captures an exact name, coordinates and a reusable link:
+  1. **Step 1 · Find it on Google Maps.** A short search box ("What are you looking for?") and a **Find on Google Maps ↗** button that opens `googleMapsFindUrl` (§9.2) in a new tab. Under it, one line: "Find the place, copy the address from your browser's address bar, then paste it below."
+  2. **Step 2 · Paste the Google Maps link.** The link field, focused-looking and full width. Parses automatically on paste or input (§9.3). When coordinates are found, fill the location and — if they're still empty — the name, then show "✓ Pin found" with the name. When the name box of Step 1 has text and the name field is empty, copy it into the name field too.
+  3. **Step 3 · Details:** name (required), category (required), neighborhood, note, website or booking link, event start and end.
+  4. **Other ways to add a location** (collapsed disclosure): Search (Nominatim) and Place on map, described below.
+
+  Location methods:
+  1. **Paste a Google Maps link** (above).
   2. **Search** by name, which runs a Nominatim search limited to the destination (section 9.4) and lets the user pick one of up to 5 results. Shown, along with method 3, under a secondary "Other ways to add a location" disclosure.
   3. **Place on map**, which switches to a mode where the next map click sets the coordinates.
 
   A place may be saved with no location. It shows "No map pin" and is excluded from the map and exports.
 - Map: centered on the destination (or on the pins). Each place is an `L.circleMarker` in its category color. The popup shows name, category, neighborhood, note, the rank summary, **Open in Google Maps**, and **Edit**. Clicking a list row pans to its marker and opens the popup, and clicking a marker scrolls to and highlights its row.
-- Every place has a location action using the same three methods as Add place: **Set location** when it has no pin yet, **Edit location** when it does — a pasted link's coordinates aren't always the actual pin (e.g. a link copied while the map view was panned/zoomed away from the marker carries the view's center, not the place's), so there must always be a way to correct one without deleting the place.
+- Each place row in the list, and each map popup, has **Open in Google Maps ↗** (§9.2).
+- Every place has a location action using the same three methods as Add place, including the **Find on Google Maps ↗** button prefilled with the place's name: **Set location** when it has no pin yet, **Edit location** when it does — a pasted link's coordinates aren't always the actual pin (e.g. a link copied while the map view was panned/zoomed away from the marker carries the view's center, not the place's), so there must always be a way to correct one without deleting the place.
 - Edit and delete (with confirmation) any place.
 
 ### 7.7 Flights & stays tab
 
 **Flights.** One section per traveler, titled "<name> from <home city>".
-- **Add flight option** fields match section 5.4. Pre-fill from and to from the traveler's home and the trip destination. Pre-fill dates from the trip dates.
-- Beside the form, show **Search Google Flights** (section 9.1) for that traveler.
-- Each option shows its details, link, notes, price panel (7.8) and comments. **Choose** sets `selectedFlights.<travelerId>`. The chosen option shows a "Chosen" badge, and choosing another replaces it.
+- **Add flight option** form, link first:
+  1. **Step 1 · Find flights:** **Search Google Flights ↗** (section 9.1) for that traveler, with the line "Pick a flight on Google Flights, then copy the address from your browser's address bar."
+  2. **Step 2 · Paste the Google Flights link.** Parses on paste or input (§9.6). Fill airports and dates that it finds, but only into fields that are still empty or still hold the pre-filled defaults. Then say exactly what was filled, e.g. "✓ Filled in: DEN → LIS, 10 Mar – 17 Mar. Add the airline, times and price yourself — Google doesn't put them in the link." If nothing could be read, say "Couldn't read this link — fill in the details below." and keep the link. The pasted link is saved as the option's `link`.
+  3. **Step 3 · Details:** fields from section 5.4, pre-filled from the traveler's home, the trip destination and the trip dates, plus an optional **Price you saw** field. If it's filled in and valid, the option is created with that as its first price entry; if it's filled in and invalid, show the usual money error and don't save.
+- Each option shows its details, link, notes, price panel (7.8) and comments. **Choose** adds the option to `selectedFlights.<travelerId>`; a chosen option shows a teal "Chosen ✓" badge and its button reads **Unchoose**, which removes it. A traveler may choose any number of options (for example an outbound and a separate return, or an extra leg). Deleting a flight option also removes it from `selectedFlights`.
 
 **Stays** (up to 10 options).
-- Add, edit and delete. Fields match section 5.4. Guests default to the number of travelers, and check-in and check-out default to the trip dates.
-- Beside the form, show **Search Google Hotels**, **Search Booking.com** and **Search Airbnb** (section 9.1).
-- Each stay shows its price panel, nights, guests, price per night (when computable), rank control and comments. **Choose** sets `selectedStayId`.
+- Add, edit and delete. The add form is link first, like flights:
+  1. **Step 1 · Find a place to stay:** **Search Google Hotels ↗**, **Search Booking.com ↗** and **Search Airbnb ↗** (section 9.1).
+  2. **Step 2 · Paste the stay's link.** Parses on paste or input (§9.6) and fills provider, name, dates and guests where found (only into empty or still-default fields), then says what it filled and what it couldn't ("Airbnb links don't include the listing name — type it below.").
+  3. **Step 3 · Details:** fields from section 5.4 plus an optional **Price you saw (total for the stay)** that becomes the first price entry, as for flights. Guests default to the number of travelers, and check-in and check-out default to the trip dates. The stay's own map location (a Google Maps link, Search, or Place on map) sits under "Other ways to add a location".
+- Each stay shows its price panel, nights, guests, price per night (when computable), rank control and comments. **Choose** adds it to `selectedStayIds` and **Unchoose** removes it; any number of stays may be chosen (for example a second neighborhood or a side trip). Deleting a stay also removes it from `selectedStayIds`.
 - A stay with coordinates also appears on the Places map as a larger `L.circleMarker` (radius 9, fill `#202124`, white 2 px border) with the tooltip "Stay: <name>". Stays can be hidden with a "Show stays" checkbox.
 
 **Shared costs.** Add, edit and delete a label, amount and note. Split equally across all travelers.
 
-**Totals card.** One row per traveler: flight + stay share + shared costs share = total. Then a combined total. If anything is missing, label the card **Partial total** and list what is missing, such as "No flight chosen for Sam", "No price logged for Sam's flight" or "No price logged for Casa Alfama". Never show a missing price as $0.
+**Totals card.** One row per traveler: flights (all their chosen flights added up) + stays share (their share of every chosen stay) + shared costs share = total. Then a combined total. If anything is missing, label the card **Partial total** and list what is missing, such as "No flight chosen for Sam", "No price logged for Sam's flight "Nonstop, Tuesday out"" or "No price logged for Casa Alfama". Never show a missing price as $0.
 
 ### 7.8 Price panel (flights and stays)
 
@@ -492,6 +573,7 @@ These are deliberately destination-agnostic (no named sport) so they read sensib
 ### 9.2 Google Maps links
 
 - Open a place: `https://www.google.com/maps/search/?api=1&query=` + encode(`<name>, <city>`). When the place has a saved `googleMapsUrl` accepted by `safeUrl`, open that link instead.
+- Find a place (`googleMapsFindUrl(text, city, country)`): `https://www.google.com/maps/search/?api=1&query=` + encode of the non-empty parts of `<text>, <city>, <country>` joined with ", ". With no text it searches the destination itself.
 - Walking route for a day: `https://www.google.com/maps/dir/?api=1&travelmode=walking&origin=<lat,lng>&destination=<lat,lng>&waypoints=<lat,lng>|<lat,lng>…` using the first located place as origin and the last as destination. Use at most 8 waypoints per link. If a day has more than 10 located places, split into consecutive links ("Route part 1", "Route part 2"…), each starting where the previous one ended. Encode `|` as `%7C`.
 
 ### 9.3 Reading Google Maps URLs (`mapsurl.js`)
@@ -519,6 +601,28 @@ These are deliberately destination-agnostic (no named sport) so they read sensib
 ### 9.5 URL safety
 
 `safeUrl(text)` trims the text and returns the normalized URL string only when `new URL()` parses it and the protocol is `http:` or `https:`. Otherwise it returns `null`.
+
+### 9.6 Reading flight and stay links (`flightlink.js`, `staylink.js`)
+
+Both are best-effort and never block typing details by hand. Google Flights, Booking.com and Airbnb do **not** put prices, airlines or times in their links, so those are always typed by hand.
+
+`parseFlightLink(text)` returns `{ fromAirport, toAirport, outboundDate, returnDate, error }`, each value `null` when not found:
+
+1. The value must pass `safeUrl` and have a `google.<tld>` host with a path starting `/travel/flights`. Otherwise error "That doesn't look like a Google Flights link."
+2. A short share link (path starting `/travel/flights/s/`, or host `goo.gl`) returns the error "Short share links can't be read. Open it, then copy the full address from the browser bar."
+3. If there's a `q` parameter in our own search-link format (§9.1), read `from <FROM> to <TO>`, `on <date>` and `returning <date>` from it. FROM/TO count as airports only when they're three capital letters.
+4. Otherwise, if there's a `tfs` parameter, it is base64url-encoded data in which dates and airport codes appear as plain text. Decode it (convert `-`→`+`, `_`→`/`, pad with `=`, then `atob`), then in order of appearance take the text matches of `\d{4}-\d{2}-\d{2}` as dates and of exactly three capital letters as airports, using `(?<![A-Z])[A-Z]{3}(?![A-Z])` — **not** a word-boundary or non-letter rule, because the encoded data often puts a lowercase letter right after a code (e.g. `DENr`). The first date is outbound and the second (if any) is return; the first two airports are from and to. Ignore invalid dates. If decoding throws, return all nulls with error "Couldn't read this link — fill in the details below."
+5. If nothing was found, return that same error.
+
+`parseStayLink(text)` returns `{ provider, name, checkIn, checkOut, guests }`, each `null` when not found: Booking.com (`/hotel/<cc>/<slug>.html` → title-cased name; `checkin`, `checkout`, `group_adults`), Airbnb (`check_in`/`checkin`, `check_out`/`checkout`, `adults`; no name), Google Hotels (`/travel/hotels` → provider; the `q` parameter, if present, as the name). Any other valid link sets provider `other`.
+
+### 9.7 Destination photos (Wikipedia)
+
+- Lookup URL: `https://en.wikipedia.org/api/rest_v1/page/summary/` + encode(title) with spaces as `_`. Try the title `<city>` first; if that result is unusable, try `<city>, <country>`. Stop after those two requests.
+- A result is usable when its `type` is `"standard"` (not `"disambiguation"`), and it has `thumbnail.source` or `originalimage.source` that passes `safeUrl` and whose host is `upload.wikimedia.org`.
+- Image size: take `thumbnail.source`; if it contains `/<n>px-`, replace `<n>` with `640` to get a sharper image. If there's no thumbnail, use `originalimage.source`.
+- Save `{ url, pageUrl }` where `pageUrl` is `content_urls.desktop.page`. The credit shown on the card is "Photo: Wikipedia ↗" linking to that page, which links to the photo's author and license.
+- `js/lib/photos.js` builds the URLs and picks the photo from the JSON (tested with sample JSON). The `fetch` itself lives in `js/lookup.js`.
 
 ## 10. Export formats (`exporters.js`)
 
@@ -552,9 +656,9 @@ Both exports include only places with coordinates. Downloads use a `Blob` and a 
 - **Nights:** whole days between check-in and check-out computed in UTC, and only when both exist and check-out is later. Otherwise show "Dates needed".
 - **Per night:** the latest stay total divided by nights, rounded to the nearest cent for display only. Never store it.
 - **Equal split** `split(amountCents, n)`: `base = floor(amount / n)` and `remainder = amount − base × n`. The first `remainder` travelers (in `travelers` array order) get `base + 1`, and the rest get `base`. The shares always add up exactly to the amount.
-- **Traveler total:** latest price of that traveler's chosen flight + their share of the chosen stay's latest price + their share of each shared cost, where each cost is split separately.
+- **Traveler total:** the latest price of each of that traveler's chosen flights, added up, + their share of each chosen stay's latest price + their share of each shared cost, where each stay and each cost is split separately.
 - **Combined total:** the sum of traveler totals.
-- **Complete:** every traveler has a chosen flight with at least one price, and either no stay is chosen or the chosen stay has at least one price. Otherwise it's a **Partial total** with a list of missing items. Missing amounts count as 0 in the sum, but they are listed, and the total is never labeled complete.
+- **Complete:** every traveler has at least one chosen flight, every chosen flight has at least one price, and every chosen stay has at least one price (choosing no stay is fine). Otherwise it's a **Partial total** with a list of missing items. Missing amounts count as 0 in the sum, but they are listed, and the total is never labeled complete.
 - Store no derived values (latest price, totals, per-night, delta) in Firestore. Compute them when rendering.
 
 ## 12. Out of scope
@@ -572,3 +676,4 @@ Changes are made by the owner (or a model the owner asks). Edit this file first,
 | 1.2 | 2026-09-27 | Added `help.html`, a static traveler-facing help page (no sign-in), and a **Help** link in the top bar that opens it (§3.2, §4). |
 | 1.3 | 2026-09-27 | Every place now gets a location action regardless of whether it already has a pin (**Edit location** vs **Set location**) — a pasted link's coordinates aren't always the real pin, and there was previously no way to correct one without deleting the place (§7.6). Replaced the three hardcoded activity-specific Discover idea queries (rock climbing/surfing/skiing) with destination-agnostic ones (outdoor activities/adventure tours/nature excursions near \<city\>), since a fixed sport makes no sense for most destinations and the app has no compliant way to guess a region-appropriate one (§1, §9.1). |
 | 1.4 | 2026-09-27 | Visual refresh at the owner's request — the flat, single-blue "draft" look is now a card-shadow/hover-lift, gradient-accent design with the Inter font, pill-shaped status/badges, and an external-link marker; no behavior changed (§4). |
+| 2.0 | 2026-09-27 | Owner feedback round 1 (tasks in `docs/tasks/`). New warm "sunset + teal" look with exact color, type and spacing tokens, a logo, favicon and phone toolbar color (§4). Candidate cards redesigned with labeled details and a free Wikipedia photo (§5.4, §7.5, §9.7). Add place, Add flight option and Add stay now lead with finding the item on Google and pasting its link, which fills in what it can; flight links are read by new `flightlink.js` (§7.6, §7.7, §9.2, §9.6). Any number of flights per traveler and stays per trip can be chosen, and totals add them all (§5.3, §7.7, §11). Big view files split up and outside lookups moved to `js/lookup.js` (§3.1). Documented `staylink.js`, which existed without a spec entry. |

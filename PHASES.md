@@ -1,4 +1,6 @@
-# Build phases
+# Build phases (history)
+
+> **All phases below are built.** This file records how the app was first put together. Don't build from it. Current work lives in `docs/tasks/` — start at `docs/tasks/README.md`.
 
 Build one phase per session. Each phase ends with a working app that the owner can use and check. Section numbers like "§7.3" refer to `SPEC.md`.
 

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Trip Planner">
+  <defs>
+    <linearGradient id="tp-sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f2a541"/>
+      <stop offset="1" stop-color="#c8553d"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#tp-sky)"/>
+  <!-- low sun over the hills -->
+  <circle cx="47" cy="22" r="7" fill="#fff4e3"/>
+  <path d="M0 46 C14 36 24 38 34 44 S54 50 64 42 V64 H0 Z" fill="#1f5f5b"/>
+  <!-- map pin -->
+  <path d="M26 12c-7.2 0-13 5.6-13 12.6 0 9.4 13 22.4 13 22.4s13-13 13-22.4C39 17.6 33.2 12 26 12z" fill="#ffffff"/>
+  <circle cx="26" cy="24.5" r="5" fill="#c8553d"/>
+</svg>
