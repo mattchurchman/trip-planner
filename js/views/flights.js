@@ -1,9 +1,10 @@
-import { addFlight, updateFlight, deleteFlight, chooseFlight, clearSelectedFlight } from "../store.js";
-import { el, confirmDialog, friendlyError, field, dialogShell, renderWhenIdle } from "../ui.js";
+import { addFlight, updateFlight, deleteFlight, chooseFlight, unchooseFlight } from "../store.js";
+import { el, setPending, confirmDialog, friendlyError, field, dialogShell, renderWhenIdle } from "../ui.js";
 import { renderComments } from "./comments.js";
 import { safeUrl, googleFlightsSearchUrl } from "../lib/links.js";
 import { parseFlightLink } from "../lib/flightlink.js";
 import { parseMoney } from "../lib/money.js";
+import { isFlightChosen } from "../lib/selection.js";
 import { buildPricePanel } from "./pricePanel.js";
 
 const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -251,26 +252,28 @@ export function createFlightsSection({ tripId, myUid, onError }) {
     }
   }
 
-  function renderFlightCard(flight, traveler, chosenId, trip, usersById) {
+  function renderFlightCard(flight, traveler, trip, usersById) {
     const errorHolder = el("div", { className: "field-error-holder" });
-    const isChosen = flight.id === chosenId;
+    const isChosen = isFlightChosen(trip, traveler.id, flight.id);
 
     const routeText = `${flight.fromAirport || flight.fromCity} → ${flight.toAirport || flight.toCity}`;
     const dateText = [flight.outboundDate, flight.returnDate].filter(Boolean).join(" – ") || "Dates not set";
 
-    const chooseBtn = el("button", {
-      type: "button",
-      className: `btn btn-small${isChosen ? " badge-chosen" : ""}`,
-      textContent: isChosen ? "Chosen" : "Choose",
-      disabled: isChosen,
+    // A traveler may choose any number of options (§7.7) — Choose/Unchoose toggles
+    // this one option; the "Chosen ✓" badge is a separate, purely visual indicator.
+    const chooseBtn = el("button", { type: "button", className: "btn btn-small", textContent: isChosen ? "Unchoose" : "Choose" });
+    chooseBtn.addEventListener("click", async () => {
+      setPending(chooseBtn, true, isChosen ? "Removing…" : "Choosing…");
+      try {
+        if (isChosen) await unchooseFlight(tripId, trip, traveler.id, flight.id);
+        else await chooseFlight(tripId, trip, traveler.id, flight.id);
+      } catch (err) {
+        errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
+      } finally {
+        setPending(chooseBtn, false);
+      }
     });
-    if (!isChosen) {
-      chooseBtn.addEventListener("click", () =>
-        chooseFlight(tripId, traveler.id, flight.id).catch((err) =>
-          errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }))
-        )
-      );
-    }
+    const chosenBadge = isChosen ? el("span", { className: "chosen-badge", textContent: "Chosen ✓" }) : null;
 
     const editBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Edit" });
     editBtn.addEventListener("click", () => openEditFlightDialog(flight));
@@ -280,8 +283,8 @@ export function createFlightsSection({ tripId, myUid, onError }) {
       if (!confirmed) return;
       try {
         await deleteFlight(tripId, flight.id);
-        if (trip.selectedFlights && trip.selectedFlights[flight.travelerId] === flight.id) {
-          await clearSelectedFlight(tripId, flight.travelerId);
+        if (isFlightChosen(trip, flight.travelerId, flight.id)) {
+          await unchooseFlight(tripId, trip, flight.travelerId, flight.id);
         }
       } catch (err) {
         errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
@@ -310,7 +313,7 @@ export function createFlightsSection({ tripId, myUid, onError }) {
     flightCommentUnsubs.push(unsubscribe);
 
     return el("article", { className: `card flight-card${isChosen ? " flight-card-chosen" : ""}` }, [
-      el("div", { className: "flight-card-header" }, [el("strong", { textContent: routeText }), el("span", { className: "muted", textContent: dateText })]),
+      el("div", { className: "flight-card-header" }, [el("strong", { textContent: routeText }), el("span", { className: "muted", textContent: dateText }), chosenBadge].filter(Boolean)),
       ...details,
       pricePanel,
       el("div", { className: "flight-actions" }, [chooseBtn, editBtn, deleteBtn]),
@@ -326,7 +329,6 @@ export function createFlightsSection({ tripId, myUid, onError }) {
     const dest = trip.destination;
     const sections = (trip.travelers || []).map((traveler) => {
       const travelerFlights = flights.filter((f) => f.travelerId === traveler.id);
-      const chosenId = trip.selectedFlights && trip.selectedFlights[traveler.id];
 
       const addBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Add flight option" });
       addBtn.addEventListener("click", () => openAddFlightDialog(traveler, trip));
@@ -344,7 +346,7 @@ export function createFlightsSection({ tripId, myUid, onError }) {
       const cardRows =
         travelerFlights.length === 0
           ? [el("p", { className: "empty-state", textContent: "No flight options yet." })]
-          : travelerFlights.map((f) => renderFlightCard(f, traveler, chosenId, trip, usersById));
+          : travelerFlights.map((f) => renderFlightCard(f, traveler, trip, usersById));
 
       return el("div", { className: "traveler-flights card" }, [
         el("h3", { textContent: `${traveler.name} from ${traveler.homeCity || "?"}` }),

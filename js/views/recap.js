@@ -17,6 +17,7 @@ import { el, setPending, confirmDialog, promptDialog, friendlyError, copyLinkBut
 import { safeUrl } from "../lib/links.js";
 import { parseMoney, formatMoney } from "../lib/money.js";
 import { computeTotals } from "../lib/totals.js";
+import { chosenFlightIds, chosenStayIds } from "../lib/selection.js";
 import { buildPublicRecap, nextTimePlaces, noOneReacted } from "../lib/recap.js";
 
 const REACTIONS = ["loved", "fine", "skipped"];
@@ -217,17 +218,21 @@ export function renderRecapPage(container, tripId, myUid) {
   }
 
   function renderActualSpend() {
+    const travelers = trip.travelers || [];
     const flightsById = Object.fromEntries(flights.map((f) => [f.id, f]));
-    const stay = stays.find((s) => s.id === trip.selectedStayId) || null;
+    const selectedFlightIdsByTraveler = Object.fromEntries(travelers.map((t) => [t.id, chosenFlightIds(trip, t.id)]));
+    const chosenStays = chosenStayIds(trip)
+      .map((id) => stays.find((s) => s.id === id))
+      .filter(Boolean);
     const result = computeTotals({
-      travelers: trip.travelers || [],
-      selectedFlights: trip.selectedFlights || {},
+      travelers,
+      selectedFlightIdsByTraveler,
       flightsById,
-      stay,
+      stays: chosenStays,
       sharedCosts: costs,
     });
 
-    const rows = (trip.travelers || []).map((traveler) => {
+    const rows = travelers.map((traveler) => {
       const plannedCents = result.travelerTotals.find((t) => t.travelerId === traveler.id)?.totalCents || 0;
       const actualCents = (trip.actualSpendCents || {})[traveler.id];
       const actualInput = el("input", {

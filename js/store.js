@@ -19,6 +19,7 @@ import {
   arrayUnion,
   arrayRemove,
 } from "./firebase.js";
+import { chosenStayIds } from "./lib/selection.js";
 
 const TRIP_SUBCOLLECTIONS = ["candidates", "places", "flights", "stays", "costs", "days", "comments"];
 
@@ -76,7 +77,7 @@ export function createTrip(name, user) {
       },
     ],
     selectedFlights: {},
-    selectedStayId: null,
+    selectedStayIds: [],
     albumUrl: null,
     actualSpendCents: {},
     createdBy: user.uid,
@@ -335,13 +336,29 @@ export function deleteFlight(tripId, flightId) {
   return deleteSubDoc(tripId, "flights", flightId);
 }
 
-/** Clears a traveler's chosen flight if it points at a specific (e.g. just-deleted) flight. */
-export function clearSelectedFlight(tripId, travelerId) {
-  return updateTripFields(tripId, { [`selectedFlights.${travelerId}`]: deleteField() });
+/**
+ * Choose/unchoose a flight option for one traveler (§5.3, §7.7). A traveler may
+ * choose any number of options. `trip` is the current trip doc, needed to detect
+ * the pre-2.0 shape (a single flight id string): the first time a legacy value
+ * changes, the whole list is written instead of arrayUnion/arrayRemove, because
+ * arrayUnion on a string would silently discard the old choice.
+ */
+export function chooseFlight(tripId, trip, travelerId, flightId) {
+  const current = trip.selectedFlights && trip.selectedFlights[travelerId];
+  if (typeof current === "string") {
+    const merged = current === flightId ? [current] : [current, flightId];
+    return updateTripFields(tripId, { [`selectedFlights.${travelerId}`]: merged });
+  }
+  return updateTripFields(tripId, { [`selectedFlights.${travelerId}`]: arrayUnion(flightId) });
 }
 
-export function chooseFlight(tripId, travelerId, flightId) {
-  return updateTripFields(tripId, { [`selectedFlights.${travelerId}`]: flightId });
+export function unchooseFlight(tripId, trip, travelerId, flightId) {
+  const current = trip.selectedFlights && trip.selectedFlights[travelerId];
+  if (typeof current === "string") {
+    const remaining = current === flightId ? [] : [current];
+    return updateTripFields(tripId, { [`selectedFlights.${travelerId}`]: remaining });
+  }
+  return updateTripFields(tripId, { [`selectedFlights.${travelerId}`]: arrayRemove(flightId) });
 }
 
 export function watchStays(tripId, onChange, onError) {
@@ -380,17 +397,33 @@ export function deleteStay(tripId, stayId) {
   return deleteSubDoc(tripId, "stays", stayId);
 }
 
-/** Clears trip.selectedStayId if it points at a specific (e.g. just-deleted) stay. */
-export function clearSelectedStay(tripId) {
-  return updateTripFields(tripId, { selectedStayId: null });
-}
-
 export function voteOnStay(tripId, stayId, uid, choice) {
   return voteOnSubDoc(tripId, "stays", stayId, uid, choice);
 }
 
-export function chooseStay(tripId, stayId) {
-  return updateTripFields(tripId, { selectedStayId: stayId });
+/**
+ * Choose/unchoose a stay (§5.3, §7.7). Any number of stays may be chosen.
+ * `trip` is the current trip doc, needed to detect the pre-2.0 shape (a single
+ * `selectedStayId` string): the first time a legacy value changes, the whole
+ * `selectedStayIds` list is written (merging in the legacy id) and
+ * `selectedStayId` is cleared, instead of using arrayUnion/arrayRemove, because
+ * arrayUnion on a value living in the wrong field wouldn't touch it at all.
+ */
+export function chooseStay(tripId, trip, stayId) {
+  if (trip.selectedStayId) {
+    const merged = chosenStayIds(trip);
+    if (!merged.includes(stayId)) merged.push(stayId);
+    return updateTripFields(tripId, { selectedStayIds: merged, selectedStayId: deleteField() });
+  }
+  return updateTripFields(tripId, { selectedStayIds: arrayUnion(stayId) });
+}
+
+export function unchooseStay(tripId, trip, stayId) {
+  if (trip.selectedStayId) {
+    const remaining = chosenStayIds(trip).filter((id) => id !== stayId);
+    return updateTripFields(tripId, { selectedStayIds: remaining, selectedStayId: deleteField() });
+  }
+  return updateTripFields(tripId, { selectedStayIds: arrayRemove(stayId) });
 }
 
 export function watchCosts(tripId, onChange, onError) {

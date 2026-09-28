@@ -1161,11 +1161,16 @@ textarea:focus {
   box-shadow: 0 0 0 3px var(--secondary-soft), var(--shadow-sm);
 }
 
-.flight-card-header {
+.flight-card-header,
+.stay-card-title {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   flex-wrap: wrap;
+}
+
+.stay-card-title h3 {
+  margin: 0;
 }
 
 .flight-actions,
@@ -1179,6 +1184,20 @@ textarea:focus {
   background: var(--secondary-soft);
   color: var(--secondary);
   border-color: var(--secondary);
+}
+
+/* The standalone "Chosen ✓" pill (§7.7) next to a flight/stay's title — unlike
+   .badge-chosen above, this isn't layered onto a .btn, so it carries its own
+   padding and shape (same recipe as candidates.js's chosen pill, §4 tokens). */
+.chosen-badge {
+  align-self: flex-start;
+  color: var(--secondary);
+  background: var(--secondary-soft);
+  font-weight: 600;
+  font-size: 0.8em;
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
 }
 
 .stays-list {

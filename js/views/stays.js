@@ -1,5 +1,5 @@
-import { addStay, updateStay, deleteStay, voteOnStay, chooseStay, clearSelectedStay } from "../store.js";
-import { el, confirmDialog, friendlyError, rankControl, field, dialogShell, renderWhenIdle } from "../ui.js";
+import { addStay, updateStay, deleteStay, voteOnStay, chooseStay, unchooseStay } from "../store.js";
+import { el, setPending, confirmDialog, friendlyError, rankControl, field, dialogShell, renderWhenIdle } from "../ui.js";
 import { renderComments } from "./comments.js";
 import { sortByRank } from "../lib/votes.js";
 import { formatMoney, parseMoney } from "../lib/money.js";
@@ -8,6 +8,7 @@ import { latestEntry, perNightCents } from "../lib/totals.js";
 import { safeUrl, googleHotelsUrl, bookingUrl, airbnbUrl } from "../lib/links.js";
 import { parseGoogleMapsUrl } from "../lib/mapsurl.js";
 import { parseStayLink } from "../lib/staylink.js";
+import { isStayChosen } from "../lib/selection.js";
 import { buildPricePanel } from "./pricePanel.js";
 
 const PROVIDERS = [
@@ -355,7 +356,7 @@ export function createStaysSection({ tripId, myUid, onError }) {
 
   function renderStayCard(stay, trip, usersById) {
     const errorHolder = el("div", { className: "field-error-holder" });
-    const isChosen = stay.id === trip.selectedStayId;
+    const isChosen = isStayChosen(trip, stay.id);
     const nights = nightsBetween(stay.checkIn, stay.checkOut);
     const latest = latestEntry(stay.prices);
     const perNight = latest && nights ? perNightCents(latest.amountCents, nights) : null;
@@ -370,17 +371,21 @@ export function createStaysSection({ tripId, myUid, onError }) {
         ),
     });
 
-    const chooseBtn = el("button", {
-      type: "button",
-      className: `btn btn-small${isChosen ? " badge-chosen" : ""}`,
-      textContent: isChosen ? "Chosen" : "Choose",
-      disabled: isChosen,
+    // The group may choose any number of stays (§7.7) — Choose/Unchoose toggles
+    // this one; the "Chosen ✓" badge is a separate, purely visual indicator.
+    const chooseBtn = el("button", { type: "button", className: "btn btn-small", textContent: isChosen ? "Unchoose" : "Choose" });
+    chooseBtn.addEventListener("click", async () => {
+      setPending(chooseBtn, true, isChosen ? "Removing…" : "Choosing…");
+      try {
+        if (isChosen) await unchooseStay(tripId, trip, stay.id);
+        else await chooseStay(tripId, trip, stay.id);
+      } catch (err) {
+        errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
+      } finally {
+        setPending(chooseBtn, false);
+      }
     });
-    if (!isChosen) {
-      chooseBtn.addEventListener("click", () =>
-        chooseStay(tripId, stay.id).catch((err) => errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) })))
-      );
-    }
+    const chosenBadge = isChosen ? el("span", { className: "chosen-badge", textContent: "Chosen ✓" }) : null;
 
     const editBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Edit" });
     editBtn.addEventListener("click", () => openEditStayDialog(stay, trip));
@@ -390,8 +395,8 @@ export function createStaysSection({ tripId, myUid, onError }) {
       if (!confirmed) return;
       try {
         await deleteStay(tripId, stay.id);
-        if (trip.selectedStayId === stay.id) {
-          await clearSelectedStay(tripId);
+        if (isStayChosen(trip, stay.id)) {
+          await unchooseStay(tripId, trip, stay.id);
         }
       } catch (err) {
         errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
@@ -422,7 +427,7 @@ export function createStaysSection({ tripId, myUid, onError }) {
     stayCommentUnsubs.push(unsubscribe);
 
     return el("article", { className: `card stay-card${isChosen ? " stay-card-chosen" : ""}` }, [
-      el("h3", { textContent: stay.name }),
+      el("div", { className: "stay-card-title" }, [el("h3", { textContent: stay.name }), chosenBadge].filter(Boolean)),
       ...details,
       pricePanel,
       rank,

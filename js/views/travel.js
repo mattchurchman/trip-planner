@@ -2,6 +2,7 @@ import { watchTrip, watchUsers, watchFlights, watchStays, watchCosts, addCost, u
 import { el, confirmDialog, friendlyError, field, dialogShell } from "../ui.js";
 import { parseMoney, formatMoney } from "../lib/money.js";
 import { computeTotals } from "../lib/totals.js";
+import { chosenFlightIds, chosenStayIds } from "../lib/selection.js";
 import { createFlightsSection } from "./flights.js";
 import { createStaysSection } from "./stays.js";
 
@@ -121,8 +122,11 @@ export function renderTravelPage(container, tripId, myUid) {
   function renderTotalsCard() {
     const travelers = trip.travelers || [];
     const flightsById = Object.fromEntries(flights.map((f) => [f.id, f]));
-    const stay = stays.find((s) => s.id === trip.selectedStayId) || null;
-    const result = computeTotals({ travelers, selectedFlights: trip.selectedFlights || {}, flightsById, stay, sharedCosts: costs });
+    const selectedFlightIdsByTraveler = Object.fromEntries(travelers.map((t) => [t.id, chosenFlightIds(trip, t.id)]));
+    const chosenStays = chosenStayIds(trip)
+      .map((id) => stays.find((s) => s.id === id))
+      .filter(Boolean);
+    const result = computeTotals({ travelers, selectedFlightIdsByTraveler, flightsById, stays: chosenStays, sharedCosts: costs });
 
     const rows = result.travelerTotals.map((t) =>
       el("div", { className: "totals-row" }, [el("span", { textContent: t.name }), el("span", { textContent: formatMoney(t.totalCents, trip.currency) })])
