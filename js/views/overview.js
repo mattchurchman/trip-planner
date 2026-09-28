@@ -250,9 +250,8 @@ export function renderOverviewPage(container, tripId, myUid) {
       }
     });
     travelersEl.replaceChildren(
-      el("h2", { textContent: "Travelers" }),
+      el("div", { className: "travelers-header" }, [el("h2", { textContent: "Travelers" }), addBtn]),
       ...(trip.travelers || []).map(travelerRow),
-      addBtn,
       travelerError
     );
   }

@@ -58,28 +58,28 @@ export function renderTravelPage(container, tripId, myUid) {
   const flightsSection = createFlightsSection({ tripId, myUid, onError });
   const staysSection = createStaysSection({ tripId, myUid, onError });
 
+  const addCostBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Add shared cost" });
+  addCostBtn.addEventListener("click", async () => {
+    const result = await costFormDialog(null);
+    if (!result) return;
+    try {
+      await addCost(tripId, result, myUid);
+    } catch (err) {
+      onError(friendlyError(err));
+    }
+  });
+
   container.replaceChildren(
     loadErrorEl,
     flightsSection.element,
     staysSection.element,
-    el("h2", { textContent: "Shared costs" }),
+    el("div", { className: "costs-header" }, [el("h2", { textContent: "Shared costs" }), addCostBtn]),
     costsSectionEl,
     el("h2", { textContent: "Totals" }),
     totalsCardEl
   );
 
   function renderCostsSection() {
-    const addBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Add shared cost" });
-    addBtn.addEventListener("click", async () => {
-      const result = await costFormDialog(null);
-      if (!result) return;
-      try {
-        await addCost(tripId, result, myUid);
-      } catch (err) {
-        onError(friendlyError(err));
-      }
-    });
-
     const rows = costs.map((cost) => {
       const editBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Edit" });
       editBtn.addEventListener("click", async () => {
@@ -115,7 +115,7 @@ export function renderTravelPage(container, tripId, myUid) {
     });
 
     const body = rows.length > 0 ? rows : [el("p", { className: "empty-state", textContent: "No shared costs yet." })];
-    costsSectionEl.replaceChildren(addBtn, ...body);
+    costsSectionEl.replaceChildren(...body);
   }
 
   function renderTotalsCard() {

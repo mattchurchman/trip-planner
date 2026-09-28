@@ -20,7 +20,7 @@ If a task fails twice, revert it ("Revert the last commit") and retry in a fresh
 | # | Task | Model | Depends on | Status |
 |---|---|---|---|---|
 | T01 | [Split big files, one place for outside lookups](T01-split-files.md) | Sonnet | — | Done (2026-09-27) |
-| T02 | [Facelift: colors, type, logo, tab icon](T02-facelift.md) | Sonnet | T01 | To do |
+| T02 | [Facelift: colors, type, logo, tab icon](T02-facelift.md) | Sonnet | T01 | Done (2026-09-27) |
 | T03 | [Destination idea cards with photos](T03-candidate-cards.md) | Sonnet | T01, T02 | To do |
 | T04 | [Places: find on Google Maps first](T04-places-link-first.md) | Haiku (Sonnet if it struggles) | T01, T02 | To do |
 | T05 | [Flights & stays: paste a link first](T05-travel-link-first.md) | Sonnet | T01, T02 | To do |

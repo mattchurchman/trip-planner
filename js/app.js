@@ -50,6 +50,7 @@ function showSignedOut() {
   });
   root.replaceChildren(
     el("div", { className: "center-card" }, [
+      el("img", { className: "center-card-logo", src: "./img/logo.svg", alt: "", width: 64, height: 64 }),
       el("h1", { textContent: "Trip Planner" }),
       el("p", { textContent: "Plan trips with your friends." }),
       signInBtn,
@@ -77,7 +78,10 @@ function renderTopBar(user) {
         textContent: (user.displayName || user.email || "?")[0].toUpperCase(),
       });
   return el("header", { className: "top-bar" }, [
-    el("a", { className: "app-name", textContent: "Trip Planner", href: "#/" }),
+    el("a", { className: "app-brand", href: "#/" }, [
+      el("img", { className: "app-logo", src: "./img/logo.svg", alt: "", width: 28, height: 28 }),
+      el("span", { className: "app-name", textContent: "Trip Planner" }),
+    ]),
     el("div", { className: "top-bar-user" }, [
       el("a", { className: "btn btn-link", textContent: "Help", href: "./help.html", target: "_blank", rel: "noopener noreferrer" }),
       avatar,
@@ -111,6 +115,7 @@ function renderTripShell(main, tripId, myUid, tabKey) {
         content.replaceChildren();
         return;
       }
+      document.title = `${trip.name} · Trip Planner`;
       header.replaceChildren(
         el("h1", { textContent: trip.name }),
         el("p", { className: "trip-status", textContent: trip.status })
@@ -136,6 +141,7 @@ function route(user, main) {
     const tabKey = TABS.some((t) => t.key === tripMatch[2]) ? tripMatch[2] : "overview";
     tripWatchers.push(renderTripShell(main, tripId, user.uid, tabKey));
   } else {
+    document.title = "Trip Planner";
     tripWatchers.push(renderTripsView(main, user));
   }
 }
