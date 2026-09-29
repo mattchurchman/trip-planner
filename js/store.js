@@ -317,6 +317,7 @@ export function addFlight(tripId, fields, uid) {
       outboundDetails: fields.outboundDetails || "",
       returnDate: fields.returnDate || null,
       returnDetails: fields.returnDetails || "",
+      legs: Array.isArray(fields.legs) ? fields.legs : [],
       link: fields.link || null,
       notes: fields.notes || "",
       // Optional "Price you saw" from the add form (§7.7), already a full PriceEntry
