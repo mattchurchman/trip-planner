@@ -1241,11 +1241,22 @@ textarea:focus {
   box-shadow: 0 0 0 3px var(--secondary-soft), var(--shadow-sm);
 }
 
+/* Card header (§7.7): label/name + pills on the left, the price summary on
+   the right. Shared by flight and stay cards — a stay's header carries both
+   classes so it gets this layout plus the h3 margin reset below. */
 .flight-card-header,
 .stay-card-title {
   display: flex;
-  align-items: center;
+  justify-content: space-between;
+  align-items: flex-start;
   gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.option-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
@@ -1253,11 +1264,48 @@ textarea:focus {
   margin: 0;
 }
 
+.stay-number {
+  color: var(--secondary);
+  font-weight: 700;
+  margin-right: 2px;
+}
+
+.provider-pill {
+  background: var(--surface-muted);
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.8em;
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+
+/* Notes clamped to two lines on both card types (§7.7) so a long note never
+   dominates the compact card. */
+.card-notes-clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0;
+}
+
 .flight-actions,
 .stay-actions {
   display: flex;
+  align-items: center;
   gap: var(--space-2);
   flex-wrap: wrap;
+}
+
+/* Flight option grid (§7.7): compact cards side by side for comparing, one
+   column once they no longer fit at 340px (phones included, no media query
+   needed). One grid per traveler section. */
+.flight-options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-3);
 }
 
 .badge-chosen {
@@ -1280,35 +1328,38 @@ textarea:focus {
   white-space: nowrap;
 }
 
+/* Same grid recipe as .flight-options-grid (§7.7). */
 .stays-list {
   display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: var(--space-3);
   margin-top: var(--space-3);
 }
 
-.price-panel {
-  padding: var(--space-3);
-  background: var(--surface-muted);
-  border-radius: var(--radius);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
+/* Price summary (§7.8): the card header's right side. Right-aligned so it
+   reads as a clean column next to the label/pills on the left. */
 .price-summary {
   display: flex;
   flex-direction: column;
+  align-items: flex-end;
   gap: 4px;
+  text-align: right;
 }
 
 .price-latest {
   margin: 0;
+  font-size: 1.25rem;
   font-weight: 600;
+}
+
+.price-per-night {
+  margin: 0;
+  font-size: 0.9em;
 }
 
 .price-delta {
   margin: 0;
-  color: var(--muted);
+  font-size: 0.9em;
 }
 
 .price-hint {
@@ -1317,7 +1368,7 @@ textarea:focus {
 }
 
 .badge-new-low {
-  align-self: flex-start;
+  align-self: flex-end;
   background: var(--sun);
   color: var(--text);
   border-radius: var(--radius-pill);
@@ -1327,17 +1378,29 @@ textarea:focus {
 }
 
 .sparkline {
-  width: 100px;
-  height: 24px;
+  width: 64px;
+  height: 16px;
 }
 
-.price-log-form {
+/* The Update-price row (§7.8), opened by the footer's Update price/Add price
+   button and closed again after Save price or Cancel — sits right under the
+   header, as its own block so it doesn't reflow the itinerary below it. */
+.price-update-row {
+  padding: var(--space-3);
+  background: var(--surface-muted);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.price-update-fields {
   display: flex;
   gap: var(--space-2);
   flex-wrap: wrap;
 }
 
-.price-log-form input {
+.price-update-fields input {
   padding: 6px var(--space-2);
   border: 1px solid var(--border);
   border-radius: var(--radius);

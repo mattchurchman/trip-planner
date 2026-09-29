@@ -2,9 +2,27 @@ import { addFlight, updateFlight, deleteFlight, chooseFlight, unchooseFlight } f
 import { el, setPending, confirmDialog, friendlyError, renderWhenIdle } from "../ui.js";
 import { renderComments } from "./comments.js";
 import { safeUrl, googleFlightsSearchUrl } from "../lib/links.js";
-import { isFlightChosen } from "../lib/selection.js";
-import { buildPricePanel } from "./pricePanel.js";
+import { isFlightChosen, chosenFlightIds } from "../lib/selection.js";
+import { sortFlightOptions, cheapestFlightId } from "../lib/optionSort.js";
+import { priceSummary, priceUpdater } from "./pricePanel.js";
+import { renderItinerary } from "./itinerary.js";
 import { addFlightFormDialog, editFlightFormDialog } from "./flightForm.js";
+
+/** A flight's `legs` when it has one, otherwise a same-shaped fallback built
+ * from the plain from/to/date fields (pre-3.0 flights, or one added without a
+ * link) so the same itinerary block renders either way — with no stops or
+ * flight-number line, per §7.7's "flight with no legs" bullet. */
+function legsForCard(flight) {
+  if (flight.legs && flight.legs.length > 0) return flight.legs;
+  const legs = [];
+  if (flight.outboundDate || flight.fromAirport || flight.fromCity) {
+    legs.push({ date: flight.outboundDate, from: flight.fromAirport || flight.fromCity, to: flight.toAirport || flight.toCity, segments: [] });
+  }
+  if (flight.returnDate) {
+    legs.push({ date: flight.returnDate, from: flight.toAirport || flight.toCity, to: flight.fromAirport || flight.fromCity, segments: [] });
+  }
+  return legs;
+}
 
 /**
  * Builds the Flights section of the Flights & stays tab (§7.7): one card of
@@ -40,15 +58,10 @@ export function createFlightsSection({ tripId, myUid, onError }) {
     }
   }
 
-  function renderFlightCard(flight, traveler, trip, usersById) {
+  function renderFlightCard(flight, traveler, trip, usersById, isCheapest) {
     const errorHolder = el("div", { className: "field-error-holder" });
     const isChosen = isFlightChosen(trip, traveler.id, flight.id);
 
-    const routeText = `${flight.fromAirport || flight.fromCity} → ${flight.toAirport || flight.toCity}`;
-    const dateText = [flight.outboundDate, flight.returnDate].filter(Boolean).join(" – ") || "Dates not set";
-
-    // A traveler may choose any number of options (§7.7) — Choose/Unchoose toggles
-    // this one option; the "Chosen ✓" badge is a separate, purely visual indicator.
     const chooseBtn = el("button", { type: "button", className: "btn btn-small", textContent: isChosen ? "Unchoose" : "Choose" });
     chooseBtn.addEventListener("click", async () => {
       setPending(chooseBtn, true, isChosen ? "Removing…" : "Choosing…");
@@ -61,11 +74,30 @@ export function createFlightsSection({ tripId, myUid, onError }) {
         setPending(chooseBtn, false);
       }
     });
-    const chosenBadge = isChosen ? el("span", { className: "chosen-badge", textContent: "Chosen ✓" }) : null;
 
-    const editBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Edit" });
+    const pills = [
+      isChosen ? el("span", { className: "chosen-badge", textContent: "Chosen ✓" }) : null,
+      isCheapest ? el("span", { className: "badge-new-low", textContent: "Cheapest" }) : null,
+    ].filter(Boolean);
+
+    const headerLeft = el("div", { className: "option-header-left" }, [el("h3", { textContent: flight.label || "Flight option" }), ...pills]);
+    const summary = priceSummary({ prices: flight.prices || [], currency: trip.currency, usersById });
+    const header = el("div", { className: "flight-card-header" }, [headerLeft, summary]);
+
+    const { button: updateBtn, row: updateRow } = priceUpdater({
+      tripId,
+      subcollection: "flights",
+      docId: flight.id,
+      prices: flight.prices || [],
+      myUid,
+      currency: trip.currency,
+    });
+
+    const itinerary = renderItinerary(legsForCard(flight), { outboundDetails: flight.outboundDetails, returnDetails: flight.returnDetails });
+
+    const editBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Edit" });
     editBtn.addEventListener("click", () => openEditFlightDialog(flight, traveler, trip));
-    const deleteBtn = el("button", { type: "button", className: "btn btn-small btn-danger", textContent: "Delete" });
+    const deleteBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Delete" });
     deleteBtn.addEventListener("click", async () => {
       const confirmed = await confirmDialog("Delete this flight option?", "Delete");
       if (!confirmed) return;
@@ -80,34 +112,22 @@ export function createFlightsSection({ tripId, myUid, onError }) {
     });
 
     const safeLink = flight.link ? safeUrl(flight.link) : null;
-    const details = [];
-    if (flight.label) details.push(el("p", { className: "muted", textContent: flight.label }));
-    if (flight.outboundDetails) details.push(el("p", { textContent: `Outbound: ${flight.outboundDetails}` }));
-    if (flight.returnDetails) details.push(el("p", { textContent: `Return: ${flight.returnDetails}` }));
-    if (flight.notes) details.push(el("p", { textContent: flight.notes }));
-    if (safeLink) details.push(el("a", { href: safeLink, target: "_blank", rel: "noopener noreferrer", textContent: "Link" }));
-
-    const pricePanel = buildPricePanel({
-      tripId,
-      subcollection: "flights",
-      docId: flight.id,
-      prices: flight.prices || [],
-      myUid,
-      usersById,
-      currency: trip.currency,
-    });
+    const openLink = safeLink ? el("a", { href: safeLink, target: "_blank", rel: "noopener noreferrer", textContent: "Open on Google" }) : null;
 
     const { element: commentsEl, unsubscribe } = renderComments({ tripId, targetType: "flight", targetId: flight.id, myUid, usersById });
     flightCommentUnsubs.push(unsubscribe);
 
+    const notes = flight.notes ? el("p", { className: "card-notes-clamp", textContent: flight.notes }) : null;
+
     return el("article", { className: `card flight-card${isChosen ? " flight-card-chosen" : ""}` }, [
-      el("div", { className: "flight-card-header" }, [el("strong", { textContent: routeText }), el("span", { className: "muted", textContent: dateText }), chosenBadge].filter(Boolean)),
-      ...details,
-      pricePanel,
-      el("div", { className: "flight-actions" }, [chooseBtn, editBtn, deleteBtn]),
+      header,
+      updateRow,
+      itinerary,
+      notes,
+      el("div", { className: "flight-actions" }, [chooseBtn, updateBtn, openLink, editBtn, deleteBtn].filter(Boolean)),
       errorHolder,
       commentsEl,
-    ]);
+    ].filter(Boolean));
   }
 
   function renderSection(flights, trip, usersById) {
@@ -117,6 +137,9 @@ export function createFlightsSection({ tripId, myUid, onError }) {
     const dest = trip.destination;
     const sections = (trip.travelers || []).map((traveler) => {
       const travelerFlights = flights.filter((f) => f.travelerId === traveler.id);
+      const chosenIds = chosenFlightIds(trip, traveler.id);
+      const sorted = sortFlightOptions(travelerFlights, chosenIds);
+      const cheapestId = cheapestFlightId(travelerFlights);
 
       const addBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Add flight option" });
       addBtn.addEventListener("click", () => openAddFlightDialog(traveler, trip, travelerFlights.length));
@@ -131,15 +154,15 @@ export function createFlightsSection({ tripId, myUid, onError }) {
       });
       const searchLink = el("a", { href: searchUrl, target: "_blank", rel: "noopener noreferrer", textContent: "Search Google Flights" });
 
-      const cardRows =
-        travelerFlights.length === 0
-          ? [el("p", { className: "empty-state", textContent: "No flight options yet. Search Google Flights above, then add what you find." })]
-          : travelerFlights.map((f) => renderFlightCard(f, traveler, trip, usersById));
+      const grid =
+        sorted.length === 0
+          ? el("p", { className: "empty-state", textContent: "No flight options yet. Search Google Flights above, then add what you find." })
+          : el("div", { className: "flight-options-grid" }, sorted.map((f) => renderFlightCard(f, traveler, trip, usersById, f.id === cheapestId)));
 
       return el("div", { className: "traveler-flights card" }, [
         el("h3", { textContent: `${traveler.name} from ${traveler.homeCity || "?"}` }),
         el("div", { className: "traveler-flights-actions" }, [addBtn, searchLink]),
-        ...cardRows,
+        grid,
       ]);
     });
     flightsSectionEl.replaceChildren(...sections);

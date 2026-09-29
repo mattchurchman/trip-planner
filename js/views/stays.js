@@ -1,15 +1,16 @@
 import { addStay, updateStay, deleteStay, voteOnStay, chooseStay, unchooseStay } from "../store.js";
 import { el, setPending, confirmDialog, friendlyError, rankControl, field, dialogShell, renderWhenIdle } from "../ui.js";
 import { renderComments } from "./comments.js";
-import { sortByRank } from "../lib/votes.js";
-import { formatMoney, parseMoney } from "../lib/money.js";
-import { nightsBetween, nightsLabel } from "../lib/dates.js";
+import { parseMoney } from "../lib/money.js";
+import { nightsBetween } from "../lib/dates.js";
+import { formatLegDate } from "../lib/itineraryFormat.js";
 import { latestEntry, perNightCents } from "../lib/totals.js";
 import { safeUrl, googleHotelsUrl, bookingUrl, airbnbUrl } from "../lib/links.js";
 import { parseGoogleMapsUrl } from "../lib/mapsurl.js";
 import { parseStayLink } from "../lib/staylink.js";
-import { isStayChosen } from "../lib/selection.js";
-import { buildPricePanel } from "./pricePanel.js";
+import { isStayChosen, chosenStayIds } from "../lib/selection.js";
+import { sortStayOptions, stayNumbers, circledNumber } from "../lib/optionSort.js";
+import { priceSummary, priceUpdater } from "./pricePanel.js";
 
 const PROVIDERS = [
   { value: "booking", label: "Booking.com" },
@@ -24,6 +25,10 @@ const PROVIDERS = [
 const NO_NAME_NOTE = {
   airbnb: "Airbnb links don't include the listing name — type it below.",
 };
+
+function providerLabel(value) {
+  return (PROVIDERS.find((p) => p.value === value) || PROVIDERS[PROVIDERS.length - 1]).label;
+}
 
 function externalLinkRow(url, label) {
   return el("a", { className: "discover-link", href: url, target: "_blank", rel: "noopener noreferrer", textContent: label });
@@ -354,7 +359,7 @@ export function createStaysSection({ tripId, myUid, onError }) {
     }
   }
 
-  function renderStayCard(stay, trip, usersById) {
+  function renderStayCard(stay, trip, usersById, number) {
     const errorHolder = el("div", { className: "field-error-holder" });
     const isChosen = isStayChosen(trip, stay.id);
     const nights = nightsBetween(stay.checkIn, stay.checkOut);
@@ -385,11 +390,10 @@ export function createStaysSection({ tripId, myUid, onError }) {
         setPending(chooseBtn, false);
       }
     });
-    const chosenBadge = isChosen ? el("span", { className: "chosen-badge", textContent: "Chosen ✓" }) : null;
 
-    const editBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Edit" });
+    const editBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Edit" });
     editBtn.addEventListener("click", () => openEditStayDialog(stay, trip));
-    const deleteBtn = el("button", { type: "button", className: "btn btn-small btn-danger", textContent: "Delete" });
+    const deleteBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Delete" });
     deleteBtn.addEventListener("click", async () => {
       const confirmed = await confirmDialog(`Delete ${stay.name}?`, "Delete");
       if (!confirmed) return;
@@ -403,38 +407,57 @@ export function createStaysSection({ tripId, myUid, onError }) {
       }
     });
 
-    const safeLink = stay.link ? safeUrl(stay.link) : null;
-    const details = [];
-    if (stay.neighborhood) details.push(el("p", { className: "muted", textContent: stay.neighborhood }));
-    if (safeLink) details.push(el("a", { href: safeLink, target: "_blank", rel: "noopener noreferrer", textContent: "Link" }));
-    const metaText = [nightsLabel(stay.checkIn, stay.checkOut), `${stay.guests} guest${stay.guests === 1 ? "" : "s"}`, perNight != null ? `${formatMoney(perNight, trip.currency)}/night` : null]
-      .filter(Boolean)
-      .join(" · ");
-    details.push(el("p", { className: "muted", textContent: metaText }));
-    if (stay.note) details.push(el("p", { textContent: stay.note }));
+    const headerLeft = el("div", { className: "option-header-left" }, [
+      el("h3", {}, [el("span", { className: "stay-number", textContent: circledNumber(number) }), ` ${stay.name}`]),
+      el("span", { className: "provider-pill", textContent: providerLabel(stay.provider) }),
+      isChosen ? el("span", { className: "chosen-badge", textContent: "Chosen ✓" }) : null,
+    ].filter(Boolean));
+    const summary = priceSummary({ prices: stay.prices || [], currency: trip.currency, perNightCents: perNight, usersById });
+    const header = el("div", { className: "flight-card-header stay-card-title" }, [headerLeft, summary]);
 
-    const pricePanel = buildPricePanel({
+    const { button: updateBtn, row: updateRow } = priceUpdater({
       tripId,
       subcollection: "stays",
       docId: stay.id,
       prices: stay.prices || [],
       myUid,
-      usersById,
       currency: trip.currency,
     });
+
+    const dateRange = [formatLegDate(stay.checkIn), formatLegDate(stay.checkOut)].filter(Boolean).join(" – ") || null;
+    const metaText = [stay.neighborhood || null, dateRange, nights != null ? `${nights} night${nights === 1 ? "" : "s"}` : null, `${stay.guests} guest${stay.guests === 1 ? "" : "s"}`]
+      .filter(Boolean)
+      .join(" · ");
+
+    // T13 makes "On the map" clickable (pans to the pin); plain text for now (Don't #2).
+    let locationLine;
+    if (stay.lat != null) {
+      locationLine = el("p", { className: "muted", textContent: "📍 On the map" });
+    } else {
+      const setLocationBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Set location" });
+      setLocationBtn.addEventListener("click", () => openEditStayDialog(stay, trip));
+      locationLine = el("p", { className: "muted" }, ["No pin yet · ", setLocationBtn]);
+    }
+
+    const safeLink = stay.link ? safeUrl(stay.link) : null;
+    const openLink = safeLink ? el("a", { href: safeLink, target: "_blank", rel: "noopener noreferrer", textContent: "Open link" }) : null;
 
     const { element: commentsEl, unsubscribe } = renderComments({ tripId, targetType: "stay", targetId: stay.id, myUid, usersById });
     stayCommentUnsubs.push(unsubscribe);
 
+    const note = stay.note ? el("p", { className: "card-notes-clamp", textContent: stay.note }) : null;
+
     return el("article", { className: `card stay-card${isChosen ? " stay-card-chosen" : ""}` }, [
-      el("div", { className: "stay-card-title" }, [el("h3", { textContent: stay.name }), chosenBadge].filter(Boolean)),
-      ...details,
-      pricePanel,
+      header,
+      updateRow,
+      el("p", { className: "muted", textContent: metaText }),
+      locationLine,
       rank,
-      el("div", { className: "stay-actions" }, [chooseBtn, editBtn, deleteBtn]),
+      note,
+      el("div", { className: "stay-actions" }, [chooseBtn, updateBtn, openLink, editBtn, deleteBtn].filter(Boolean)),
       errorHolder,
       commentsEl,
-    ]);
+    ].filter(Boolean));
   }
 
   function renderSection(stays, trip, usersById) {
@@ -451,11 +474,13 @@ export function createStaysSection({ tripId, myUid, onError }) {
 
     addStayBtn.disabled = stays.length >= 10;
 
-    const sorted = sortByRank(stays);
+    // Numbers are stable (createdAt order) and independent of the display sort below.
+    const numbers = stayNumbers(stays);
+    const sorted = sortStayOptions(stays, chosenStayIds(trip));
     if (sorted.length === 0) {
       staysListEl.replaceChildren(el("p", { className: "empty-state", textContent: "No stays yet. Search above, then paste a link to add one." }));
     } else {
-      staysListEl.replaceChildren(...sorted.map((s) => renderStayCard(s, trip, usersById)));
+      staysListEl.replaceChildren(...sorted.map((s) => renderStayCard(s, trip, usersById, numbers[s.id])));
     }
   }
 
