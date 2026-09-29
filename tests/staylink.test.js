@@ -53,6 +53,43 @@ export const tests = [
   }],
   ["parseStayLink: plain text returns all nulls", () => {
     const result = parseStayLink("just some text");
-    assert.deepEqual(result, { provider: null, name: null, checkIn: null, checkOut: null, guests: null });
+    assert.deepEqual(result, {
+      provider: null,
+      name: null,
+      checkIn: null,
+      checkOut: null,
+      guests: null,
+      lat: null,
+      lng: null,
+    });
+  }],
+  ["parseStayLink: Booking.com URL with lat/latitude params returns coordinates", () => {
+    const result = parseStayLink(
+      "https://www.booking.com/hotel/pt/casa-alfama.html?checkin=2026-06-01&latitude=38.7139&longitude=-9.1334"
+    );
+    assert.equal(result.lat, 38.7139);
+    assert.equal(result.lng, -9.1334);
+  }],
+  ["parseStayLink: Airbnb URL with a combined ll= param returns coordinates", () => {
+    const result = parseStayLink("https://www.airbnb.com/rooms/12345678?ll=38.7139,-9.1334");
+    assert.equal(result.lat, 38.7139);
+    assert.equal(result.lng, -9.1334);
+  }],
+  ["parseStayLink: Google Hotels URL with lat/lng params returns coordinates", () => {
+    const result = parseStayLink("https://www.google.com/travel/hotels/entity/abc123?lat=38.7139&lng=-9.1334");
+    assert.equal(result.lat, 38.7139);
+    assert.equal(result.lng, -9.1334);
+  }],
+  ["parseStayLink: an existing link with no coordinate params returns lat: null, lng: null", () => {
+    const result = parseStayLink(
+      "https://www.booking.com/hotel/pt/casa-alfama.en-gb.html?checkin=2026-06-01&checkout=2026-06-10&group_adults=2"
+    );
+    assert.equal(result.lat, null);
+    assert.equal(result.lng, null);
+  }],
+  ["parseStayLink: an out-of-range lat/lng pair is ignored", () => {
+    const result = parseStayLink("https://www.airbnb.com/rooms/12345678?lat=200&lng=-9.1334");
+    assert.equal(result.lat, null);
+    assert.equal(result.lng, null);
   }],
 ];

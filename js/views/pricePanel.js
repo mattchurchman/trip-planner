@@ -76,6 +76,24 @@ export function buildPricePanel({ tripId, subcollection, docId, prices, myUid, u
     }
   });
 
+  // Collapsed by default so the price box doesn't dominate the card (§7.8) --
+  // same expand/collapse pattern as the History toggle below.
+  const logToggle = el("button", {
+    type: "button",
+    className: "btn btn-link",
+    textContent: "Log a price",
+    attrs: { "aria-expanded": "false" },
+  });
+  const logSection = el("div", { className: "price-log-section", hidden: true }, [
+    el("p", { className: "muted price-hint" }, ["Check the price on the site first, then save what you saw."]),
+    el("div", { className: "price-log-form" }, [amountInput, noteInput, logBtn]),
+  ]);
+  logToggle.addEventListener("click", () => {
+    logSection.hidden = !logSection.hidden;
+    logToggle.setAttribute("aria-expanded", logSection.hidden ? "false" : "true");
+    if (!logSection.hidden) amountInput.focus();
+  });
+
   const historyToggle = el("button", {
     type: "button",
     className: "btn btn-link",
@@ -111,8 +129,8 @@ export function buildPricePanel({ tripId, subcollection, docId, prices, myUid, u
 
   return el("div", { className: "price-panel" }, [
     el("div", { className: "price-summary" }, summaryParts),
-    el("p", { className: "muted price-hint" }, ["Check the price on the site first, then save what you saw."]),
-    el("div", { className: "price-log-form" }, [amountInput, noteInput, logBtn]),
+    logToggle,
+    logSection,
     errorHolder,
     historyToggle,
     historyList,

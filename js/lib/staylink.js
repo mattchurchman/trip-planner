@@ -24,9 +24,41 @@ function isIsoDate(value) {
   return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
-/** Returns { provider, name, checkIn, checkOut, guests }, each null when not found. */
+function validated(latStr, lngStr) {
+  const lat = Number(latStr);
+  const lng = Number(lngStr);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  return { lat, lng };
+}
+
+/** Best-effort coordinates from a stay link's query params, per §9.6 / T08. Most
+ * real Booking.com/Airbnb/Google Hotels share links don't carry a point location
+ * at all (Airbnb's own lat/lng params are a search map's bounding box, not the
+ * listing) -- this only catches the minority of links that happen to include
+ * one. "Other ways to add a location" (a pasted Google Maps link, or Search /
+ * Place on map) stays the primary way to set a stay's spot. */
+function extractCoordinates(url) {
+  const latStr = firstParam(url, ["lat", "latitude"]);
+  const lngStr = firstParam(url, ["lng", "lon", "long", "longitude"]);
+  if (latStr && lngStr) {
+    const coords = validated(latStr, lngStr);
+    if (coords) return coords;
+  }
+  const combined = firstParam(url, ["ll"]);
+  if (combined) {
+    const match = combined.match(/^(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)$/);
+    if (match) {
+      const coords = validated(match[1], match[2]);
+      if (coords) return coords;
+    }
+  }
+  return null;
+}
+
+/** Returns { provider, name, checkIn, checkOut, guests, lat, lng }, each null when not found. */
 export function parseStayLink(text) {
-  const result = { provider: null, name: null, checkIn: null, checkOut: null, guests: null };
+  const result = { provider: null, name: null, checkIn: null, checkOut: null, guests: null, lat: null, lng: null };
   const normalized = safeUrl(text);
   if (!normalized) return result;
   const url = new URL(normalized);
@@ -55,6 +87,12 @@ export function parseStayLink(text) {
     result.name = firstParam(url, ["q"]);
   } else {
     result.provider = "other";
+  }
+
+  const coords = extractCoordinates(url);
+  if (coords) {
+    result.lat = coords.lat;
+    result.lng = coords.lng;
   }
 
   return result;

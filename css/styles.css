@@ -1251,6 +1251,13 @@ textarea:focus {
   height: 24px;
 }
 
+/* Collapsed by default (§7.8, T08) -- keeps the price box from dominating the card. */
+.price-log-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
 .price-log-form {
   display: flex;
   gap: var(--space-2);
