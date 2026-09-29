@@ -3,7 +3,7 @@ import { el, setPending, friendlyError, field, dialogShell } from "../ui.js";
 import { safeUrl, googleMapsFindUrl } from "../lib/links.js";
 import { parseGoogleMapsUrl } from "../lib/mapsurl.js";
 import { nominatimSearch } from "../lookup.js";
-import { CATEGORIES } from "./places.js";
+import { CATEGORIES } from "../lib/categories.js";
 
 /**
  * The three location-entry methods from §7.6: find it on Google Maps then

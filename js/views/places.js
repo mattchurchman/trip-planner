@@ -6,21 +6,7 @@ import { editPlaceDialog, buildSetLocationInline, buildAddPlacePanel } from "./p
 import { sortByRank, notRankedByMe, voteSummary, toMillis } from "../lib/votes.js";
 import { safeUrl, googleMapsOpenUrl } from "../lib/links.js";
 import { rangesOverlap } from "../lib/dates.js";
-
-export const CATEGORIES = [
-  { label: "Food", color: "#e8710a" },
-  { label: "Drinks & nightlife", color: "#9334e6" },
-  { label: "Neighborhood walk", color: "#188038" },
-  { label: "Sight", color: "#1a73e8" },
-  { label: "Museum & history", color: "#795548" },
-  { label: "Walking tour", color: "#00897b" },
-  { label: "Event & seasonal", color: "#d93025" },
-  { label: "Adventure", color: "#f9ab00" },
-  { label: "Day trip", color: "#3949ab" },
-  { label: "Shopping", color: "#c2185b" },
-  { label: "Other", color: "#5f6368" },
-];
-const CATEGORY_COLOR = Object.fromEntries(CATEGORIES.map((c) => [c.label, c.color]));
+import { CATEGORIES, categoryColor } from "../lib/categories.js";
 
 /**
  * Armed by the Overview tab's "Set on map" action when a chosen destination has no
@@ -392,7 +378,7 @@ export function renderPlacesPage(container, tripId, myUid) {
       { className: "card place-row", attrs: { "data-place-id": place.id } },
       [
         el("div", { className: "place-row-title" }, [
-          el("span", { className: "category-chip", textContent: place.category, style: `background:${CATEGORY_COLOR[place.category] || CATEGORY_COLOR.Other}` }),
+          el("span", { className: "category-chip", textContent: place.category, style: `background:${categoryColor(place.category)}` }),
           nameEl,
         ]),
         el("p", { className: "muted", textContent: place.neighborhood || "" }),
@@ -471,7 +457,7 @@ export function renderPlacesPage(container, tripId, myUid) {
       markersById.clear();
       for (const place of filtered) {
         if (place.lat == null || place.lng == null) continue;
-        const color = CATEGORY_COLOR[place.category] || CATEGORY_COLOR.Other;
+        const color = categoryColor(place.category);
         const marker = window.L.circleMarker([place.lat, place.lng], { radius: 7, color, fillColor: color, fillOpacity: 0.85, weight: 2 });
         marker.bindPopup(buildPopup(place));
         marker.on("click", () => {
