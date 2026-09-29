@@ -1,4 +1,4 @@
-import { watchTrip, watchUsers, watchFlights, watchStays, watchCosts, addCost, updateCost, deleteCost } from "../store.js";
+import { watchTrip, watchUsers, watchFlights, watchStays, watchCosts, watchPlaces, addCost, updateCost, deleteCost } from "../store.js";
 import { el, confirmDialog, friendlyError, field, dialogShell } from "../ui.js";
 import { parseMoney, formatMoney } from "../lib/money.js";
 import { computeTotals } from "../lib/totals.js";
@@ -47,6 +47,7 @@ export function renderTravelPage(container, tripId, myUid) {
   let flights = [];
   let stays = [];
   let costs = [];
+  let places = []; // for the stays map's "our top places" layer (§7.7.1); not used elsewhere here
 
   const loadErrorEl = el("div", { className: "field-error-holder" });
   const costsSectionEl = el("div", { className: "costs-section card" });
@@ -146,7 +147,7 @@ export function renderTravelPage(container, tripId, myUid) {
   function rerenderAll() {
     if (!trip) return;
     flightsSection.render(flights, trip, usersById);
-    staysSection.render(stays, trip, usersById);
+    staysSection.render(stays, trip, usersById, places);
     renderCostsSection();
     renderTotalsCard();
   }
@@ -182,11 +183,19 @@ export function renderTravelPage(container, tripId, myUid) {
     (s) => {
       stays = s;
       if (trip) {
-        staysSection.render(stays, trip, usersById);
+        staysSection.render(stays, trip, usersById, places);
         renderTotalsCard();
       }
     },
     (err) => onError(friendlyError(err))
+  );
+  const unsubPlaces = watchPlaces(
+    tripId,
+    (p) => {
+      places = p;
+      if (trip) staysSection.render(stays, trip, usersById, places);
+    },
+    () => {}
   );
   const unsubCosts = watchCosts(
     tripId,
@@ -205,6 +214,7 @@ export function renderTravelPage(container, tripId, myUid) {
     unsubUsers();
     unsubFlights();
     unsubStays();
+    unsubPlaces();
     unsubCosts();
     flightsSection.unsubscribe();
     staysSection.unsubscribe();

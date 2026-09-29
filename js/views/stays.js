@@ -9,6 +9,7 @@ import { isStayChosen, chosenStayIds } from "../lib/selection.js";
 import { sortStayOptions, stayNumbers, circledNumber } from "../lib/optionSort.js";
 import { priceSummary, priceUpdater } from "./pricePanel.js";
 import { addStayFormDialog, editStayFormDialog, providerLabel } from "./stayForm.js";
+import { createStaysMap } from "./staysMap.js";
 
 function externalLinkRow(url, label) {
   return el("a", { className: "discover-link", href: url, target: "_blank", rel: "noopener noreferrer", textContent: label });
@@ -17,8 +18,9 @@ function externalLinkRow(url, label) {
 /**
  * Builds the Stays section of the Flights & stays tab (§7.7): the header with
  * its Add button, discover links, and the ranked list of stay cards. Call
- * `render(stays, trip, usersById)` whenever trip/stays/users change — it defers
- * rebuilding the list on its own while someone is editing inside it (§8).
+ * `render(stays, trip, usersById, places)` whenever trip/stays/users/places
+ * change — it defers rebuilding the list on its own while someone is editing
+ * inside it (§8). `places` feeds only the map's "our top places" layer.
  */
 export function createStaysSection({ tripId, myUid, onError }) {
   let stayCommentUnsubs = [];
@@ -27,7 +29,18 @@ export function createStaysSection({ tripId, myUid, onError }) {
 
   const addStayBtn = el("button", { type: "button", className: "btn btn-primary", textContent: "Add stay" });
   const staysDiscoverEl = el("div", { className: "discover-section" });
+  const staysMapHolder = el("div", { className: "stays-map-holder" });
   const staysListEl = el("div", { className: "stays-list" });
+
+  const staysMap = createStaysMap(staysMapHolder, {
+    onPinClick: (stayId) => {
+      const card = staysListEl.querySelector(`[data-stay-id="${stayId}"]`);
+      if (!card) return;
+      card.scrollIntoView({ behavior: "smooth", block: "center" });
+      card.classList.add("stay-card-highlight");
+      setTimeout(() => card.classList.remove("stay-card-highlight"), 1500);
+    },
+  });
 
   addStayBtn.addEventListener("click", async () => {
     if (currentStays.length >= 10) return;
@@ -124,10 +137,11 @@ export function createStaysSection({ tripId, myUid, onError }) {
       .filter(Boolean)
       .join(" · ");
 
-    // T13 makes "On the map" clickable (pans to the pin); plain text for now (Don't #2).
     let locationLine;
     if (stay.lat != null) {
-      locationLine = el("p", { className: "muted", textContent: "📍 On the map" });
+      const onMapBtn = el("button", { type: "button", className: "btn btn-link", textContent: "📍 On the map" });
+      onMapBtn.addEventListener("click", () => staysMap.focusStay(stay.id));
+      locationLine = el("p", { className: "muted" }, [onMapBtn]);
     } else {
       const setLocationBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Set location" });
       setLocationBtn.addEventListener("click", () => openEditStayDialog(stay, trip, true));
@@ -142,7 +156,7 @@ export function createStaysSection({ tripId, myUid, onError }) {
 
     const note = stay.note ? el("p", { className: "card-notes-clamp", textContent: stay.note }) : null;
 
-    return el("article", { className: `card stay-card${isChosen ? " stay-card-chosen" : ""}` }, [
+    return el("article", { className: `card stay-card${isChosen ? " stay-card-chosen" : ""}`, attrs: { "data-stay-id": stay.id } }, [
       header,
       updateRow,
       el("p", { className: "muted", textContent: metaText }),
@@ -182,18 +196,23 @@ export function createStaysSection({ tripId, myUid, onError }) {
   const element = el("div", {}, [
     el("div", { className: "stays-header" }, [el("h2", { textContent: "Stays" }), addStayBtn]),
     staysDiscoverEl,
+    staysMapHolder,
     staysListEl,
   ]);
 
   return {
     element,
-    render(stays, trip, usersById) {
+    render(stays, trip, usersById, places = []) {
       currentTrip = trip;
       currentStays = stays;
+      // The map isn't a form, so it updates immediately even while a card
+      // elsewhere in the list is deferred by renderWhenIdle below (§8).
+      staysMap.update(stays, places, trip);
       renderWhenIdle(staysListEl, () => renderSection(stays, trip, usersById));
     },
     unsubscribe() {
       for (const unsub of stayCommentUnsubs) unsub();
+      staysMap.destroy();
     },
   };
 }
