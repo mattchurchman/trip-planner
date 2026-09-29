@@ -14,10 +14,12 @@ Check the task's **Depends on** line. If a task it depends on isn't marked Done 
 
 `PHASES.md` is the history of how the app was first built. Don't build from it.
 
+**Never invent work.** Don't write your own task file or change `SPEC.md` on your own initiative. If the owner asks for something that has no task yet, write the task file in the same shape as the others, add it to `docs/tasks/README.md` as "Needs review", and **stop** — build it only after the owner says go. (An unreviewed task written and built in one session is how the first T08 went wrong and had to be reverted.)
+
 ## Fixed decisions (do not change)
 
 - Plain HTML, CSS and JavaScript ES modules. No frameworks (no React, Vue, Svelte), no build tools, no bundlers, no TypeScript, and no npm packages.
-- Hosting is GitHub Pages from the repository root on `main`.
+- Hosting is GitHub Pages from the repository root on `master` (this repo's default branch; there is no `main`).
 - Firebase **Spark (free) plan only**: Google sign-in and Cloud Firestore. Never use or suggest Cloud Storage, Cloud Functions, the Blaze plan, or anything that needs a credit card.
 - The map is Leaflet 1.9.4 with OpenStreetMap tiles. Never use the Google Maps JavaScript API, the Places API, or any API key.
 - The only outside services the app may call are Nominatim (place search) and the Wikipedia page-summary API (destination photos), both from `js/lookup.js`. Everything else is a plain link the user opens.
@@ -37,7 +39,9 @@ If you cannot build a requirement as written, say so plainly and name the requir
 - Every button does something real and shows a pending state, success, or a specific error.
 - Keep files under about 400 lines (`js/store.js` and `css/styles.css` are allowed exceptions). Use clear names and short comments where the reason isn't obvious.
 - Style only with the tokens in SPEC §4 (`var(--primary)`, `var(--space-4)` …). Don't type raw colors, except the category colors. Put new CSS in the section of `styles.css` for the screen you're working on.
-- Words on screen follow `docs/tasks/WORDING.md` once task T07 is done.
+- Words on screen follow `docs/tasks/WORDING.md`.
+- **Reuse the app's UI patterns; don't invent new ones.** Dialogs use `dialogShell()`, fields use `field()` and `.field-row`, buttons use the existing `.btn` classes, disclosures use `<details>`/`<summary>`, pills use the existing pill classes. No "Step 1/2/3" headings, no new input styles, no one-off spacing. When a task includes a layout sketch, match it; if something in the sketch can't work, say so instead of improvising.
+- Check layouts at 1280 px and 375 px wide before finishing. You usually can't sign in, so also re-read your CSS against the sketch and list anything you couldn't see for the owner to check.
 
 ## Checking your work
 
@@ -50,7 +54,7 @@ If you cannot build a requirement as written, say so plainly and name the requir
 When the task is done and tests pass:
 
 1. In `docs/tasks/README.md`, change the task's status to **Done** and add today's date.
-2. Commit with the message `T0N: <short summary>` and push to `main` (ask first if the owner hasn't said pushing is fine).
+2. Commit with the message `T<number>: <short summary>` and push to `master` (ask first if the owner hasn't said pushing is fine).
 3. Tell the owner, in plain language:
    - what you changed
    - what you tested and how

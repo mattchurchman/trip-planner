@@ -66,7 +66,7 @@ Screens may be labeled slightly differently than written here. Look for the clos
 1. Open Claude Code and connect it to your `trip-planner` repository.
 2. Send:
 
-   > Read CLAUDE.md, then build Phase 0 from PHASES.md. You may push to main when tests pass. Here is my Firebase config: *(paste the firebaseConfig block)*
+   > Read CLAUDE.md, then build Phase 0 from PHASES.md. You may push to master when tests pass. Here is my Firebase config: *(paste the firebaseConfig block)*
 
 3. Wait for it to finish. It will list what it built and give you an **Owner check** list.
 
@@ -79,7 +79,7 @@ Production mode starts fully locked, so until you publish these rules the app sh
 
 ### E. Turn on the website
 
-1. In your GitHub repo, go to **Settings → Pages**. Under **Build and deployment**, set the source to **Deploy from a branch**, the branch to `main`, and the folder to `/ (root)`. Click **Save**.
+1. In your GitHub repo, go to **Settings → Pages**. Under **Build and deployment**, set the source to **Deploy from a branch**, the branch to `master`, and the folder to `/ (root)`. Click **Save**.
 2. After a minute or two, the page shows your site address: `https://<your-github-username>.github.io/trip-planner/`. This is the link you send to friends.
 
 ### F. Check Phase 0
@@ -97,7 +97,7 @@ The original phases are all built. Improvements now live as small task files in 
 For phases 1 through 6 (and optionally 7), the loop is:
 
 1. **Start a new Claude Code session** on the repo. Starting fresh each phase keeps smaller models focused.
-2. Send: **"Read CLAUDE.md, then build Phase N from PHASES.md. You may push to main when tests pass."**
+2. Send: **"Read CLAUDE.md, then build Phase N from PHASES.md. You may push to master when tests pass."**
 3. When it finishes, wait 1–2 minutes for GitHub Pages to update, then hard-refresh the site (Mac: ⌘⇧R, Windows: Ctrl+Shift+R).
 4. Go through that phase's **Owner check** list, with a friend where the list says so.
 5. If something fails, stay in the same session and describe exactly what you did and what you saw. For errors, open the browser console (Chrome on Mac: ⌥⌘J, Windows: Ctrl+Shift+J) and paste the red text.
