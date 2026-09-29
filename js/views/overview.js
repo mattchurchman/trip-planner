@@ -23,8 +23,6 @@ import {
   ideaQueries,
 } from "../lib/links.js";
 
-const STATUSES = ["exploring", "planning", "booked", "done"];
-
 function externalLinkRow(url, label) {
   const anchor = el("a", {
     className: "discover-link",
@@ -67,7 +65,6 @@ export function renderOverviewPage(container, tripId, myUid) {
         destination: { city: candidate.city, country: candidate.country, lat, lng, airport: candidate.airport || "" },
         destinationId: candidate.id,
       };
-      if (trip.status === "exploring") fields.status = "planning";
       await updateTripFields(tripId, fields);
       await adoptUnassignedPlaces(tripId, candidate.id);
     } catch (err) {
@@ -84,11 +81,6 @@ export function renderOverviewPage(container, tripId, myUid) {
   function renderTripDetails() {
     const fieldError = el("div", { className: "field-error-holder" });
     const nameInput = el("input", { type: "text", value: trip.name });
-    const statusSelect = el(
-      "select",
-      {},
-      STATUSES.map((s) => el("option", { value: s, textContent: s, selected: s === trip.status }))
-    );
     const startInput = el("input", { type: "date", value: trip.startDate || "" });
     const endInput = el("input", { type: "date", value: trip.endDate || "" });
     const currencyInput = el("input", { type: "text", value: trip.currency, maxLength: 3 });
@@ -110,7 +102,6 @@ export function renderOverviewPage(container, tripId, myUid) {
       }
       save({ name: value });
     });
-    statusSelect.addEventListener("change", () => save({ status: statusSelect.value }));
     startInput.addEventListener("change", () => save({ startDate: startInput.value || null }));
     endInput.addEventListener("change", () => {
       if (startInput.value && endInput.value && endInput.value < startInput.value) {
@@ -137,7 +128,6 @@ export function renderOverviewPage(container, tripId, myUid) {
 
     tripDetailsEl.replaceChildren(
       field("Trip name", nameInput),
-      field("Status", statusSelect),
       el("div", { className: "field-row" }, [field("Start date", startInput), field("End date", endInput)]),
       field("Currency", currencyInput),
       field("Notes", notesInput),

@@ -1,6 +1,7 @@
 import { auth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, isConfigured } from "./firebase.js";
 import { checkAllowlist, ensureUserDoc, watchTrip } from "./store.js";
 import { el, setPending, friendlyError } from "./ui.js";
+import { tripStage } from "./lib/stage.js";
 import { renderTripsView } from "./views/trips.js";
 import { renderOverviewPage } from "./views/overview.js";
 import { renderPlacesPage } from "./views/places.js";
@@ -116,9 +117,14 @@ function renderTripShell(main, tripId, myUid, tabKey) {
         return;
       }
       document.title = `${trip.name} · Trip Planner`;
+      const today = new Date().toISOString().slice(0, 10);
+      const stage = tripStage(trip, today);
+      const stageBadge = stage.key === "done"
+        ? el("a", { className: `stage-badge stage-${stage.key}`, href: `#/trip/${tripId}/recap`, textContent: stage.label })
+        : el("span", { className: `stage-badge stage-${stage.key}`, textContent: stage.label });
       header.replaceChildren(
         el("h1", { textContent: trip.name }),
-        el("p", { className: "trip-status", textContent: trip.status })
+        stageBadge
       );
     },
     (err) => header.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }))

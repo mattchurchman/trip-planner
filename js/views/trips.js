@@ -1,6 +1,12 @@
 import { watchTrips, createTrip, deleteTrip } from "../store.js";
 import { el, setPending, confirmDialog, promptDialog, friendlyError } from "../ui.js";
 import { relativeTime } from "../lib/dates.js";
+import { tripStage } from "../lib/stage.js";
+
+function todayString() {
+  const today = new Date();
+  return today.toISOString().slice(0, 10);
+}
 
 /** Renders the trips list (§7.2) into `container` and returns an unsubscribe function. */
 export function renderTripsView(container, user) {
@@ -34,11 +40,14 @@ export function renderTripsView(container, user) {
     const travelerNames = (trip.travelers || []).map((t) => t.name).filter(Boolean).join(", ");
     const updatedLabel = trip.updatedAt && trip.updatedAt.toDate ? `Updated ${relativeTime(trip.updatedAt.toDate())}` : "";
 
+    const stage = tripStage(trip, todayString());
+    const stageBadge = el("span", { className: `stage-badge stage-${stage.key}`, textContent: stage.shortLabel });
+
     const card = el("article", { className: "card trip-card" }, [
       el("h2", { className: "trip-card-title" }, [
         el("a", { className: "trip-card-link", href: `#/trip/${trip.id}`, textContent: trip.name }),
       ]),
-      el("p", { className: "trip-card-meta", textContent: `${trip.status} · ${destinationLabel}` }),
+      el("p", { className: "trip-card-meta" }, [stageBadge, el("span", { textContent: ` · ${destinationLabel}` })]),
       el("p", { className: "trip-card-meta", textContent: dateLabel }),
       el("p", { className: "trip-card-meta", textContent: travelerNames }),
       el("p", { className: "trip-card-updated", textContent: updatedLabel }),

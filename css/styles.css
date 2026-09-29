@@ -492,16 +492,20 @@ textarea:focus {
   margin: 0 0 var(--space-1);
 }
 
-.trip-status {
+.stage-badge {
   display: inline-block;
   margin: 0 0 var(--space-2);
   color: var(--secondary);
   background: var(--secondary-soft);
-  text-transform: capitalize;
   font-weight: 600;
   font-size: 0.8em;
   padding: 3px var(--space-3);
   border-radius: var(--radius-pill);
+  text-decoration: none;
+}
+
+.stage-badge:hover {
+  opacity: 0.85;
 }
 
 .trip-content {

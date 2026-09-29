@@ -60,7 +60,6 @@ export function watchTrip(tripId, onChange, onError) {
 export function createTrip(name, user) {
   return addDoc(collection(db, "trips"), {
     name,
-    status: "exploring",
     currency: "USD",
     notes: "",
     destination: null,
