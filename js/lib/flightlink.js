@@ -20,21 +20,12 @@ function isValidDate(str) {
 }
 
 function empty(error = null) {
-  return {
-    fromAirport: null,
-    toAirport: null,
-    outboundDate: null,
-    returnDate: null,
-    outboundStops: null,
-    returnStops: null,
-    error,
-  };
+  return { fromAirport: null, toAirport: null, outboundDate: null, returnDate: null, error };
 }
 
 /** Reads `?q=` in our own search-link format (§9.1): "Flights from <FROM> to
  * <TO>[ on <date>][ returning <date>]". FROM/TO count as airports only when
- * they're exactly three capital letters. Our own search links never carry a
- * stop count, so outboundStops/returnStops are always null here. */
+ * they're exactly three capital letters. */
 function parseSearchQuery(q) {
   const match = q.match(/^Flights from (.+?) to (.+?)(?: on (\d{4}-\d{2}-\d{2}))?(?: returning (\d{4}-\d{2}-\d{2}))?$/);
   if (!match) return null;
@@ -44,8 +35,6 @@ function parseSearchQuery(q) {
     toAirport: /^[A-Z]{3}$/.test(to) ? to : null,
     outboundDate: outbound || null,
     returnDate: ret || null,
-    outboundStops: null,
-    returnStops: null,
     error: null,
   };
 }
@@ -55,59 +44,24 @@ const DATE_RE = /\d{4}-\d{2}-\d{2}/g;
 // letter right after a code (e.g. "DENr"), which \b would treat as one token.
 const AIRPORT_RE = /(?<![A-Z])[A-Z]{3}(?![A-Z])/g;
 
-/** Best-effort stop count for one leg's airport codes, in travel order
- * (e.g. [DEN, ORD, ORD, LIS] for a one-stop DEN -> ORD -> LIS leg). Each
- * from/to pair is one segment; extra segments beyond the first are stops.
- * Reverse-engineered from a single real nonstop sample (no connecting-flight
- * sample to check it against) -- treat as a rough guess, never load-bearing. */
-function legStops(airports) {
-  if (airports.length < 2) return null;
-  const segments = Math.ceil(airports.length / 2);
-  return Math.max(0, segments - 1);
-}
-
-/** Splits the decoded `tfs` blob into one chunk per leg, using each valid
- * date match as a leg's start. The blob lists outbound then return (if any)
- * as consecutive "date ... airport ... airport" runs, so slicing between
- * consecutive dates isolates each leg's own airports -- this also fixes a
- * previous bug where a connecting outbound leg's layover airport could be
- * mistaken for the final destination. */
-function splitLegs(decoded) {
-  const dateMatches = [...decoded.matchAll(DATE_RE)].filter((m) => isValidDate(m[0]));
-  if (dateMatches.length === 0) return [decoded];
-  return dateMatches.map((m, i) => {
-    const start = m.index;
-    const end = i + 1 < dateMatches.length ? dateMatches[i + 1].index : decoded.length;
-    return decoded.slice(start, end);
-  });
-}
-
-/** Decodes the `tfs=` parameter (base64url) and reads dates/airport codes/stop
- * counts as plain text out of it, in order of appearance. Throws only on
- * decode failure (the caller turns that into the "couldn't read" error,
- * never an exception). */
+/** Decodes the `tfs=` parameter (base64url) and reads dates/airport codes as
+ * plain text out of it, in order of appearance. Throws only on decode failure
+ * (the caller turns that into the "couldn't read" error, never an exception). */
 function parseTfs(tfs) {
   const padded = tfs.replace(/-/g, "+").replace(/_/g, "/");
   const decoded = atob(padded + "=".repeat((4 - (padded.length % 4)) % 4));
-  const legs = splitLegs(decoded).map((chunk) => [...chunk.matchAll(AIRPORT_RE)].map((m) => m[0]));
   const dates = [...decoded.matchAll(DATE_RE)].map((m) => m[0]).filter(isValidDate);
-  const outboundAirports = legs[0] || [];
-  const returnAirports = legs[1] || [];
+  const airports = [...decoded.matchAll(AIRPORT_RE)].map((m) => m[0]);
   return {
-    fromAirport: outboundAirports[0] || null,
-    toAirport: outboundAirports[outboundAirports.length - 1] || null,
+    fromAirport: airports[0] || null,
+    toAirport: airports[1] || null,
     outboundDate: dates[0] || null,
     returnDate: dates[1] || null,
-    outboundStops: legStops(outboundAirports),
-    returnStops: dates[1] ? legStops(returnAirports) : null,
     error: null,
   };
 }
 
-/** Returns { fromAirport, toAirport, outboundDate, returnDate, outboundStops,
- * returnStops, error } per §9.6. outboundStops/returnStops are a best-effort
- * guess (null when there's no basis to guess from, e.g. our own ?q= links or
- * a leg with too few airport matches to read) -- see legStops() above. */
+/** Returns { fromAirport, toAirport, outboundDate, returnDate, error } per §9.6. */
 export function parseFlightLink(text) {
   const safe = safeUrl(text);
   if (!safe) return empty(NOT_A_LINK_ERROR);

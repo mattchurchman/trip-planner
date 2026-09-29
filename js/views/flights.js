@@ -18,15 +18,13 @@ function shortDate(dateStr) {
 }
 
 /**
- * Add flight option, link first (§7.7): Step 1 paste the Google Flights link
- * (parsed on paste/input, §9.6) — with a fallback search link for travelers
- * who don't have one yet — Step 2 pre-filled details plus an optional "Price
- * you saw". Resolves `{ ...flight fields, priceAmountCents }` or `null` on
- * cancel; the caller (which has `myUid`) turns a valid amount into the
- * flight's first PriceEntry. `existingOptionCount` is how many flight options
- * this traveler already has, used to default the label to "Option N".
+ * Add flight option, link first (§7.7): Step 1 search Google Flights, Step 2
+ * paste the link (parsed on paste/input, §9.6), Step 3 pre-filled details plus
+ * an optional "Price you saw". Resolves `{ ...flight fields, priceAmountCents }`
+ * or `null` on cancel; the caller (which has `myUid`) turns a valid amount into
+ * the flight's first PriceEntry.
  */
-function addFlightFormDialog(traveler, trip, existingOptionCount) {
+function addFlightFormDialog(traveler, trip) {
   return dialogShell("flight-dialog", (finish) => {
     const dest = trip.destination;
 
@@ -49,8 +47,7 @@ function addFlightFormDialog(traveler, trip, existingOptionCount) {
     const linkInput = el("input", { type: "text", placeholder: "Paste the Google Flights link", attrs: { "aria-label": "Google Flights link" } });
     const parseResultEl = el("p", { className: "link-parse-result", hidden: true });
 
-    const defaultLabel = `Option ${existingOptionCount + 1}`;
-    const labelInput = el("input", { type: "text", value: defaultLabel });
+    const labelInput = el("input", { type: "text" });
     const fromCityInput = el("input", { type: "text", value: traveler.homeCity || "" });
     const fromAirportInput = el("input", { type: "text", value: traveler.homeAirport || "" });
     const toCityInput = el("input", { type: "text", value: dest?.city || "" });
@@ -79,18 +76,6 @@ function addFlightFormDialog(traveler, trip, existingOptionCount) {
       return false;
     }
 
-    // "N stop(s)" text for a best-effort guess (§9.6) -- null/0 (nonstop) needs no mention.
-    function stopsText(stops) {
-      if (!stops) return null;
-      return stops === 1 ? "1 stop" : `${stops} stops`;
-    }
-    function fillStopsIfEmpty(input, stops) {
-      const text = stopsText(stops);
-      if (!text || input.value.trim() !== "") return false;
-      input.value = text;
-      return true;
-    }
-
     function tryParseLink() {
       if (!linkInput.value.trim()) return;
       const result = parseFlightLink(linkInput.value);
@@ -100,7 +85,7 @@ function addFlightFormDialog(traveler, trip, existingOptionCount) {
         parseResultEl.hidden = false;
         return;
       }
-      // Every call must run regardless of the others' result, so this can't
+      // Both calls must run regardless of the other's result, so this can't
       // short-circuit on || — track each outcome, then OR the booleans.
       const filledFrom = fillIfDefault(fromAirportInput, "fromAirport", result.fromAirport);
       const filledTo = fillIfDefault(toAirportInput, "toAirport", result.toAirport);
@@ -108,8 +93,6 @@ function addFlightFormDialog(traveler, trip, existingOptionCount) {
       const filledOutbound = fillIfDefault(outboundDateInput, "outboundDate", result.outboundDate);
       const filledReturn = fillIfDefault(returnDateInput, "returnDate", result.returnDate);
       const filledDates = filledOutbound || filledReturn;
-      const filledOutboundStops = fillStopsIfEmpty(outboundDetailsInput, result.outboundStops);
-      const filledReturnStops = fillStopsIfEmpty(returnDetailsInput, result.returnStops);
 
       const parts = [];
       if (filledAirports) parts.push(`${fromAirportInput.value || "?"} → ${toAirportInput.value || "?"}`);
@@ -117,11 +100,6 @@ function addFlightFormDialog(traveler, trip, existingOptionCount) {
         const range = [shortDate(outboundDateInput.value), shortDate(returnDateInput.value)].filter(Boolean).join(" – ");
         if (range) parts.push(range);
       }
-      const stopParts = [];
-      if (filledOutboundStops) stopParts.push(`outbound ${stopsText(result.outboundStops)}`);
-      if (filledReturnStops) stopParts.push(`return ${stopsText(result.returnStops)}`);
-      if (stopParts.length > 0) parts.push(stopParts.join(", "));
-
       if (parts.length > 0) {
         parseResultEl.className = "link-parse-result link-parse-success";
         parseResultEl.textContent = `✓ Filled in: ${parts.join(", ")}. Add the airline, times and price yourself — Google doesn't put them in the link.`;
@@ -138,16 +116,15 @@ function addFlightFormDialog(traveler, trip, existingOptionCount) {
     const okBtn = el("button", { type: "submit", className: "btn btn-primary", textContent: "Add" });
 
     const form = el("form", { method: "dialog", className: "flight-form" }, [
-      el("h4", { textContent: "Step 1 · Paste a Google Flights link" }),
+      el("h4", { textContent: "Step 1 · Find flights" }),
+      searchLink,
+      el("p", { className: "muted", textContent: "Pick a flight on Google Flights, then copy the address from your browser's address bar." }),
+
+      el("h4", { textContent: "Step 2 · Paste the Google Flights link" }),
       linkInput,
       parseResultEl,
-      el("p", { className: "muted" }, [
-        "Don't have one yet? ",
-        searchLink,
-        " — pick a flight, then copy the address from your browser's address bar.",
-      ]),
 
-      el("h4", { textContent: "Step 2 · Details" }),
+      el("h4", { textContent: "Step 3 · Details" }),
       field("Label", labelInput),
       el("div", { className: "field-row" }, [field("From city", fromCityInput), field("From airport", fromAirportInput)]),
       el("div", { className: "field-row" }, [field("To city", toCityInput), field("To airport", toAirportInput)]),
@@ -172,7 +149,7 @@ function addFlightFormDialog(traveler, trip, existingOptionCount) {
         }
       }
       finish({
-        label: labelInput.value.trim() || defaultLabel,
+        label: labelInput.value.trim(),
         fromCity: fromCityInput.value.trim(),
         fromAirport: fromAirportInput.value.trim().toUpperCase(),
         toCity: toCityInput.value.trim(),
@@ -251,8 +228,8 @@ export function createFlightsSection({ tripId, myUid, onError }) {
   let flightCommentUnsubs = [];
   const flightsSectionEl = el("div", { className: "flights-section" });
 
-  async function openAddFlightDialog(traveler, trip, existingOptionCount) {
-    const result = await addFlightFormDialog(traveler, trip, existingOptionCount);
+  async function openAddFlightDialog(traveler, trip) {
+    const result = await addFlightFormDialog(traveler, trip);
     if (!result) return;
     const { priceAmountCents, ...fields } = result;
     const firstPriceEntry = priceAmountCents
@@ -354,7 +331,7 @@ export function createFlightsSection({ tripId, myUid, onError }) {
       const travelerFlights = flights.filter((f) => f.travelerId === traveler.id);
 
       const addBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Add flight option" });
-      addBtn.addEventListener("click", () => openAddFlightDialog(traveler, trip, travelerFlights.length));
+      addBtn.addEventListener("click", () => openAddFlightDialog(traveler, trip));
 
       const searchUrl = googleFlightsSearchUrl({
         fromCity: traveler.homeCity || "?",

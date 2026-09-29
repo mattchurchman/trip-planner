@@ -11,16 +11,6 @@ import { parseStayLink } from "../lib/staylink.js";
 import { isStayChosen } from "../lib/selection.js";
 import { buildPricePanel } from "./pricePanel.js";
 
-const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-/** "2026-03-10" -> "10 Mar", matching flights.js's Step summary style (§7.7). */
-function shortDate(dateStr) {
-  if (!dateStr) return null;
-  const [year, month, day] = dateStr.split("-").map(Number);
-  if (!year || !month || !day) return null;
-  return `${day} ${MONTH_ABBR[month - 1]}`;
-}
-
 const PROVIDERS = [
   { value: "booking", label: "Booking.com" },
   { value: "airbnb", label: "Airbnb" },
@@ -41,10 +31,7 @@ function externalLinkRow(url, label) {
 
 /** The "Other ways to add a location" disclosure (§7.6 style, §7.7 Do #5):
  * a Google Maps link, the only location method a stay has today. Shared shape
- * between the add and edit dialogs, each with its own lat/lng state. Returns
- * `{ element, refresh }` — `refresh({ reveal })` lets the caller (the main
- * stay-link Step, when it finds coordinates itself) update the status text
- * and, with `reveal: true`, open the disclosure so the finding is visible. */
+ * between the add and edit dialogs, each with its own lat/lng state. */
 function buildLocationDisclosure({ getLat, getLng, setLocation, nameInput }) {
   const mapsLinkInput = el("input", { type: "text", placeholder: "Paste a Google Maps link", attrs: { "aria-label": "Google Maps link for this stay" } });
   const locationStatus = el("p", { className: "muted" });
@@ -84,15 +71,7 @@ function buildLocationDisclosure({ getLat, getLng, setLocation, nameInput }) {
     toggle.setAttribute("aria-expanded", holder.hidden ? "false" : "true");
   });
 
-  function refresh({ reveal = false } = {}) {
-    updateStatus();
-    if (reveal) {
-      holder.hidden = false;
-      toggle.setAttribute("aria-expanded", "true");
-    }
-  }
-
-  return { element: el("div", {}, [toggle, holder]), refresh };
+  return el("div", {}, [toggle, holder]);
 }
 
 /**
@@ -106,10 +85,6 @@ function addStayFormDialog(trip) {
   return dialogShell("stay-dialog", (finish) => {
     let stayLat = null;
     let stayLng = null;
-    function setStayLocation(lat, lng) {
-      stayLat = lat;
-      stayLng = lng;
-    }
     const dest = trip.destination;
     const adults = (trip.travelers || []).length || 1;
 
@@ -177,22 +152,11 @@ function addStayFormDialog(trip) {
       const filledCheckOut = fillIfDefault(checkOutInput, "checkOut", parsed.checkOut);
       const filledGuests = fillIfDefault(guestsInput, "guests", parsed.guests);
 
-      // Best-effort coordinates (§9.6) -- most real share links won't carry these;
-      // "Other ways to add a location" stays the primary path. Never overwrite a
-      // location already set (by hand, or by an earlier paste).
-      let filledLocation = false;
-      if (parsed.lat != null && parsed.lng != null && stayLat == null) {
-        setStayLocation(parsed.lat, parsed.lng);
-        refreshLocationStatus({ reveal: true });
-        filledLocation = true;
-      }
-
       const filledParts = [];
       if (filledProvider) filledParts.push("provider");
       if (filledName) filledParts.push("name");
       if (filledCheckIn || filledCheckOut) filledParts.push("dates");
       if (filledGuests) filledParts.push("guests");
-      if (filledLocation) filledParts.push("location");
 
       const sentences = [];
       if (filledParts.length > 0) sentences.push(`✓ Filled in: ${filledParts.join(", ")}.`);
@@ -207,10 +171,13 @@ function addStayFormDialog(trip) {
     linkInput.addEventListener("paste", () => setTimeout(tryParseLink, 0));
     linkInput.addEventListener("input", tryParseLink);
 
-    const { element: locationDisclosureEl, refresh: refreshLocationStatus } = buildLocationDisclosure({
+    const locationDisclosure = buildLocationDisclosure({
       getLat: () => stayLat,
       getLng: () => stayLng,
-      setLocation: setStayLocation,
+      setLocation: (lat, lng) => {
+        stayLat = lat;
+        stayLng = lng;
+      },
       nameInput,
     });
 
@@ -219,13 +186,14 @@ function addStayFormDialog(trip) {
     const okBtn = el("button", { type: "submit", className: "btn btn-primary", textContent: "Add" });
 
     const form = el("form", { method: "dialog", className: "stay-form" }, [
-      el("h4", { textContent: "Step 1 · Paste the stay's link" }),
-      linkInput,
-      parseResultEl,
-      el("p", { className: "muted" }, ["Don't have one yet? Search below, then come back and paste it."]),
+      el("h4", { textContent: "Step 1 · Find a place to stay" }),
       searchLinks,
 
-      el("h4", { textContent: "Step 2 · Details" }),
+      el("h4", { textContent: "Step 2 · Paste the stay's link" }),
+      linkInput,
+      parseResultEl,
+
+      el("h4", { textContent: "Step 3 · Details" }),
       field("Name", nameInput),
       field("Provider", providerSelect),
       field("Neighborhood", neighborhoodInput),
@@ -233,7 +201,7 @@ function addStayFormDialog(trip) {
       field("Guests", guestsInput),
       field("Note", noteInput),
       field("Price you saw (total for the stay)", priceInput),
-      locationDisclosureEl,
+      locationDisclosure,
       errorHolder,
       el("div", { className: "dialog-actions" }, [cancelBtn, okBtn]),
     ]);
@@ -295,7 +263,7 @@ function editStayFormDialog(stay, trip) {
     const cancelBtn = el("button", { type: "button", className: "btn btn-secondary", textContent: "Cancel" });
     const okBtn = el("button", { type: "submit", className: "btn btn-primary", textContent: "Save" });
 
-    const { element: locationDisclosureEl } = buildLocationDisclosure({
+    const locationDisclosure = buildLocationDisclosure({
       getLat: () => stayLat,
       getLng: () => stayLng,
       setLocation: (lat, lng) => {
@@ -313,7 +281,7 @@ function editStayFormDialog(stay, trip) {
       el("div", { className: "field-row" }, [field("Check-in", checkInInput), field("Check-out", checkOutInput)]),
       field("Guests", guestsInput),
       field("Note", noteInput),
-      locationDisclosureEl,
+      locationDisclosure,
       errorHolder,
       el("div", { className: "dialog-actions" }, [cancelBtn, okBtn]),
     ]);
@@ -439,13 +407,7 @@ export function createStaysSection({ tripId, myUid, onError }) {
     const details = [];
     if (stay.neighborhood) details.push(el("p", { className: "muted", textContent: stay.neighborhood }));
     if (safeLink) details.push(el("a", { href: safeLink, target: "_blank", rel: "noopener noreferrer", textContent: "Link" }));
-    const dateRange = [shortDate(stay.checkIn), shortDate(stay.checkOut)].filter(Boolean).join(" – ") || null;
-    const metaText = [
-      dateRange,
-      nightsLabel(stay.checkIn, stay.checkOut),
-      `${stay.guests} guest${stay.guests === 1 ? "" : "s"}`,
-      perNight != null ? `${formatMoney(perNight, trip.currency)}/night` : null,
-    ]
+    const metaText = [nightsLabel(stay.checkIn, stay.checkOut), `${stay.guests} guest${stay.guests === 1 ? "" : "s"}`, perNight != null ? `${formatMoney(perNight, trip.currency)}/night` : null]
       .filter(Boolean)
       .join(" · ");
     details.push(el("p", { className: "muted", textContent: metaText }));

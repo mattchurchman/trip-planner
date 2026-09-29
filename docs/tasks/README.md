@@ -26,7 +26,6 @@ If a task fails twice, revert it ("Revert the last commit") and retry in a fresh
 | T05 | [Flights & stays: paste a link first](T05-travel-link-first.md) | Sonnet | T01, T02 | Done (2026-09-27) |
 | T06 | [Choose several flights and stays](T06-multi-select.md) | Sonnet (Opus if it fails once) | T05 | Done (2026-09-28) |
 | T07 | [Clearer wording everywhere](T07-wording.md) | Haiku | T02–T06 | Done (2026-09-28) |
-| T08 | [Better link parsing and more efficient flight/stay cards](T08-flight-stay-details.md) | Sonnet | T05, T06, T07 | Done (2026-09-28) |
 
 ## Order, and running tasks at the same time
 
