@@ -1152,23 +1152,39 @@ textarea:focus {
 }
 
 /* Add/Edit flight dialog (§7.7): the "✓ Read from the link" itinerary preview,
-   and the collapsed "Edit route and dates" disclosure. */
-.flight-form h3 {
+   and the collapsed "Edit route and dates" disclosure. Shared with the stay
+   dialog's "Paste a Google Maps link" disclosure (§7.7, T12). */
+.flight-form h3,
+.stay-form h3 {
   margin: 0 0 var(--space-2);
 }
 
-.flight-form details {
+.flight-form details,
+.stay-form details {
   margin: var(--space-2) 0;
 }
 
-.flight-form summary {
+.flight-form summary,
+.stay-form summary {
   cursor: pointer;
   color: var(--primary);
   font-weight: 500;
 }
 
-.flight-form details[open] summary {
+.flight-form details[open] summary,
+.stay-form details[open] summary {
   margin-bottom: var(--space-2);
+}
+
+/* The "Where is it?" section (§7.7, T12): status line, Find-on-the-map button
+   and results, and the Google Maps link disclosure, grouped like any other
+   field but holding several controls instead of one input. */
+.where-is-it {
+  gap: var(--space-2);
+}
+
+.where-is-it .search-results {
+  margin-top: var(--space-1);
 }
 
 .flight-link-preview {
