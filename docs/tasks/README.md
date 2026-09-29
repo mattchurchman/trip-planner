@@ -37,7 +37,7 @@ The first "T08" (link parsing and card changes, 2026-09-28) was reverted. These 
 | T09 | [Coffee & cafés category](T09-coffee-category.md) | Haiku | — | To do |
 | T10 | [Add flight dialog reads the whole link](T10-flight-dialog.md) | Sonnet | — | Done (2026-09-28) |
 | T11 | [Compact flight and stay cards](T11-cards.md) | Sonnet | T10 | Done (2026-09-28) |
-| T12 | [Add stay dialog with "Where is it?"](T12-stay-dialog.md) | Sonnet | T11 | To do |
+| T12 | [Add stay dialog with "Where is it?"](T12-stay-dialog.md) | Sonnet | T11 | Done (2026-09-28) |
 | T13 | [Stays price-pin map](T13-stays-map.md) | Sonnet | T12 | To do |
 
 ## Order, and running tasks at the same time

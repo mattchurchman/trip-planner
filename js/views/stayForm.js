@@ -237,7 +237,12 @@ function buildStayDialog({ isEdit, stay, trip, focusLocation }) {
 
       currentProvider = parsed.provider;
       whereIsIt.setProviderHint(currentProvider);
-      if (parsed.name && !nameInput.value.trim()) nameInput.value = parsed.name;
+      if (parsed.name && !nameInput.value.trim()) {
+        nameInput.value = parsed.name;
+        // Setting .value directly doesn't fire "input" — nudge it so the Find
+        // button's label/enabled state and the Google Maps link pick up the name.
+        nameInput.dispatchEvent(new Event("input"));
+      }
       fillIfDefault(checkInInput, "checkIn", parsed.checkIn);
       fillIfDefault(checkOutInput, "checkOut", parsed.checkOut);
       fillIfDefault(guestsInput, "guests", parsed.guests);
