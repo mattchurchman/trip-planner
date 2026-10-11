@@ -1,21 +1,48 @@
 # Task board
 
-Round 1 of owner feedback (spec version 2.0). Each task is one Claude Code session.
+Each task is one session. The rules every agent follows are in `AGENTS.md`; models, effort and backup agents are in `docs/MODEL_TIERS.md`.
 
 ## How to run a task
 
-1. Open a **new** Claude Code session on the `trip-planner` repo and pick the model from the table.
-2. Send one line:
+1. Clear the context or open a **new** session on the `trip-planner` repo.
+2. Select the model and effort from the table.
+3. Send one line, with the task number, model and effort filled in:
 
-   > Read CLAUDE.md, then do task T01 from docs/tasks/. You may push to master when tests pass.
+   > Read AGENTS.md, then do task T14. Model: Sonnet. Effort: medium. You may push to master when tests pass.
 
-3. When it finishes, wait 1–2 minutes and hard-refresh the live site (Mac ⌘⇧R, Windows Ctrl+Shift+R).
-4. Click through the task's **Owner check**. If something fails, stay in the same session and describe what you did and what you saw.
-5. Start the next task only after this one is marked **Done**.
+4. If the task has **Owner steps first**, the agent lists them and waits for you.
+5. When it finishes, wait a minute or two for the site to update, then click through the task's **Owner check**. If something fails, stay in the same session and describe what you did and what you saw.
+6. The agent ends by telling you the next task and which model and effort to select. Start it only after this one is **Done**.
 
-If a task fails twice, revert it ("Revert the last commit") and retry in a fresh session with the next model up.
+If a task fails twice, say "Revert the last commit" and rerun it in a fresh session on the model named in its **If it fails twice** line.
 
-## Tasks
+## Round 3 — the V4 overhaul (design in `docs/V4.md`)
+
+| # | Task | Model | Effort | Depends on | Status |
+|---|---|---|---|---|---|
+| T14 | [Home-screen app and Firebase Hosting](T14-app-shell-hosting.md) | Sonnet | medium | — | To do |
+| T15 | [Sign-in that sticks on iPhone](T15-sign-in.md) | Sonnet | high | T14 | To do |
+| T16 | [New look and phone navigation](T16-design-refresh.md) | Sonnet | high | T15 | To do |
+| T17 | [Airport lookup](T17-airports.md) | Sonnet | low | — | To do |
+| T18 | [Route logic](T18-route-logic.md) | Opus | high | T17 | To do |
+| T19 | [Routes tab](T19-routes-screen.md) | Sonnet | high | T16, T18 | To do |
+| T20 | [Paste a flight link and it files itself](T20-paste-flights.md) | Sonnet | high | T19 | To do |
+| T21 | [Two-tap price check](T21-price-check.md) | Sonnet | medium | T20 | To do |
+| T22 | [Love / Like / Pass](T22-love-like-pass.md) | Haiku | medium | T16 | To do |
+| T23 | [Slim Overview, remove Recap and destination ideas](T23-overview-cleanup.md) | Sonnet | medium | T21 | To do |
+| T24 | [Stays by stop, with night coverage](T24-stays-by-stop.md) | Sonnet | high | T23 | To do |
+| T25 | [One Map tab for places and stays](T25-map-tab.md) | Sonnet | high | T22, T24 | To do |
+| T26 | [Import places from Google My Maps](T26-mymaps-import.md) | Sonnet | medium | T25 | To do |
+| T27 | [Plan days on the map](T27-days-map.md) | Sonnet | high | T25 | To do |
+| T28 | [Take the plan to Google Maps](T28-export-google.md) | Haiku | medium | T27 | To do |
+| T29 | [Help page for the new flow](T29-help.md) | Haiku | medium | T28 | To do |
+| T30 | [Final review and SPEC 4.0](T30-review-spec.md) | Opus | high | T29 | To do |
+
+**Order.** Top to bottom is the safe path. Two tasks can be done early or alongside others because they touch nothing else: **T17** (any time before T18) and **T22** (any time after T16). Everything else changes shared screens, so run those one at a time.
+
+**Natural stopping points** where the app is fully usable: after T15 (sign-in fixed), after T21 (Routes complete), after T25 (Map complete), after T30.
+
+## Earlier rounds (history)
 
 | # | Task | Model | Depends on | Status |
 |---|---|---|---|---|
@@ -33,23 +60,14 @@ The first "T08" (link parsing and card changes, 2026-09-28) was reverted. These 
 
 | # | Task | Model | Depends on | Status |
 |---|---|---|---|---|
-| T08 | [Automatic trip stage instead of Status](T08-trip-stage.md) | Haiku | — | To do |
-| T09 | [Coffee & cafés category](T09-coffee-category.md) | Haiku | — | To do |
+| T08 | [Automatic trip stage instead of Status](T08-trip-stage.md) | Haiku | — | Appears built (found in code 2026-10-11) |
+| T09 | [Coffee & cafés category](T09-coffee-category.md) | Haiku | — | Appears built (found in code 2026-10-11) |
 | T10 | [Add flight dialog reads the whole link](T10-flight-dialog.md) | Sonnet | — | Done (2026-09-28) |
 | T11 | [Compact flight and stay cards](T11-cards.md) | Sonnet | T10 | Done (2026-09-28) |
 | T12 | [Add stay dialog with "Where is it?"](T12-stay-dialog.md) | Sonnet | T11 | Done (2026-09-28) |
 | T13 | [Stays price-pin map](T13-stays-map.md) | Sonnet | T12 | Done (2026-09-28) |
 
-## Order, and running tasks at the same time
-
-The simple, safe path is **one at a time, top to bottom**. Each task pushes to `master` before the next starts, so nothing collides.
-
-Once T01 and T02 are done, T03, T04 and T05 touch different screens and *can* run at the same time in separate sessions, even on different models (for example T04 on Haiku while T05 runs on Sonnet). The catch: they all add CSS to `styles.css`, so whichever pushes second may hit a "merge conflict". If that happens, tell that session: "Pull the latest master, fix the conflict keeping both changes, run the tests, and push." If that sounds like more hassle than it's worth, stay sequential — it's only a few extra minutes per task.
-
-T06 must wait for T05 (same screen). T07 goes last because it touches words on every screen.
-
-**Round 2:** T08 and T09 are small Haiku jobs on different screens; do them first, in either order (or at the same time). T10 → T11 → T12 → T13 all change the Flights & stays tab, so run them one after another.
 
 ## Writing a new task
 
-Copy the shape of an existing task file: **Goal**, **Why**, **Depends on**, **Files you may change**, **Spec sections**, **Do**, **Don't**, **Tests**, **Done when**, **Owner check**. Keep one task to one screen or one idea — small, specific tasks are what let Haiku and Sonnet do good work. If the task changes behavior, update `SPEC.md` first (bump the version, add a changelog row).
+Copy `docs/tasks/_TEMPLATE.md`. Keep one task to one screen or one idea. If the task changes behavior, the design doc (`docs/V4.md`, or `SPEC.md` after T30) changes first. Add it to the board as **Needs review** and build it only after the owner says go.
