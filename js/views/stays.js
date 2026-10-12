@@ -1,5 +1,5 @@
-import { addStay, updateStay, deleteStay, voteOnStay, chooseStay, unchooseStay } from "../store.js";
-import { el, setPending, confirmDialog, friendlyError, rankControl, renderWhenIdle } from "../ui.js";
+import { addStay, updateStay, deleteStay, chooseStay, unchooseStay } from "../store.js";
+import { el, setPending, confirmDialog, friendlyError, renderWhenIdle } from "../ui.js";
 import { renderComments } from "./comments.js";
 import { nightsBetween } from "../lib/dates.js";
 import { formatLegDate } from "../lib/itineraryFormat.js";
@@ -74,16 +74,6 @@ export function createStaysSection({ tripId, myUid, onError }) {
     const nights = nightsBetween(stay.checkIn, stay.checkOut);
     const latest = latestEntry(stay.prices);
     const perNight = latest && nights ? perNightCents(latest.amountCents, nights) : null;
-
-    const rank = rankControl({
-      votes: stay.votes || {},
-      myUid,
-      usersById,
-      onVote: (choice) =>
-        voteOnStay(tripId, stay.id, myUid, choice).catch((err) =>
-          errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }))
-        ),
-    });
 
     // The group may choose any number of stays (§7.7) — Choose/Unchoose toggles
     // this one; the "Chosen ✓" badge is a separate, purely visual indicator.
@@ -163,7 +153,6 @@ export function createStaysSection({ tripId, myUid, onError }) {
       priceRow,
       el("p", { className: "muted", textContent: metaText }),
       locationLine,
-      rank,
       note,
       el("div", { className: "stay-actions" }, [chooseBtn, openLink, editBtn, deleteBtn].filter(Boolean)),
       errorHolder,

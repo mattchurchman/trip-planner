@@ -127,7 +127,7 @@ export const tests = [
     const csv = buildPlacesCsv(places, days);
     const rows = parseCsv(csv);
     const timeOutRow = rows.slice(1).find((r) => r[0] === "Time Out Market");
-    assert.equal(timeOutRow[7], "1 must · 1 nice");
+    assert.equal(timeOutRow[7], "1 love · 1 like");
     assert.equal(timeOutRow[8], "Day 1");
     const belemRow = rows.slice(1).find((r) => r[0].startsWith("Belém"));
     assert.equal(belemRow[7], "");

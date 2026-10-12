@@ -196,35 +196,24 @@ export function dialogShell(className, buildForm) {
   });
 }
 
-/** The pressed/toggle Must/Nice/Skip summary shown next to it; tap to see who chose what (§7.3). */
+/** Show each person's pick as their initial. */
 function rankSummary(votes, usersById) {
-  const summaryText = voteSummary(votes) || "Not ranked yet";
   const entries = Object.entries(votes || {});
-  const toggleBtn = el("button", {
-    type: "button",
-    className: "rank-summary-toggle",
-    textContent: summaryText,
-    attrs: { "aria-expanded": "false" },
-  });
-  if (entries.length === 0) return el("div", { className: "rank-summary" }, [toggleBtn]);
+  if (entries.length === 0) return null;
 
-  const details = el(
-    "ul",
-    { className: "rank-summary-details", hidden: true },
-    entries.map(([uid, choice]) => {
-      const name = (usersById[uid] && usersById[uid].displayName) || "Someone";
-      return el("li", { textContent: `${name}: ${choice}` });
-    })
-  );
-  toggleBtn.addEventListener("click", () => {
-    details.hidden = !details.hidden;
-    toggleBtn.setAttribute("aria-expanded", details.hidden ? "false" : "true");
+  const initials = entries.map(([uid]) => {
+    const name = (usersById[uid] && usersById[uid].displayName) || "?";
+    return name[0].toUpperCase();
   });
-  return el("div", { className: "rank-summary" }, [toggleBtn, details]);
+  const summaryText = initials.join(" ");
+  return el("span", { className: "rank-summary", textContent: summaryText, title: entries.map(([uid, choice]) => {
+    const name = (usersById[uid] && usersById[uid].displayName) || "Someone";
+    return `${name}: ${choice}`;
+  }).join("\n") });
 }
 
 // What each rank choice means, shown as a tooltip (wording guide).
-const RANK_TOOLTIPS = { must: "Must go", nice: "Nice to have", skip: "Skip it" };
+const RANK_TOOLTIPS = { love: "Love it", like: "Like it", pass: "Pass" };
 
 /**
  * The Must/Nice/Skip control (§7.3). Pressing the current choice again clears it.
@@ -235,7 +224,7 @@ export function rankControl({ votes = {}, myUid, usersById = {}, onVote }) {
   const buttons = el(
     "div",
     { className: "rank-buttons" },
-    ["must", "nice", "skip"].map((choice) => {
+    ["love", "like", "pass"].map((choice) => {
       const pressed = current === choice;
       const btn = el("button", {
         type: "button",
@@ -248,7 +237,8 @@ export function rankControl({ votes = {}, myUid, usersById = {}, onVote }) {
       return btn;
     })
   );
-  return el("div", { className: "rank-control" }, [buttons, rankSummary(votes, usersById)]);
+  const summary = rankSummary(votes, usersById);
+  return el("div", { className: "rank-control" }, summary ? [buttons, summary] : [buttons]);
 }
 
 /** A "Copy link" button using the Clipboard API, falling back to a selectable text field (§8). */

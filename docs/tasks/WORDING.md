@@ -20,7 +20,7 @@ How Trip Planner talks. Every agent follows this once T07 is done. The owner can
 | No candidates yet. | No ideas yet. Add a place you'd love to go — Google Flights Explore is a good place to look. | Overview |
 | Choose this destination | Pick this destination | Candidate card |
 | Discover | Search the web | Overview panel heading |
-| Must / Nice / Skip | Must / Nice / Skip (keep), with tooltips "Must go", "Nice to have", "Skip it" | Rank control |
+| Must / Nice / Skip | Love / Like / Pass, with tooltips "Love it", "Like it", "Pass" | Rank control |
 | Ranking (sort) | Group favorites | Places sort |
 | Not ranked by me | I haven't ranked yet | Filters |
 | Unplanned | Not in a day yet | Days tab |
