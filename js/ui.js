@@ -1,5 +1,6 @@
 // Shared DOM helpers. No Firebase imports here.
 import { voteSummary } from "./lib/votes.js";
+import { looksLikeLink } from "./lib/links.js";
 
 /** Creates an element. props supports className, textContent, onX handlers,
  * an `attrs` object for raw attributes, and any other DOM property. */
@@ -170,6 +171,64 @@ export async function readClipboardText() {
 /** A labeled form field: a <label> wrapping a caption span and the given input/select/textarea. */
 export function field(labelText, input) {
   return el("label", { className: "field" }, [el("span", { textContent: labelText }), input]);
+}
+
+/**
+ * A link-paste box plus a Paste button, shared by the flight, stay and place
+ * dialogs (T42). `onLink(text)` fires once for the box's current text: on
+ * `paste` (next tick, since the value isn't updated yet when it fires), on
+ * typing (debounced ~250ms), and right after the Paste button or `fill()`
+ * sets the value — never twice in a row for the same text. Returns
+ * `{ row, input, fill }`; `fill(text)` is also how a dialog's own
+ * auto-read-on-open sets the box. `multiline` makes `input` a 2-row
+ * `<textarea>` (the flight link sheet) instead of a single-line `<input>`.
+ */
+export function linkField({ placeholder, ariaLabel, onLink, multiline = false }) {
+  const input = multiline
+    ? el("textarea", { rows: 2, placeholder, attrs: { "aria-label": ariaLabel } })
+    : el("input", { type: "text", placeholder, attrs: { "aria-label": ariaLabel } });
+
+  let lastValue = null;
+  function maybeFire() {
+    if (input.value === lastValue) return;
+    lastValue = input.value;
+    onLink(input.value);
+  }
+
+  function fill(text) {
+    input.value = text;
+    maybeFire();
+  }
+
+  let debounceTimer = null;
+  input.addEventListener("paste", () => setTimeout(maybeFire, 0));
+  input.addEventListener("input", () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(maybeFire, 250);
+  });
+
+  const pasteBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Paste" });
+  pasteBtn.addEventListener("click", async () => {
+    const text = await readClipboardText();
+    if (text == null) return;
+    fill(text);
+  });
+
+  const row = el("div", { className: "input-row" }, [input, pasteBtn]);
+  return { row, input, fill };
+}
+
+/**
+ * Auto-read-on-open (T42 item 4): called once when a paste dialog opens from
+ * a button tap. Reads the clipboard itself only when the box is still empty
+ * and this isn't an edit — never otherwise, since that would read the
+ * clipboard without a tap starting it for this box. Silently does nothing
+ * when the clipboard is unreadable or doesn't look like a link.
+ */
+export async function autoReadLinkOnOpen({ input, fill }, { isEdit = false } = {}) {
+  if (isEdit || input.value.trim()) return;
+  const text = await readClipboardText();
+  if (text != null && looksLikeLink(text)) fill(text);
 }
 
 /**

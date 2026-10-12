@@ -1,5 +1,5 @@
 import { addPlace, updatePlace } from "../store.js";
-import { el, setPending, friendlyError, field, dialogShell, readClipboardText } from "../ui.js";
+import { el, setPending, friendlyError, field, dialogShell, linkField, autoReadLinkOnOpen } from "../ui.js";
 import { safeUrl, googleMapsFindUrl } from "../lib/links.js";
 import { parseGoogleMapsUrl } from "../lib/mapsurl.js";
 import { nominatimSearch } from "../lookup.js";
@@ -71,34 +71,28 @@ export function buildLocationPicker({ getCity = () => null, mapClickState, onCha
   });
 
   // Step 2 · Paste the Google Maps link (§7.6, §9.3).
-  const linkInput = el("input", { type: "text", placeholder: "Paste a Google Maps link", attrs: { "aria-label": "Google Maps link" } });
-  const useLinkBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Read this link" });
-  function tryParseLink() {
-    if (!linkInput.value.trim()) return;
+  function tryParseLink(text) {
+    text = text.trim();
+    if (!text) return;
     errorEl.replaceChildren();
     pinFoundEl.hidden = true;
-    const result = parseGoogleMapsUrl(linkInput.value);
+    const result = parseGoogleMapsUrl(text);
     if (result.error) {
       errorEl.replaceChildren(el("p", { className: "field-error", textContent: result.error }));
       return;
     }
-    setLocation(result.lat, result.lng, safeUrl(linkInput.value), result.name);
+    setLocation(result.lat, result.lng, safeUrl(text), result.name);
     pinFoundEl.textContent = result.name ? `✓ Pin found: ${result.name}` : "✓ Pin found";
     pinFoundEl.hidden = false;
   }
-  useLinkBtn.addEventListener("click", tryParseLink);
-  // Auto-parse as soon as a link is pasted (§7.6) — a paste event fires before the
-  // input's value updates, so read it on the next tick. The button stays as a
-  // fallback for a manually typed/edited link.
-  linkInput.addEventListener("paste", () => setTimeout(tryParseLink, 0));
-  // Tap-to-paste fallback beside the link box (T25), as the stay dialog's link paste.
-  const pasteBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Paste" });
-  pasteBtn.addEventListener("click", async () => {
-    const text = await readClipboardText();
-    if (!text) return;
-    linkInput.value = text;
-    tryParseLink();
+  const { row: linkRow, input: linkInput, fill: fillLink } = linkField({
+    placeholder: "Paste a Google Maps link",
+    ariaLabel: "Google Maps link",
+    onLink: tryParseLink,
   });
+  // stepLabels is true only for the fresh "Add place" form; the inline
+  // Set/Edit location picker on an existing place never auto-reads (T42 item 4).
+  autoReadLinkOnOpen({ input: linkInput, fill: fillLink }, { isEdit: !stepLabels });
 
   const searchInput = el("input", { type: "text", placeholder: "Search by name", attrs: { "aria-label": "Search for a place by name" } });
   const searchBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Search" });
@@ -188,7 +182,7 @@ export function buildLocationPicker({ getCity = () => null, mapClickState, onCha
     el("div", { className: "location-method" }, [findQueryInput, findLink]),
     el("p", { className: "muted", textContent: "Find the place, copy the address from your browser's address bar, then paste it below." }),
     stepLabels ? el("h4", { textContent: "Step 2 · Paste the Google Maps link" }) : null,
-    el("div", { className: "location-method location-method-primary" }, [linkInput, pasteBtn, useLinkBtn]),
+    el("div", { className: "location-method location-method-primary" }, [linkRow]),
     pinFoundEl,
     el("div", { className: "location-status-row" }, [statusEl, clearBtn]),
     errorEl,

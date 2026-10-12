@@ -15,6 +15,18 @@ export function safeUrl(text) {
   return url.toString();
 }
 
+/** True for clipboard text worth auto-filling into a link box (T42): a
+ * scheme, a bare `www.`, or a bare domain-looking token — never plain text,
+ * which may contain spaces or newlines a link never has. */
+export function looksLikeLink(text) {
+  if (typeof text !== "string") return false;
+  const trimmed = text.trim();
+  if (!trimmed || /\s/.test(trimmed)) return false;
+  if (/^https?:\/\//i.test(trimmed)) return true;
+  if (/^www\./i.test(trimmed)) return true;
+  return /^[a-z0-9-]+(\.[a-z0-9-]+)+(\/\S*)?$/i.test(trimmed);
+}
+
 export function googleFlightsExploreUrl() {
   return "https://www.google.com/travel/explore";
 }

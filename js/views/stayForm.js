@@ -1,4 +1,4 @@
-import { el, field, dialogShell, setPending, friendlyError, readClipboardText } from "../ui.js";
+import { el, field, dialogShell, setPending, friendlyError, linkField, autoReadLinkOnOpen } from "../ui.js";
 import { googleHotelsUrl, bookingUrl, airbnbUrl, googleMapsFindUrl } from "../lib/links.js";
 import { parseStayLink } from "../lib/staylink.js";
 import { parseGoogleMapsUrl } from "../lib/mapsurl.js";
@@ -199,24 +199,7 @@ function buildStayDialog({ isEdit, stay, trip, focusLocation, stopDefaults, city
   return dialogShell("stay-dialog", (finish) => {
     const adults = (trip.travelers || []).length || 1;
 
-    const linkInput = el("input", {
-      type: "text",
-      value: stay?.link || "",
-      placeholder: "Paste a Booking.com, Airbnb, Google Hotels or other link…",
-      attrs: { "aria-label": "Stay link" },
-    });
     const resultLine = el("p", { className: "link-parse-result", hidden: true });
-
-    // A tap-to-paste fallback beside the link box, for browsers that don't
-    // fire a "paste" event reliably (e.g. no clipboard permission yet).
-    const pasteBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Paste" });
-    pasteBtn.addEventListener("click", async () => {
-      const text = await readClipboardText();
-      if (!text) return;
-      linkInput.value = text;
-      tryParseLink();
-    });
-    const linkRow = el("div", { className: "input-row" }, [linkInput, pasteBtn]);
 
     const nameInput = el("input", { type: "text", value: stay?.name || "" });
     const priceInput = isEdit ? null : el("input", { type: "text", placeholder: "e.g. 480.50" });
@@ -243,9 +226,10 @@ function buildStayDialog({ isEdit, stay, trip, focusLocation, stopDefaults, city
       return false;
     }
 
-    function tryParseLink() {
-      if (!linkInput.value.trim()) return;
-      const parsed = parseStayLink(linkInput.value);
+    function tryParseLink(rawText) {
+      const linkText = rawText.trim();
+      if (!linkText) return;
+      const parsed = parseStayLink(linkText);
       const { text, success } = resultLineFor(parsed);
       resultLine.className = success ? "link-parse-result link-parse-success" : "link-parse-result";
       resultLine.textContent = text;
@@ -264,8 +248,17 @@ function buildStayDialog({ isEdit, stay, trip, focusLocation, stopDefaults, city
       fillIfDefault(checkOutInput, "checkOut", parsed.checkOut);
       fillIfDefault(guestsInput, "guests", parsed.guests);
     }
-    linkInput.addEventListener("paste", () => setTimeout(tryParseLink, 0));
-    linkInput.addEventListener("input", tryParseLink);
+    const { row: linkRow, input: linkInput, fill: fillLink } = linkField({
+      placeholder: "Paste a Booking.com, Airbnb, Google Hotels or other link…",
+      ariaLabel: "Stay link",
+      onLink: tryParseLink,
+    });
+    // Edit mode: show the saved link without re-running the parse over the
+    // already-saved fields it would otherwise "fill in" (§7.7's "only into
+    // empty or still-default fields" already protects them, but there's no
+    // reason to re-parse a link nobody just pasted).
+    if (stay?.link) linkInput.value = stay.link;
+    else autoReadLinkOnOpen({ input: linkInput, fill: fillLink }, { isEdit });
 
     const searchLinksLine = el("p", { className: "muted" }, [
       "Don't have one yet? ",

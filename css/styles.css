@@ -772,10 +772,13 @@ textarea:focus {
    button keeps its own width instead of wrapping to a second line. */
 .input-row {
   display: flex;
+  align-items: flex-start;
   gap: var(--space-2);
 }
 
-.input-row input {
+/* textarea too, for the flight dialog's multiline linkField() (T42). */
+.input-row input,
+.input-row textarea {
   flex: 1 1 auto;
   width: auto;
   min-width: 0;

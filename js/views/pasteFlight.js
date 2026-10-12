@@ -1,6 +1,6 @@
 // The "Paste flight link" sheet and the "Move to…" dialog for earlier
 // flights (V4 §4.5, §4.6) — the main way flights get into Routes.
-import { el, field, dialogShell } from "../ui.js";
+import { el, field, dialogShell, linkField, autoReadLinkOnOpen } from "../ui.js";
 import { parseFlightLink } from "../lib/flightlink.js";
 import { parseMoney, formatMoney } from "../lib/money.js";
 import { flightLabel } from "../lib/itineraryFormat.js";
@@ -43,11 +43,6 @@ function labelFor(legs, optionCount) {
  */
 export function pasteFlightDialog({ target, traveler, trip, airports, myUid }) {
   return dialogShell("paste-flight-dialog", (finish) => {
-    const linkInput = el("textarea", {
-      rows: 2,
-      placeholder: "Paste the address from Google Flights…",
-      attrs: { "aria-label": "Google Flights link" },
-    });
     const linkErrorEl = el("p", { className: "field-error", hidden: true });
     const previewEl = el("div", { className: "flight-link-preview", hidden: true });
 
@@ -112,8 +107,8 @@ export function pasteFlightDialog({ target, traveler, trip, airports, myUid }) {
       linkErrorEl.hidden = !message;
     }
 
-    function tryParse() {
-      const text = linkInput.value.trim();
+    function tryParse(text) {
+      text = text.trim();
       if (!text) {
         showNothing(null);
         return;
@@ -143,8 +138,13 @@ export function pasteFlightDialog({ target, traveler, trip, airports, myUid }) {
       targetLineEl.hidden = false;
       okBtn.disabled = false;
     }
-    linkInput.addEventListener("paste", () => setTimeout(tryParse, 0));
-    linkInput.addEventListener("input", tryParse);
+    const { row: linkRow, input: linkInput, fill: fillLink } = linkField({
+      placeholder: "Paste the address from Google Flights…",
+      ariaLabel: "Google Flights link",
+      onLink: tryParse,
+      multiline: true,
+    });
+    autoReadLinkOnOpen({ input: linkInput, fill: fillLink }, { isEdit: false });
 
     const errorHolder = el("div", { className: "field-error-holder" });
     const cancelBtn = el("button", { type: "button", className: "btn btn-secondary", textContent: "Cancel" });
@@ -152,7 +152,7 @@ export function pasteFlightDialog({ target, traveler, trip, airports, myUid }) {
 
     const form = el("form", { method: "dialog", className: "flight-form" }, [
       el("h3", { textContent: "Paste flight link" }),
-      field("Google Flights link", linkInput),
+      field("Google Flights link", linkRow),
       linkErrorEl,
       previewEl,
       landsDateRow,

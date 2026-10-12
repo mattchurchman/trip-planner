@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   safeUrl,
+  looksLikeLink,
   googleFlightsExploreUrl,
   googleFlightsSearchUrl,
   googleHotelsUrl,
@@ -213,5 +214,32 @@ export const tests = [
     assert.equal(links[1].label, "Route part 2");
     assert.match(links[1].url, /origin=8,8/); // part 2 starts where part 1 ended
     assert.match(links[1].url, /destination=20,20/);
+  }],
+  ["looksLikeLink accepts an https URL", () => {
+    assert.equal(looksLikeLink("https://www.google.com/travel/flights?a=b"), true);
+  }],
+  ["looksLikeLink accepts an http URL", () => {
+    assert.equal(looksLikeLink("http://booking.com/hotel/123"), true);
+  }],
+  ["looksLikeLink accepts a bare www. link", () => {
+    assert.equal(looksLikeLink("www.airbnb.com/rooms/123"), true);
+  }],
+  ["looksLikeLink accepts a bare known-looking domain", () => {
+    assert.equal(looksLikeLink("maps.app.goo.gl/abc123"), true);
+  }],
+  ["looksLikeLink trims surrounding whitespace first", () => {
+    assert.equal(looksLikeLink("  https://example.com  "), true);
+  }],
+  ["looksLikeLink rejects plain text", () => {
+    assert.equal(looksLikeLink("just some notes about the trip"), false);
+  }],
+  ["looksLikeLink rejects text with a dot but no domain shape", () => {
+    assert.equal(looksLikeLink("meet you at 5.30"), false);
+  }],
+  ["looksLikeLink rejects empty or non-string input", () => {
+    assert.equal(looksLikeLink(""), false);
+    assert.equal(looksLikeLink("   "), false);
+    assert.equal(looksLikeLink(null), false);
+    assert.equal(looksLikeLink(undefined), false);
   }],
 ];
