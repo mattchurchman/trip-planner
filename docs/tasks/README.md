@@ -62,6 +62,28 @@ If a task fails twice, say "Revert the last commit" and rerun it in a fresh sess
 
 **Order.** T32 and T33 touch nothing else and can run any time. T34 → T35 → T36 → T37 → T38 → T39 → T40 one at a time; T36–T38 all depend only on T35 but share screens, so don't run them side by side.
 
+## Round 6 — owner testing, 2026-10-12 (spec 4.2, phone first)
+
+| # | Task | Model | Effort | Depends on | Status |
+|---|---|---|---|---|---|
+| T41 | [Phone foundation: no zoom, clean header, matching fields](T41-mobile-foundation.md) | Sonnet | medium | T40 | To do |
+| T42 | [Paste once and it fills in](T42-paste-fills-itself.md) | Sonnet | medium | T41 | To do |
+| T43 | [Travelers as cards with a Save sheet](T43-traveler-cards.md) | Sonnet | medium | T41 | To do |
+| T44 | [Routes: + Idea works; slim total bar](T44-routes-idea-button-and-total.md) | Sonnet | low | T41 | To do |
+| T45 | [Price check you can see](T45-price-check-visible.md) | Sonnet | medium | T41 | To do |
+| T46 | [Night math: idea city ends at the first hop](T46-night-math.md) | Opus | high | T40 | To do |
+| T47 | ["I live here": no home flight needed](T47-i-live-here.md) | Opus | high | T46 | To do |
+| T48 | [Stays show every stop before any stay](T48-stays-show-stops.md) | Sonnet | medium | T46 | To do |
+| T49 | [Map places: compact rows; no event dates](T49-compact-places.md) | Sonnet | medium | T41 | To do |
+| T50 | [Days: dated names; walking routes stay in the day](T50-days-names-and-walks.md) | Sonnet | medium | T46 | To do |
+| T51 | [Phone pass: Trips, Overview, Routes](T51-phone-overview-routes.md) | Sonnet | high | T41–T47 | To do |
+| T52 | [Phone pass: Map and Days](T52-phone-map-days.md) | Sonnet | high | T48–T51 | To do |
+| T53 | [Help page, wording and final review](T53-review-round6.md) | Opus | medium | T41–T52 | To do |
+
+**Order.** Run top to bottom, one at a time — most of these share `css/styles.css`. T41 comes first because every later screen builds on it. T46 touches only logic, so it can go any time after T40 if you want the night math fixed early, but T47, T48 and T50 must wait for it.
+
+**Natural stopping points:** after T42 (no zoom, paste works), after T48 (all the reported bugs fixed), after T53.
+
 **Order.** Top to bottom is the safe path. Two tasks can be done early or alongside others because they touch nothing else: **T17** (any time before T18) and **T22** (any time after T16). Everything else changes shared screens, so run those one at a time.
 
 **Natural stopping points** where the app is fully usable: after T15 (sign-in fixed), after T21 (Routes complete), after T25 (Map complete), after T30.
