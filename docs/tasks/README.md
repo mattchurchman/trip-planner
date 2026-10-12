@@ -35,7 +35,7 @@ If a task fails twice, say "Revert the last commit" and rerun it in a fresh sess
 | T26 | [Import places from Google My Maps](T26-mymaps-import.md) | Sonnet | medium | T25 | Done (2026-10-11) |
 | T27 | [Plan days on the map](T27-days-map.md) | Sonnet | high | T25 | Done (2026-10-12) |
 | T28 | [Take the plan to Google Maps](T28-export-google.md) | Haiku | medium | T27 | Done (2026-10-12) |
-| T29 | [Help page for the new flow](T29-help.md) | Haiku | medium | T28 | To do |
+| T29 | [Help page for the new flow](T29-help.md) | Haiku | medium | T28 | Done (2026-10-12) |
 | T30 | [Final review and SPEC 4.0](T30-review-spec.md) | Opus | high | T29 | To do |
 
 **Order.** Top to bottom is the safe path. Two tasks can be done early or alongside others because they touch nothing else: **T17** (any time before T18) and **T22** (any time after T16). Everything else changes shared screens, so run those one at a time.

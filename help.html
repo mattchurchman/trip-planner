@@ -25,57 +25,124 @@
     <main class="app-main help-main">
       <h1>How this app works</h1>
       <p>
-        Trip Planner is a private site where a small group of friends plans a trip together: pick a destination,
-        pin places to go, compare flights and stays, sketch out days, and — after the trip — share a recap. Nothing
-        here books anything or fetches live prices; it's just where your group collects and compares what you've
-        each found elsewhere.
+        Trip Planner is a private site where a small group of friends plans a trip together. Nothing here books anything or fetches live prices; it's where your group collects and compares what you've each found elsewhere.
       </p>
 
-      <section class="card help-section">
-        <h2>Signing in</h2>
-        <p>
-          Sign in with the Google account the trip owner added you with. If you see
-          <strong>"this account isn't on the trip list yet,"</strong> it means your exact email hasn't been added —
-          ask the owner to add it (lowercase, matching your Google account exactly).
-        </p>
-        <p>If the sign-in popup never appears, your browser is probably blocking popups — allow them for this site and try again.</p>
+      <nav class="help-contents">
+        <p><strong>Jump to:</strong></p>
+        <ul>
+          <li><a href="#home-screen">Add to home screen and sign in</a></li>
+          <li><a href="#routes">Routes: copy and paste flights</a></li>
+          <li><a href="#prices">Check prices</a></li>
+          <li><a href="#map">Map: places and stays by stop</a></li>
+          <li><a href="#days">Days: plan day by day</a></li>
+          <li><a href="#google-maps">Take the plan to Google Maps</a></li>
+        </ul>
+      </nav>
+
+      <section class="card help-section" id="home-screen">
+        <h2>Add to home screen and sign in</h2>
+        <p>Make Trip Planner easy to find on your phone.</p>
+        <ol>
+          <li>On iPhone, tap Share → Add to Home Screen. On Android, tap the menu → Install app. This adds a shortcut that works like a real app.</li>
+          <li>Open the app and sign in with your Google account, or create one with email and password.</li>
+          <li>If you see "this account isn't on the trip list yet," ask the owner to add your email (lowercase, exactly as it appears in your Google account).</li>
+        </ol>
+        <details>
+          <summary><strong>If it doesn't work</strong></summary>
+          <ul>
+            <li><strong>The sign-in popup never appears.</strong> Your browser is probably blocking popups — allow them for this site and try again.</li>
+            <li><strong>Everything says "You don't have access."</strong> Tell the owner — the site's permission rules need updating on their end.</li>
+          </ul>
+        </details>
+      </section>
+
+      <section class="card help-section" id="routes">
+        <h2>Routes: copy and paste flights</h2>
+        <p>Start by pasting a Google Flights link. It fills in your home airport, dates, and which cities are in your trip.</p>
+        <ol>
+          <li>Go to <strong>Routes</strong> tab and tap <strong>Paste flight link</strong>.</li>
+          <li>Open Google Flights and find a flight. The price must be visible on the link — paste the full address from your browser's bar, not a short share link.</li>
+          <li>The app reads where you're from (your home airport), the date you leave, and where you arrive. Each traveler can paste their own flights from their home city on different dates.</li>
+          <li>You'll see it as a home flight, which sets your trip window. Other travelers paste their flights too — they might leave on different days.</li>
+          <li>Once everyone has a home flight into the region, paste flights between cities (hops). These create options: "Rome + Florence," "Madrid + Barcelona," etc.</li>
+          <li>The app shows your route, how many nights, and the total cost per person.</li>
+        </ol>
+        <details>
+          <summary><strong>If it doesn't work</strong></summary>
+          <ul>
+            <li><strong>Short share links don't work.</strong> Open the link in Google Flights, copy the full address from your browser's address bar, and paste that.</li>
+            <li><strong>The price didn't read correctly.</strong> The link must have the price visible. Go back to Google Flights and make sure you copied the whole URL.</li>
+          </ul>
+        </details>
+        <!-- IMAGE: traveler switch, paste button, home flights card, option with stops -->
+      </section>
+
+      <section class="card help-section" id="prices">
+        <h2>Check prices</h2>
+        <p>Prices are a snapshot from when the link was copied. Check them later to see if they've changed.</p>
+        <ol>
+          <li>On a flight or stay, the price is a button. Tap it to see what Google showed when the link was pasted.</li>
+          <li>If the price is the same, tap <strong>Same</strong>. If it changed, enter the new price and tap <strong>Save price</strong>.</li>
+          <li>The app shows whether prices went up or down and keeps a running total per person.</li>
+          <li>On the Routes or Map tabs, tap <strong>Check prices</strong> to walk through every price older than 3 days, one at a time.</li>
+        </ol>
+        <details>
+          <summary><strong>If it doesn't work</strong></summary>
+          <ul>
+            <li><strong>No link was saved.</strong> The app still asks for a price, but can't open the site — check it yourself and enter what you see.</li>
+          </ul>
+        </details>
+        <!-- IMAGE: price button, price check sheet -->
+      </section>
+
+      <section class="card help-section" id="map">
+        <h2>Map: places and stays by stop</h2>
+        <p>Pin the restaurants, museums and hotels you want to check out. The map groups them by the cities in your route.</p>
+        <ol>
+          <li>Go to <strong>Map</strong> and tap <strong>Add place</strong>. Search or paste a Google Maps link — the name and location fill in automatically.</li>
+          <li>You can also tap <strong>Import from My Maps</strong> to upload a Google My Maps layer (export it as KML from My Maps, not KMZ).</li>
+          <li>To add where you're staying, tap <strong>Add stay</strong> and paste a Booking.com, Airbnb or Google Hotels link. The app fills in dates from your stops and you enter the price.</li>
+          <li>The app shows night coverage for each stop — how many nights each stay covers and the total cost.</li>
+        </ol>
+        <details>
+          <summary><strong>If it doesn't work</strong></summary>
+          <ul>
+            <li><strong>Short share links don't work.</strong> Open the link, copy the full address from your browser's address bar, and paste that.</li>
+            <li><strong>KMZ files don't import.</strong> In My Maps, use ⋮ → Export to KML/KMZ and tick "Export as KML instead of KMZ", then try again.</li>
+          </ul>
+        </details>
+        <!-- IMAGE: map with stop chips, places and stays together -->
+      </section>
+
+      <section class="card help-section" id="days">
+        <h2>Days: plan day by day</h2>
+        <p>Organize your favorite places into a day-by-day plan.</p>
+        <ol>
+          <li>Go to <strong>Days</strong> and tap <strong>Create days from route</strong>. The app makes one day per city in your chosen route.</li>
+          <li>Tap a place pin to add it to a day. The map shows which places are on which day.</li>
+          <li>The app numbers each place, so you can sketch a walking route.</li>
+        </ol>
+        <!-- IMAGE: day list, place pins numbered by day -->
+      </section>
+
+      <section class="card help-section" id="google-maps">
+        <h2>Take the plan to Google Maps</h2>
+        <p>Download your day-by-day plan as a map file and open it in Google Maps for turn-by-turn navigation.</p>
+        <ol>
+          <li>On the <strong>Days</strong> tab, tap <strong>Take it to Google Maps</strong> to download a file.</li>
+          <li>Open Google My Maps and tap <strong>Create a new map</strong> → <strong>Import</strong>. Pick your file; a layer per day appears with your places and stays.</li>
+          <li>Open the map in the Google Maps app on your phone. Tap a place to get directions for that day's walking route.</li>
+        </ol>
+        <!-- IMAGE: days tab with export button, My Maps import dialog, navigation in Google Maps app -->
       </section>
 
       <section class="card help-section">
-        <h2>The tabs, in the order most groups use them</h2>
-        <dl>
-          <dt>Overview</dt>
-          <dd>Set trip dates, add travelers, and add destination ideas. Rank them Must / Nice / Skip, then whoever's excited clicks <strong>Pick this destination</strong> to lock it in.</dd>
-          <dt>Places</dt>
-          <dd>Pin food, sights, tours and more in the chosen city. The fastest way in: search for a place on Google Maps, then paste the link back in — the name and pin fill themselves in.</dd>
-          <dt>Flights &amp; stays</dt>
-          <dd>Each traveler pastes a Google Flights link to add their own flight options from their home city; the group does the same with a Booking.com, Airbnb or Google Hotels link for stays. Choose as many flights or stays as you need — an extra leg, a second stay, a side trip. Save a price whenever you check one — the app tracks whether it went up or down and shows a running total per person.</dd>
-          <dt>Days</dt>
-          <dd>Drag your favorite places into loose day plans (well — click Add to day; there's no dragging). Each day can open as a walking route in Google Maps.</dd>
-          <dt id="google-maps">Google Maps</dt>
-          <dd>Download the day-by-day map from the Days tab, then import it into your Google My Maps: <strong>Create a new map → Import</strong>, pick the file, and a layer per day appears. Open the map in the Google Maps app to navigate during your trip.</dd>
-          <dt>Recap</dt>
-          <dd>After the trip: say how each place went, add your actual spend next to the planned total, and optionally publish a shareable read-only recap page — no sign-in needed to view it.</dd>
-        </dl>
-      </section>
-
-      <section class="card help-section">
-        <h2>Common snags</h2>
+        <h2>Quick fixes</h2>
         <ul>
           <li><strong>You just heard about an update but don't see it.</strong> Wait a minute or two, then hard-refresh the page (Mac: ⌘⇧R, Windows: Ctrl+Shift+R).</li>
-          <li><strong>Everything says "You don't have access."</strong> Tell the owner — this means the site's permission rules need republishing on their end, not something you can fix.</li>
-          <li><strong>The map is blank, or something looks broken.</strong> A reload fixes most of it. If not, open your browser's console (Chrome: Option+⌘+J on Mac, Ctrl+Shift+J on Windows) and send the red error text to the owner.</li>
-          <li><strong>You pasted a Google Maps link and nothing filled in.</strong> Short share links (like maps.app.goo.gl) can't be read this way — open the link, copy the full address from your browser's address bar, and paste that instead.</li>
+          <li><strong>The map is blank, or something looks broken.</strong> A reload usually fixes it. If not, open your browser's console (Chrome: Option+⌘+J on Mac, Ctrl+Shift+J on Windows) and send the red error text to the owner.</li>
         </ul>
-      </section>
-
-      <section class="card help-section">
-        <h2>What this app deliberately doesn't do</h2>
-        <p>
-          No live flight or hotel prices, no booking or payments, no photo uploads (photos live in a shared album
-          you link to), no chat or notifications, and no currency conversion. Every price you see is one a person
-          typed in after checking it themselves.
-        </p>
       </section>
     </main>
   </body>
