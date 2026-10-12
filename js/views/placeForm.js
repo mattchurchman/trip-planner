@@ -1,9 +1,10 @@
 import { addPlace, updatePlace } from "../store.js";
-import { el, setPending, friendlyError, field, dialogShell } from "../ui.js";
+import { el, setPending, friendlyError, field, dialogShell, readClipboardText } from "../ui.js";
 import { safeUrl, googleMapsFindUrl } from "../lib/links.js";
 import { parseGoogleMapsUrl } from "../lib/mapsurl.js";
 import { nominatimSearch } from "../lookup.js";
 import { CATEGORIES } from "../lib/categories.js";
+import { nearestStop } from "../lib/stops.js";
 
 /**
  * The three location-entry methods from §7.6: find it on Google Maps then
@@ -85,6 +86,14 @@ export function buildLocationPicker({ trip, mapClickState, onChange, findText = 
   // input's value updates, so read it on the next tick. The button stays as a
   // fallback for a manually typed/edited link.
   linkInput.addEventListener("paste", () => setTimeout(tryParseLink, 0));
+  // Tap-to-paste fallback beside the link box (T25), as the stay dialog's link paste.
+  const pasteBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Paste" });
+  pasteBtn.addEventListener("click", async () => {
+    const text = await readClipboardText();
+    if (!text) return;
+    linkInput.value = text;
+    tryParseLink();
+  });
 
   const searchInput = el("input", { type: "text", placeholder: "Search by name", attrs: { "aria-label": "Search for a place by name" } });
   const searchBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Search" });
@@ -173,7 +182,7 @@ export function buildLocationPicker({ trip, mapClickState, onChange, findText = 
     el("div", { className: "location-method" }, [findQueryInput, findLink]),
     el("p", { className: "muted", textContent: "Find the place, copy the address from your browser's address bar, then paste it below." }),
     stepLabels ? el("h4", { textContent: "Step 2 · Paste the Google Maps link" }) : null,
-    el("div", { className: "location-method location-method-primary" }, [linkInput, useLinkBtn]),
+    el("div", { className: "location-method location-method-primary" }, [linkInput, pasteBtn, useLinkBtn]),
     pinFoundEl,
     el("div", { className: "location-status-row" }, [statusEl, clearBtn]),
     errorEl,
@@ -247,7 +256,7 @@ export function editPlaceDialog(place) {
 /** The inline location editor on a place row (§7.6): a toggle button that reveals
  * a location picker pre-armed to update that place, its Find button prefilled
  * with the place's own name. */
-export function buildSetLocationInline({ place, trip, tripId, mapClickState, onError }) {
+export function buildSetLocationInline({ place, trip, tripId, mapClickState, onError, cities = [] }) {
   const hasLocation = place.lat != null && place.lng != null;
   const toggleBtn = el("button", { type: "button", className: "btn btn-small", textContent: hasLocation ? "Edit location" : "Set location" });
   const holder = el("div", { className: "set-location-holder", hidden: true });
@@ -267,6 +276,8 @@ export function buildSetLocationInline({ place, trip, tripId, mapClickState, onE
               lat: payload.lat,
               lng: payload.lng,
               googleMapsUrl: cleared ? null : payload.googleMapsUrl || place.googleMapsUrl || null,
+              // Nearest stop on the chosen route (T25, V4 §6), reworked with the pin.
+              stopKey: cleared ? null : nearestStop(payload.lat, payload.lng, cities),
             });
             holder.hidden = true;
           } catch (err) {
@@ -284,7 +295,7 @@ export function buildSetLocationInline({ place, trip, tripId, mapClickState, onE
  * the link), Step 3 (details), then "Other ways to add a location". Renders
  * into `addPanelHolder` and calls `onAdded()` after a successful add so the
  * caller can collapse the panel. */
-export function buildAddPlacePanel({ trip, tripId, myUid, mapClickState, addPanelHolder, onAdded }) {
+export function buildAddPlacePanel({ trip, tripId, myUid, mapClickState, addPanelHolder, onAdded, cities = [] }) {
   const nameInput = el("input", { type: "text" });
   const categorySelect = el("select", {}, [
     el("option", { value: "", textContent: "Choose a category", disabled: true, selected: true }),
@@ -349,6 +360,8 @@ export function buildAddPlacePanel({ trip, tripId, myUid, mapClickState, addPane
           lat,
           lng,
           googleMapsUrl,
+          // Nearest stop on the chosen route (T25, V4 §6); null shows under "Elsewhere".
+          stopKey: nearestStop(lat, lng, cities),
         },
         myUid
       );

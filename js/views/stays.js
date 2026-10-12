@@ -11,7 +11,6 @@ import { sortStayOptions, stayNumbers, circledNumber } from "../lib/optionSort.j
 import { nightCoverage, stopStayTotal } from "../lib/coverage.js";
 import { priceCheck, checkPricesButton } from "./pricePanel.js";
 import { addStayFormDialog, editStayFormDialog, providerLabel } from "./stayForm.js";
-import { createStaysMap } from "./staysMap.js";
 
 function externalLinkRow(url, label) {
   return el("a", { className: "discover-link", href: url, target: "_blank", rel: "noopener noreferrer", textContent: label });
@@ -42,24 +41,25 @@ function groupByStop(stays, stops) {
 }
 
 /**
- * Builds the Stays section of the Stays tab (§7.7, V4 §7): the header with
- * its Add button, discover links, and stays grouped by the stop of the
- * chosen route, each with a night-coverage bar and total — or, with no
- * route chosen, every stay ungrouped and a hint to choose one. Call
- * `render(stays, trip, usersById, places, stops)` whenever trip/stays/users/
- * places/the chosen route's stops change — it defers rebuilding the list on
- * its own while someone is editing inside it (§8). `places` feeds only the
- * map's "our top places" layer. `stops` is `stopsFor`'s result for the
- * chosen option, or `null` when none is chosen yet.
+ * Builds the Stays section of the Map tab (V4 §7, §8): the header with its
+ * Add button, discover links, and stays grouped by the stop of the chosen
+ * route, each with a night-coverage bar and total — or, with no route
+ * chosen, every stay ungrouped and a hint to choose one. Call `render(stays,
+ * trip, usersById, stops)` whenever trip/stays/users/the chosen route's
+ * stops (or the stop chip filtering `stays`, T25) change — it defers
+ * rebuilding the list on its own while someone is editing inside it (§8).
+ * `stops` is `stopsFor`'s result for the chosen option, or `null` when none
+ * is chosen yet. `onFocusOnMap(stay)` pans the caller's shared map (T25) to
+ * that stay's pin; `focusCard(stayId)` (returned below) is the inverse,
+ * called by the caller when that pin is tapped.
  */
-export function createStaysSection({ tripId, myUid, onError }) {
+export function createStaysSection({ tripId, myUid, onError, onFocusOnMap }) {
   let stayCommentUnsubs = [];
   let currentTrip = null;
   let currentStays = [];
 
   const addStayBtn = el("button", { type: "button", className: "btn btn-primary", textContent: "Add stay" });
   const staysDiscoverEl = el("div", { className: "discover-section" });
-  const staysMapHolder = el("div", { className: "stays-map-holder" });
   const checkPricesEl = el("div", { className: "stays-check-prices" });
   const routeHintEl = el("p", { className: "empty-state" }, [
     "No route chosen yet. ",
@@ -67,16 +67,6 @@ export function createStaysSection({ tripId, myUid, onError }) {
     " to group stays by city.",
   ]);
   const staysListEl = el("div", {});
-
-  const staysMap = createStaysMap(staysMapHolder, {
-    onPinClick: (stayId) => {
-      const card = staysListEl.querySelector(`[data-stay-id="${stayId}"]`);
-      if (!card) return;
-      card.scrollIntoView({ behavior: "smooth", block: "center" });
-      card.classList.add("stay-card-highlight");
-      setTimeout(() => card.classList.remove("stay-card-highlight"), 1500);
-    },
-  });
 
   async function handleAddStay(stopDefaults) {
     if (currentStays.length >= 10) return;
@@ -195,7 +185,7 @@ export function createStaysSection({ tripId, myUid, onError }) {
     let locationLine;
     if (stay.lat != null) {
       const onMapBtn = el("button", { type: "button", className: "btn btn-link", textContent: "📍 On the map" });
-      onMapBtn.addEventListener("click", () => staysMap.focusStay(stay.id));
+      onMapBtn.addEventListener("click", () => onFocusOnMap(stay));
       locationLine = el("p", { className: "muted" }, [onMapBtn]);
     } else {
       const setLocationBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Set location" });
@@ -333,9 +323,8 @@ export function createStaysSection({ tripId, myUid, onError }) {
   }
 
   const element = el("div", {}, [
-    el("div", { className: "stays-header" }, [el("h2", { textContent: "Stays" }), addStayBtn]),
+    el("div", { className: "stays-header" }, [addStayBtn]),
     staysDiscoverEl,
-    staysMapHolder,
     checkPricesEl,
     routeHintEl,
     staysListEl,
@@ -343,17 +332,20 @@ export function createStaysSection({ tripId, myUid, onError }) {
 
   return {
     element,
-    render(stays, trip, usersById, places = [], stops = null) {
+    render(stays, trip, usersById, stops = null) {
       currentTrip = trip;
       currentStays = stays;
-      // The map isn't a form, so it updates immediately even while a card
-      // elsewhere in the list is deferred by renderWhenIdle below (§8).
-      staysMap.update(stays, places, trip);
       renderWhenIdle(staysListEl, () => renderSection(stays, trip, usersById, stops));
+    },
+    focusCard(stayId) {
+      const card = staysListEl.querySelector(`[data-stay-id="${stayId}"]`);
+      if (!card) return;
+      card.scrollIntoView({ behavior: "smooth", block: "center" });
+      card.classList.add("stay-card-highlight");
+      setTimeout(() => card.classList.remove("stay-card-highlight"), 1500);
     },
     unsubscribe() {
       for (const unsub of stayCommentUnsubs) unsub();
-      staysMap.destroy();
     },
   };
 }

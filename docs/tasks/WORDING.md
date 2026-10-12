@@ -30,7 +30,7 @@ How Trip Planner talks. Every agent follows this once T07 is done. The owner can
 | Plan trips with your friends. | Plan trips with your friends — from "where should we go?" to the recap. | Sign-in screen |
 | No trips yet. Start one! | No trips yet. Start one with **New trip**. | Trips list |
 
-Tab names: **Overview · Routes · Places · Stays · Days** (T23 removes Recap).
+Tab names: **Overview · Routes · Map · Days** (T23 removes Recap; T25 merges Places and Stays into Map).
 
 ## Routes (T19, V4 round 3)
 
@@ -56,6 +56,15 @@ Tab names: **Overview · Routes · Places · Stays · Days** (T23 removes Recap)
 | No route chosen yet. Choose an option on Routes to group stays by city. | Stays, shown instead of grouping until an option is chosen |
 | Duplicate | Stays, copies a stay (no price) and opens it for editing — for splitting one stay into two |
 | Paste | Stays, Add/Edit stay dialog — fills the link box from the clipboard |
+
+## Map tab (T25)
+
+| Wording | Where |
+|---|---|
+| All / {city} / Elsewhere | Map, stop chips above the map — "Elsewhere" is a place or stay with no stop nearby |
+| Choose an option on Routes to group this by your actual route. | Map, shown under the chips until an option is chosen (chips list every city across every option until then) |
+| Places / Stays | Map, the switch under the chips that picks which list shows below the map |
+| Paste | Map, "Add place" and the inline location editor — fills the Google Maps link box from the clipboard |
 
 ## Paste flight link (T20)
 

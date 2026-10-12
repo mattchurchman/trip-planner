@@ -5,18 +5,18 @@ import { tripStage } from "./lib/stage.js";
 import { renderTripsView } from "./views/trips.js";
 import { renderOverviewPage } from "./views/overview.js";
 import { renderRoutesPage } from "./views/routes.js";
-import { renderPlacesPage } from "./views/places.js";
-import { renderTravelPage } from "./views/travel.js";
+import { renderMapPage } from "./views/mapTab.js";
 import { renderDaysPage } from "./views/days.js";
 import { renderSignIn, renderEmailConfirmation } from "./views/signin.js";
 
 const TABS = [
   { key: "overview", label: "Overview", icon: "M4 11l8-7 8 7v9h-5v-6H9v6H4z", render: renderOverviewPage },
   { key: "routes", label: "Routes", icon: "M1 18l7-7 5 5 9-9M16 7h7v7", render: renderRoutesPage },
-  { key: "places", label: "Places", icon: "M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z", render: renderPlacesPage },
-  { key: "travel", label: "Stays", icon: "M3 17l6-2 4 3 8-12M3 17v.01M21 6v.01", render: renderTravelPage },
+  { key: "map", label: "Map", icon: "M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z", render: renderMapPage },
   { key: "days", label: "Days", icon: "M5 5h14v15H5zM5 10h14M9 3v4M15 3v4", render: renderDaysPage },
 ];
+// Old links from before T25 (§8) still land somewhere useful.
+const LEGACY_TAB_REDIRECTS = { places: "map", travel: "map" };
 
 const root = document.getElementById("app");
 let tripWatchers = [];
@@ -170,6 +170,11 @@ function route(user, main) {
   const tripMatch = hash.match(/^#\/trip\/([^/]+)(?:\/([a-z]+))?/);
   if (tripMatch) {
     const tripId = decodeURIComponent(tripMatch[1]);
+    const redirect = LEGACY_TAB_REDIRECTS[tripMatch[2]];
+    if (redirect) {
+      location.hash = `#/trip/${tripMatch[1]}/${redirect}`;
+      return;
+    }
     const tabKey = TABS.some((t) => t.key === tripMatch[2]) ? tripMatch[2] : "overview";
     tripWatchers.push(renderTripShell(main, tripId, user.uid, tabKey));
   } else {

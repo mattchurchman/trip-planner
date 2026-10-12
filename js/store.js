@@ -194,6 +194,8 @@ export function addPlace(tripId, fields, uid) {
       link: fields.link || null,
       eventStart: fields.eventStart || null,
       eventEnd: fields.eventEnd || null,
+      // Nearest stop on the chosen route (T25, V4 §6), or null for "Elsewhere".
+      stopKey: fields.stopKey ?? null,
       dayId: null,
       dayOrder: null,
       votes: {},

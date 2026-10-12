@@ -31,7 +31,7 @@ If a task fails twice, say "Revert the last commit" and rerun it in a fresh sess
 | T22 | [Love / Like / Pass](T22-love-like-pass.md) | Haiku | medium | T16 | Done (2026-10-11) |
 | T23 | [Slim Overview, remove Recap and destination ideas](T23-overview-cleanup.md) | Sonnet | medium | T21 | Done (2026-10-11) |
 | T24 | [Stays by stop, with night coverage](T24-stays-by-stop.md) | Sonnet | high | T23 | Done (2026-10-11) |
-| T25 | [One Map tab for places and stays](T25-map-tab.md) | Sonnet | high | T22, T24 | To do |
+| T25 | [One Map tab for places and stays](T25-map-tab.md) | Sonnet | high | T22, T24 | Done (2026-10-11) |
 | T26 | [Import places from Google My Maps](T26-mymaps-import.md) | Sonnet | medium | T25 | To do |
 | T27 | [Plan days on the map](T27-days-map.md) | Sonnet | high | T25 | To do |
 | T28 | [Take the plan to Google Maps](T28-export-google.md) | Haiku | medium | T27 | To do |
