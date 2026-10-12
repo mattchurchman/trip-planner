@@ -4,6 +4,7 @@ import { el, svgEl, friendlyError } from "./ui.js";
 import { tripStage } from "./lib/stage.js";
 import { renderTripsView } from "./views/trips.js";
 import { renderOverviewPage } from "./views/overview.js";
+import { renderRoutesPage } from "./views/routes.js";
 import { renderPlacesPage } from "./views/places.js";
 import { renderTravelPage } from "./views/travel.js";
 import { renderDaysPage } from "./views/days.js";
@@ -12,6 +13,7 @@ import { renderSignIn, renderEmailConfirmation } from "./views/signin.js";
 
 const TABS = [
   { key: "overview", label: "Overview", icon: "M4 11l8-7 8 7v9h-5v-6H9v6H4z", render: renderOverviewPage },
+  { key: "routes", label: "Routes", icon: "M1 18l7-7 5 5 9-9M16 7h7v7", render: renderRoutesPage },
   { key: "places", label: "Places", icon: "M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z", render: renderPlacesPage },
   { key: "travel", label: "Flights & stays", icon: "M3 17l6-2 4 3 8-12M3 17v.01M21 6v.01", render: renderTravelPage },
   { key: "days", label: "Days", icon: "M5 5h14v15H5zM5 10h14M9 3v4M15 3v4", render: renderDaysPage },

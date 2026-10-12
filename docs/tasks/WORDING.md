@@ -38,4 +38,18 @@ How Trip Planner talks. Every agent follows this once T07 is done. The owner can
 | Plan trips with your friends. | Plan trips with your friends — from "where should we go?" to the recap. | Sign-in screen |
 | No trips yet. Start one! | No trips yet. Start one with **New trip**. | Trips list |
 
-Tab names stay: **Overview · Places · Flights & stays · Days · Recap**.
+Tab names stay: **Overview · Places · Flights & stays · Days · Recap**, plus the new **Routes** tab (T19) between Overview and Places.
+
+## Routes (T19, V4 round 3)
+
+| Wording | Where |
+|---|---|
+| Ideas for this window / + Idea / Rename idea / Delete idea | Routes, idea switch |
+| Options once you land / + Option / Rename / Delete | Routes, option cards |
+| Use this / Using | Routes, home-flights card |
+| Choose this option / Unchoose | Routes, option card |
+| Add flight | Routes, home-flights card and an open option (opens the existing flight dialog; T20 replaces this with pasting a link) |
+| No ideas yet. Add one to start planning flights. | Routes, empty tab |
+| No flights yet for {name}. Add one below. | Routes, empty home-flights card |
+| No options yet. Add one above to start building stops. | Routes, idea with no options |
+| No flights yet for this option. Add one below. | Routes, open option with no hops yet |

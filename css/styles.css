@@ -2016,6 +2016,182 @@ textarea:focus {
   margin-bottom: var(--space-2);
 }
 
+/* Routes tab (V4 §4, T19): traveler/idea switches, the home-flights card, and
+   option cards opening into a rail of stops with their hop flights. */
+.routes-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.who {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.route-idea-actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.route-home {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.route-flight-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--surface-muted);
+  border-radius: var(--radius);
+}
+
+.route-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.route-option {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.route-option-chosen {
+  border-color: var(--secondary);
+  box-shadow: 0 0 0 1px var(--secondary);
+}
+
+.route-option-head {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.route-option-name {
+  font-weight: 600;
+  font-size: 1.0625rem;
+}
+
+.route-option-total {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.route-option-badges {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.route-option-body {
+  padding: 0 var(--space-4) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.route-option-foot {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.route-rail {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.route-rail-item {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  column-gap: var(--space-3);
+}
+
+.route-rail-track {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.route-rail-node {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--secondary);
+  margin-top: 5px;
+  flex: none;
+}
+
+.route-rail-node-home {
+  background: var(--surface);
+  border: 2px solid var(--muted);
+}
+
+.route-rail-stem {
+  flex: 1;
+  width: 2px;
+  background: var(--border);
+  min-height: 10px;
+}
+
+.route-rail-item:last-child .route-rail-stem {
+  display: none;
+}
+
+.route-stop {
+  padding-bottom: var(--space-2);
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.route-hop {
+  background: var(--surface-muted);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.route-warn {
+  background: var(--sun-soft);
+  border-radius: var(--radius);
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.9em;
+  margin: 0 0 var(--space-2);
+}
+
 @media (max-width: 760px) {
   .top-bar {
     padding: calc(var(--space-3) + env(safe-area-inset-top)) var(--space-4) var(--space-3);

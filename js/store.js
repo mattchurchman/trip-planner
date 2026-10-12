@@ -21,7 +21,7 @@ import {
 } from "./firebase.js";
 import { chosenStayIds } from "./lib/selection.js";
 
-const TRIP_SUBCOLLECTIONS = ["candidates", "places", "flights", "stays", "costs", "days", "comments"];
+const TRIP_SUBCOLLECTIONS = ["candidates", "places", "flights", "stays", "costs", "days", "comments", "ideas", "options"];
 
 export function checkAllowlist(email) {
   return getDoc(doc(db, "allowlist", email.toLowerCase()));
@@ -307,7 +307,7 @@ export function addFlight(tripId, fields, uid) {
     tripId,
     "flights",
     {
-      travelerId: fields.travelerId,
+      travelerId: fields.travelerId ?? null,
       label: fields.label || "",
       fromCity: fields.fromCity || "",
       fromAirport: fields.fromAirport || "",
@@ -323,6 +323,15 @@ export function addFlight(tripId, fields, uid) {
       // Optional "Price you saw" from the add form (§7.7), already a full PriceEntry
       // built by the caller (same shape as pricePanel.js's Log price).
       prices: fields.firstPriceEntry ? [fields.firstPriceEntry] : [],
+      // V4 Routes fields (§4.2). A flight added from the pre-V4 "Flights & stays"
+      // tab passes none of these, so `role` stays absent — route.js reads a
+      // missing role as "a flight from before V4" and leaves it off the rail.
+      ...(fields.role ? { role: fields.role } : {}),
+      ...(fields.role ? { ideaId: fields.ideaId ?? null } : {}),
+      ...(fields.role === "hop" ? { optionId: fields.optionId ?? null } : {}),
+      ...(fields.role === "home" ? { direction: fields.direction ?? null } : {}),
+      ...(fields.role === "home" ? { landsDate: fields.landsDate ?? null } : {}),
+      ...(fields.role === "home" ? { picked: fields.picked ?? true } : {}),
     },
     uid
   );
@@ -334,6 +343,74 @@ export function updateFlight(tripId, flightId, fields) {
 
 export function deleteFlight(tripId, flightId) {
   return deleteSubDoc(tripId, "flights", flightId);
+}
+
+/** Sets a home flight's `picked` field directly (§7.9/V4 §4.6's Use this / Using
+ * control) — unlike chooseFlight/unchooseFlight, this isn't a per-traveler trip
+ * field, it's a field on the flight doc itself. */
+export function setFlightPicked(tripId, flightId, picked) {
+  return updateSubDoc(tripId, "flights", flightId, { picked });
+}
+
+async function deleteFlightsWhere(tripId, field, value) {
+  const flightsQuery = query(collection(db, "trips", tripId, "flights"), where(field, "==", value));
+  const snapshot = await getDocs(flightsQuery);
+  for (const docSnap of snapshot.docs) await deleteDoc(docSnap.ref);
+}
+
+export function watchIdeas(tripId, onChange, onError) {
+  return watchSubcollection(tripId, "ideas", onChange, onError);
+}
+
+export function addIdea(tripId, fields, uid) {
+  return addSubDoc(tripId, "ideas", { name: fields.name, nameEdited: Boolean(fields.nameEdited), order: fields.order }, uid);
+}
+
+export function updateIdea(tripId, ideaId, fields) {
+  return updateSubDoc(tripId, "ideas", ideaId, fields);
+}
+
+/** Deletes an idea along with its options and every flight that belongs to it
+ * (V4 §4.6 — "deleting asks first and deletes their flights"). Options are
+ * removed first so their hop flights go with them before the idea's own
+ * (home) flights are cleared by `ideaId`. */
+export async function deleteIdea(tripId, ideaId) {
+  const optionsSnap = await getDocs(query(collection(db, "trips", tripId, "options"), where("ideaId", "==", ideaId)));
+  for (const optionDoc of optionsSnap.docs) {
+    await deleteFlightsWhere(tripId, "optionId", optionDoc.id);
+    await deleteDoc(optionDoc.ref);
+  }
+  await deleteFlightsWhere(tripId, "ideaId", ideaId);
+  return deleteSubDoc(tripId, "ideas", ideaId);
+}
+
+export function watchOptions(tripId, onChange, onError) {
+  return watchSubcollection(tripId, "options", onChange, onError);
+}
+
+export function addOption(tripId, fields, uid) {
+  return addSubDoc(
+    tripId,
+    "options",
+    { ideaId: fields.ideaId, name: fields.name, nameEdited: Boolean(fields.nameEdited), order: fields.order },
+    uid
+  );
+}
+
+export function updateOption(tripId, optionId, fields) {
+  return updateSubDoc(tripId, "options", optionId, fields);
+}
+
+/** Deletes an option and its hop flights (V4 §4.6). */
+export async function deleteOption(tripId, optionId) {
+  await deleteFlightsWhere(tripId, "optionId", optionId);
+  return deleteSubDoc(tripId, "options", optionId);
+}
+
+/** Sets or clears the trip's chosen route option (V4 §4.6's Choose this option /
+ * Unchoose). Unlike chooseFlight, there is only ever one at a time. */
+export function setChosenOption(tripId, optionId) {
+  return updateTripFields(tripId, { chosenOptionId: optionId });
 }
 
 /**
