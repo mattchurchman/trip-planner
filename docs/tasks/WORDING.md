@@ -66,6 +66,16 @@ Tab names: **Overview · Routes · Map · Days** (T23 removes Recap; T25 merges 
 | Places / Stays | Map, the switch under the chips that picks which list shows below the map |
 | Paste | Map, "Add place" and the inline location editor — fills the Google Maps link box from the clipboard |
 
+## Import from My Maps (T26)
+
+| Wording | Where |
+|---|---|
+| Import from My Maps | Map, toolbar button that opens the import dialog |
+| Export your map from My Maps: ⋮ → Export to KML/KMZ, tick "Export as KML instead of KMZ". | Import dialog |
+| This looks like a KMZ file. In My Maps, use ⋮ → Export to KML/KMZ and tick "Export as KML instead of KMZ", then pick that file instead. | Import dialog, KMZ file picked |
+| No pins found in that file. | Import dialog, a KML with no usable Placemarks |
+| Add {n} places / Add {n} places ({m} already here) | Import dialog's confirm button |
+
 ## Paste flight link (T20)
 
 | Wording | Where |

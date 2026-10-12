@@ -1081,6 +1081,21 @@ textarea:focus {
   margin-bottom: var(--space-3);
 }
 
+.map-tab-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-3);
+}
+
+.kml-import-layer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
+}
+
 .places-list {
   display: flex;
   flex-direction: column;

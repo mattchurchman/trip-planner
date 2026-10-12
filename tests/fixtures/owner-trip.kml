@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+  <name>Test trip</name>
+  <Folder>
+    <name>Food</name>
+    <Placemark>
+      <name>Cafe Portugal</name>
+      <description>https://www.google.com/maps/place/Cafe+Portugal/@38.7101526,-9.2020602,13z/data=!4m10!1m2!2m1!1slisbon+cafe+in+portugal!3m6!1s0xd193380b339ec9f:0xa995ad8c7eb2024d!8m2!3d38.7140957!4d-9.1401654!15sChdsaXNib24gY2FmZSBpbiBwb3J0dWdhbFoZIhdsaXNib24gY2FmZSBpbiBwb3J0dWdhbJIBCnJlc3RhdXJhbnSaAURDaTlEUVVsUlFVTnZaRU5vZEhsalJqbHZUMjVTTTJFeFRtNWhSRlpSWVVod2FGSlhXbmRsU0VaM1ZWZGpNbGRJWXhBQuABAPoBBQi9AxBF!16s%2Fg%2F11b_2z5pv3?entry=ttu&amp;g_ep=EgoyMDI2MDkyMy4wIKXMDSoASAFQAw%3D%3D</description>
+      <Point><coordinates>-9.140165,38.714096,0</coordinates></Point>
+    </Placemark>
+  </Folder>
+</Document>
+</kml>

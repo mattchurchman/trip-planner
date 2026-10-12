@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+  <name>Sample trip</name>
+  <Folder>
+    <name>Food &amp; Drink</name>
+    <Placemark>
+      <name><![CDATA[Café "Central"]]></name>
+      <description>Great pastéis de nata</description>
+      <Point><coordinates>-9.1393,38.7077,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Riverside Walk</name>
+      <description>A route, not a pin</description>
+      <LineString>
+        <coordinates>-9.14,38.70,0 -9.13,38.71,0</coordinates>
+      </LineString>
+    </Placemark>
+  </Folder>
+  <Folder>
+    <name>Sights</name>
+    <Placemark>
+      <name>Belem Tower</name>
+      <description>&lt;b&gt;Iconic&lt;/b&gt; &amp; historic</description>
+      <Point><coordinates>-9.2159,38.6916,0</coordinates></Point>
+    </Placemark>
+  </Folder>
+  <Placemark>
+    <name>Unfiled Pin</name>
+    <Point><coordinates>-9.15,38.72,0</coordinates></Point>
+  </Placemark>
+</Document>
+</kml>

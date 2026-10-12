@@ -1,5 +1,6 @@
-import { watchTrip, watchUsers, watchPlaces, watchStays, watchDays, watchFlights, watchOptions } from "../store.js";
-import { el, friendlyError } from "../ui.js";
+import { watchTrip, watchUsers, watchPlaces, watchStays, watchDays, watchFlights, watchOptions, addPlacesBatch } from "../store.js";
+import { el, friendlyError, toast } from "../ui.js";
+import { importFromMyMapsDialog } from "./importPlaces.js";
 import { loadAirports } from "../lookup.js";
 import { stopsFor } from "../lib/route.js";
 import { nearestStop, stopChips } from "../lib/stops.js";
@@ -97,6 +98,8 @@ export function renderMapPage(container, tripId, myUid) {
   const stayMarkersById = new Map();
 
   const loadErrorEl = el("div", { className: "field-error-holder" });
+  const importBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Import from My Maps" });
+  const toolbarEl = el("div", { className: "map-tab-toolbar" }, [importBtn]);
   const chipsEl = el("div", { className: "category-chips stop-chips" });
   const noRouteHintEl = el("p", { className: "muted", hidden: true, textContent: "Choose an option on Routes to group this by your actual route." });
   const switchEl = el("div", { className: "seg", attrs: { role: "group", "aria-label": "Show" } });
@@ -147,7 +150,34 @@ export function renderMapPage(container, tripId, myUid) {
   staysBtn.addEventListener("click", () => setListMode("stays"));
   switchEl.replaceChildren(placesBtn, staysBtn);
 
-  container.replaceChildren(loadErrorEl, chipsEl, noRouteHintEl, layoutEl);
+  container.replaceChildren(loadErrorEl, toolbarEl, chipsEl, noRouteHintEl, layoutEl);
+
+  importBtn.addEventListener("click", async () => {
+    const result = await importFromMyMapsDialog({ places });
+    if (!result || result.toAdd.length === 0) return;
+    try {
+      await addPlacesBatch(
+        tripId,
+        result.toAdd.map((pin) => ({
+          name: pin.name,
+          category: pin.category,
+          note: pin.note,
+          lat: pin.lat,
+          lng: pin.lng,
+          layer: pin.layer,
+          stopKey: nearestStop(pin.lat, pin.lng, cities),
+        })),
+        myUid
+      );
+      toast(
+        result.duplicateCount > 0
+          ? `Added ${result.toAdd.length} places (${result.duplicateCount} already here).`
+          : `Added ${result.toAdd.length} places.`
+      );
+    } catch (err) {
+      onError(friendlyError(err));
+    }
+  });
 
   function ensureMap() {
     if (map || typeof window === "undefined" || !window.L) return;

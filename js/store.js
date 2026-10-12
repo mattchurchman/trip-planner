@@ -178,30 +178,47 @@ export function watchPlaces(tripId, onChange, onError) {
   return watchSubcollection(tripId, "places", onChange, onError);
 }
 
+function placeDocFields(fields) {
+  return {
+    name: fields.name,
+    destinationId: fields.destinationId ?? null,
+    category: fields.category,
+    neighborhood: fields.neighborhood || "",
+    note: fields.note || "",
+    lat: fields.lat ?? null,
+    lng: fields.lng ?? null,
+    googleMapsUrl: fields.googleMapsUrl || null,
+    link: fields.link || null,
+    eventStart: fields.eventStart || null,
+    eventEnd: fields.eventEnd || null,
+    // Nearest stop on the chosen route (T25, V4 §6), or null for "Elsewhere".
+    stopKey: fields.stopKey ?? null,
+    // The My Maps layer this place was imported from (T26, V4 §6), or "".
+    layer: fields.layer || "",
+    dayId: null,
+    dayOrder: null,
+    votes: {},
+  };
+}
+
 export function addPlace(tripId, fields, uid) {
-  return addSubDoc(
-    tripId,
-    "places",
-    {
-      name: fields.name,
-      destinationId: fields.destinationId ?? null,
-      category: fields.category,
-      neighborhood: fields.neighborhood || "",
-      note: fields.note || "",
-      lat: fields.lat ?? null,
-      lng: fields.lng ?? null,
-      googleMapsUrl: fields.googleMapsUrl || null,
-      link: fields.link || null,
-      eventStart: fields.eventStart || null,
-      eventEnd: fields.eventEnd || null,
-      // Nearest stop on the chosen route (T25, V4 §6), or null for "Elsewhere".
-      stopKey: fields.stopKey ?? null,
-      dayId: null,
-      dayOrder: null,
-      votes: {},
-    },
-    uid
-  );
+  return addSubDoc(tripId, "places", placeDocFields(fields), uid);
+}
+
+/**
+ * Adds many places at once (T26 My Maps import), chunked under Firestore's
+ * 500-write batch limit. Resolves when every chunk has committed.
+ */
+export async function addPlacesBatch(tripId, placesFields, uid) {
+  const now = serverTimestamp();
+  for (let i = 0; i < placesFields.length; i += 400) {
+    const batch = writeBatch(db);
+    for (const fields of placesFields.slice(i, i + 400)) {
+      const ref = doc(collection(db, "trips", tripId, "places"));
+      batch.set(ref, { ...placeDocFields(fields), addedBy: uid, createdAt: now, updatedAt: now });
+    }
+    await batch.commit();
+  }
 }
 
 export function updatePlace(tripId, placeId, fields) {
