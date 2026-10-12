@@ -1,12 +1,12 @@
 import { el, downloadFile } from "../ui.js";
-import { buildPlacesCsv, buildPlacesKml, placesCsvFilename, placesKmlFilename, locatedCount } from "../lib/exporters.js";
+import { buildPlacesCsv, buildPlacesKml, buildTripKml, placesCsvFilename, placesKmlFilename, locatedCount } from "../lib/exporters.js";
 
 /**
  * The Export section shared by the Places and Days tabs (§7.10): CSV/KML
  * downloads, the left-out-pins count, and the Google My Maps help box.
  * Stateless -- call again whenever trip/places/days change.
  */
-export function renderExportSection({ trip, places, days }) {
+export function renderExportSection({ trip, places, days, chosenStays = [] }) {
   const leftOutCount = places.length - locatedCount(places);
 
   const csvBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Download CSV for Google My Maps" });
@@ -17,6 +17,11 @@ export function renderExportSection({ trip, places, days }) {
   const kmlBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Download KML" });
   kmlBtn.addEventListener("click", () => {
     downloadFile(placesKmlFilename(trip.name), buildPlacesKml(trip.name, places, days), "application/vnd.google-earth.kml+xml");
+  });
+
+  const tripKmlBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Download map for Google Maps" });
+  tripKmlBtn.addEventListener("click", () => {
+    downloadFile(placesKmlFilename(trip.name), buildTripKml(trip.name, places, days, chosenStays), "application/vnd.google-earth.kml+xml");
   });
 
   return el(
@@ -36,6 +41,13 @@ export function renderExportSection({ trip, places, days }) {
         textContent:
           'In Google My Maps: Create a new map → Import → choose the CSV → pick Latitude/Longitude for location and Name for the title → then "Style by" Category. Share the map with your friends from My Maps.',
       }),
+      el("div", { className: "export-actions" }, [tripKmlBtn]),
+      el("p", {
+        className: "muted export-help",
+      }, [
+        el("span", { textContent: "Take the plan to Google Maps: " }),
+        el("a", { href: "help.html#google-maps", textContent: "Download the map file → import into Google My Maps → open in the Google Maps app." }),
+      ]),
     ].filter(Boolean)
   );
 }

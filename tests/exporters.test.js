@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { buildPlacesCsv, buildPlacesKml, slugify, placesCsvFilename, placesKmlFilename } from "../js/lib/exporters.js";
+import { buildPlacesCsv, buildPlacesKml, buildTripKml, slugify, placesCsvFilename, placesKmlFilename } from "../js/lib/exporters.js";
 
 // A minimal RFC 4180 parser, used only to round-trip our own generated CSV in tests.
 function parseCsv(text) {
@@ -151,5 +151,59 @@ export const tests = [
     const kml = buildPlacesKml("Trip", places, days);
     const folderNames = [...kml.matchAll(/<Folder>\s*<name>([^<]+)<\/name>/g)].map((m) => m[1]);
     assert.deepEqual(folderNames.sort(), ["Food", "Sight"]);
+  }],
+  ["buildTripKml: one folder per day in order, with places from that day", () => {
+    const testDays = [
+      { id: "d1", title: "Day 1", date: "2026-06-01", order: 0 },
+      { id: "d2", title: "Day 2", date: "2026-06-02", order: 1 },
+    ];
+    const testPlaces = [
+      { name: "Place A", category: "Food", lat: 38.7, lng: -9.1, link: null, googleMapsUrl: null, votes: {}, dayId: "d1", neighborhood: "", note: "" },
+      { name: "Place B", category: "Sight", lat: 38.7, lng: -9.2, link: null, googleMapsUrl: null, votes: {}, dayId: "d2", neighborhood: "", note: "" },
+    ];
+    const kml = buildTripKml("Trip", testPlaces, testDays, []);
+    const folderNames = [...kml.matchAll(/<Folder>\s*<name>([^<]+)<\/name>/g)].map((m) => m[1]);
+    // Should have Day 1 and Day 2 folders (in order), plus "Not planned"
+    assert.match(folderNames[0], /Day 1/);
+    assert.match(folderNames[1], /Day 2/);
+    assert(folderNames.includes("Not planned"));
+  }],
+  ["buildTripKml: stays folder with name, dates, and link", () => {
+    const testDays = [{ id: "d1", title: "Day 1", date: "2026-06-01", order: 0 }];
+    const testPlaces = [{ name: "Place A", category: "Food", lat: 38.7, lng: -9.1, link: null, googleMapsUrl: null, votes: {}, dayId: null, neighborhood: "", note: "" }];
+    const testStays = [
+      { id: "s1", name: "Hotel X", lat: 38.7, lng: -9.15, link: "https://example.com/hotel", checkIn: "2026-06-01", checkOut: "2026-06-02" },
+    ];
+    const kml = buildTripKml("Trip", testPlaces, testDays, testStays);
+    assert.match(kml, /<Folder>\s*<name>Stays<\/name>/);
+    assert.match(kml, /Hotel X/);
+    assert.match(kml, /2026-06-01/);
+    assert.match(kml, /2026-06-02/);
+  }],
+  ["buildTripKml: not planned folder for places without dayId", () => {
+    const testDays = [{ id: "d1", title: "Day 1", date: "2026-06-01", order: 0 }];
+    const testPlaces = [
+      { name: "Place A", category: "Food", lat: 38.7, lng: -9.1, link: null, googleMapsUrl: null, votes: {}, dayId: "d1", neighborhood: "", note: "" },
+      { name: "Place B", category: "Sight", lat: 38.7, lng: -9.2, link: null, googleMapsUrl: null, votes: {}, dayId: null, neighborhood: "", note: "" },
+    ];
+    const kml = buildTripKml("Trip", testPlaces, testDays, []);
+    assert.match(kml, /<Folder>\s*<name>Not planned<\/name>/);
+    assert.match(kml, /Place B/);
+  }],
+  ["buildTripKml: skips places and stays without coordinates", () => {
+    const testDays = [{ id: "d1", title: "Day 1", date: "2026-06-01", order: 0 }];
+    const testPlaces = [
+      { name: "Place A", category: "Food", lat: 38.7, lng: -9.1, link: null, googleMapsUrl: null, votes: {}, dayId: "d1", neighborhood: "", note: "" },
+      { name: "No coords", category: "Food", lat: null, lng: null, link: null, googleMapsUrl: null, votes: {}, dayId: "d1", neighborhood: "", note: "" },
+    ];
+    const testStays = [
+      { id: "s1", name: "Hotel X", lat: 38.7, lng: -9.15, link: "https://example.com/hotel", checkIn: "2026-06-01", checkOut: "2026-06-02" },
+      { id: "s2", name: "No coords stay", lat: null, lng: null, link: null, checkIn: "2026-06-02", checkOut: "2026-06-03" },
+    ];
+    const kml = buildTripKml("Trip", testPlaces, testDays, testStays);
+    assert(!kml.includes("No coords"));
+    assert(!kml.includes("No coords stay"));
+    assert.match(kml, /Place A/);
+    assert.match(kml, /Hotel X/);
   }],
 ];

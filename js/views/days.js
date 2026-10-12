@@ -8,7 +8,9 @@ import {
   deleteDayAndUnassignPlaces,
   watchFlights,
   watchOptions,
+  watchStays,
 } from "../store.js";
+import { chosenStayIds } from "../lib/selection.js";
 import { el, confirmDialog, friendlyError, field, dialogShell } from "../ui.js";
 import { renderExportSection } from "./exportSection.js";
 import { sortByRank, voteSummary, voteCounts } from "../lib/votes.js";
@@ -78,6 +80,7 @@ export function renderDaysPage(container, tripId, myUid) {
   let days = [];
   let flights = [];
   let options = [];
+  let stays = [];
   let airports = null;
   let selectedDayId = null;
 
@@ -340,7 +343,8 @@ export function renderDaysPage(container, tripId, myUid) {
 
     daysMapSection.render(cityPlaces, daysInCity, selectedDay ? selectedDay.id : null);
     renderUnplanned(cityPlaces, daysInCity);
-    exportSectionHolder.replaceChildren(renderExportSection({ trip, places: scopedPlaces, days }));
+    const chosenStays = stays.filter((s) => chosenStayIds(trip).includes(s.id));
+    exportSectionHolder.replaceChildren(renderExportSection({ trip, places: scopedPlaces, days, chosenStays }));
   }
 
   const unsubTrip = watchTrip(tripId, (t) => { trip = t; renderDays(); }, onError);
@@ -348,6 +352,7 @@ export function renderDaysPage(container, tripId, myUid) {
   const unsubDays = watchDays(tripId, (d) => { days = d; if (trip) renderDays(); }, onError);
   const unsubFlights = watchFlights(tripId, (f) => { flights = f; if (trip) renderDays(); }, onError);
   const unsubOptions = watchOptions(tripId, (o) => { options = o; if (trip) renderDays(); }, onError);
+  const unsubStays = watchStays(tripId, (s) => { stays = s; if (trip) renderDays(); }, onError);
 
   loadAirports()
     .then((loaded) => { airports = loaded; if (trip) renderDays(); })
@@ -359,6 +364,7 @@ export function renderDaysPage(container, tripId, myUid) {
     unsubDays();
     unsubFlights();
     unsubOptions();
+    unsubStays();
     daysMapSection.destroy();
   };
 }

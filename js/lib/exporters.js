@@ -118,3 +118,103 @@ export function buildPlacesKml(tripName, places, days) {
     "",
   ].join("\n");
 }
+
+function dayFormatLabel(day) {
+  if (!day.date) return day.title || "Untitled day";
+  const date = new Date(day.date + "T00:00:00Z");
+  const weekday = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][date.getUTCDay()];
+  const monthDay = date.getUTCDate();
+  const month = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][date.getUTCMonth()];
+  const title = day.title ? ` · ${day.title}` : "";
+  return `${weekday} ${monthDay} ${month}${title}`;
+}
+
+/** KML 2.2, one Folder per day with places, one Stays folder, one Not planned folder. */
+export function buildTripKml(tripName, places, days, chosenStays) {
+  const daysById = Object.fromEntries((days || []).map((d) => [d.id, d]));
+  const stayIds = new Set((chosenStays || []).map((s) => s.id));
+
+  const dayFolders = (days || [])
+    .slice()
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    .map((day) => {
+      const dayPlaces = (places || []).filter((p) => p.lat != null && p.lng != null && p.dayId === day.id);
+      if (dayPlaces.length === 0) return null;
+
+      const placemarks = dayPlaces
+        .map((p) => {
+          const description = [p.neighborhood, p.note, safeUrl(p.link) || safeUrl(p.googleMapsUrl) || "", voteSummary(p.votes || {})]
+            .filter(Boolean)
+            .map(xmlEscape)
+            .join("\n");
+          return [
+            "    <Placemark>",
+            `      <name>${xmlEscape(p.name)}</name>`,
+            `      <description>${description}</description>`,
+            `      <Point><coordinates>${round6(p.lng)},${round6(p.lat)},0</coordinates></Point>`,
+            "    </Placemark>",
+          ].join("\n");
+        })
+        .join("\n");
+
+      const folderName = dayFormatLabel(day);
+      return [`  <Folder>`, `    <name>${xmlEscape(folderName)}</name>`, placemarks, `  </Folder>`].join("\n");
+    })
+    .filter(Boolean);
+
+  const staysFolder = (chosenStays || [])
+    .filter((s) => s.lat != null && s.lng != null)
+    .map((stay) => {
+      const dates = [stay.checkIn, stay.checkOut].filter(Boolean).join(" → ") || "";
+      const description = [dates, safeUrl(stay.link) || ""].filter(Boolean).map(xmlEscape).join("\n");
+      return [
+        "    <Placemark>",
+        `      <name>${xmlEscape(stay.name)}</name>`,
+        `      <description>${description}</description>`,
+        `      <Point><coordinates>${round6(stay.lng)},${round6(stay.lat)},0</coordinates></Point>`,
+        "    </Placemark>",
+      ].join("\n");
+    })
+    .join("\n");
+
+  const staysFolderText = staysFolder
+    ? [`  <Folder>`, `    <name>Stays</name>`, staysFolder, `  </Folder>`].join("\n")
+    : null;
+
+  const unplannedPlaces = (places || [])
+    .filter((p) => p.lat != null && p.lng != null && p.dayId == null)
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const unplannedMarks = unplannedPlaces
+    .map((p) => {
+      const description = [p.neighborhood, p.note, safeUrl(p.link) || safeUrl(p.googleMapsUrl) || "", voteSummary(p.votes || {})]
+        .filter(Boolean)
+        .map(xmlEscape)
+        .join("\n");
+      return [
+        "    <Placemark>",
+        `      <name>${xmlEscape(p.name)}</name>`,
+        `      <description>${description}</description>`,
+        `      <Point><coordinates>${round6(p.lng)},${round6(p.lat)},0</coordinates></Point>`,
+        "    </Placemark>",
+      ].join("\n");
+    })
+    .join("\n");
+
+  const unplannedFolderText = unplannedPlaces.length > 0
+    ? [`  <Folder>`, `    <name>Not planned</name>`, unplannedMarks, `  </Folder>`].join("\n")
+    : [`  <Folder>`, `    <name>Not planned</name>`, `  </Folder>`].join("\n");
+
+  const allFolders = [...dayFolders, staysFolderText, unplannedFolderText].filter(Boolean).join("\n");
+
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<kml xmlns="http://www.opengis.net/kml/2.2">',
+    "<Document>",
+    `  <name>${xmlEscape(tripName)}</name>`,
+    allFolders,
+    "</Document>",
+    "</kml>",
+    "",
+  ].join("\n");
+}
