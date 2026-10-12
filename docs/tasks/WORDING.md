@@ -44,6 +44,9 @@ Tab names: **Overview · Routes · Map · Days** (T23 removes Recap; T25 merges 
 | {traveler}'s flights from home · $X | Routes, home-flights card heading (flights being used only) |
 | per person · For: Matt, Sam · Chosen by {name} ✓ | Routes, option card (cost of its own flights only) |
 | Who's this for? / Automatic / Set by hand · Reset | Routes, each hop flight |
+| Who's this for? · Everyone · ÷ 2 · Matt, Sam | Overview, split cost dialog and rows |
+| Not chosen yet | Overview, Route line for a traveler with no choice |
+| Flights from home / Option flights / Stays / Split costs | Overview, Budget, inside each traveler |
 | {name}: home $A + option flights $B = $C | Routes, summary pinned to the bottom ("at least $C" while something is missing) |
 | Add flight | Routes, home-flights card and an open option (opens the existing flight dialog; T20 replaces this with pasting a link) |
 | No ideas yet. Add one to start planning flights. | Routes, empty tab |

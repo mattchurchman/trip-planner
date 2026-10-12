@@ -6,16 +6,8 @@ import { addCostButton, renderSplitCosts } from "./splitCosts.js";
 import { formatMoney } from "../lib/money.js";
 import { choiceFor, tripBudget } from "../lib/choices.js";
 import { chosenStayIds } from "../lib/selection.js";
-import { stopsFor, totalFor } from "../lib/route.js";
 import { safeUrl } from "../lib/links.js";
 import { loadAirports } from "../lookup.js";
-
-/** The traveler the budget and chosen-route summary focus on: whoever's
- * signed in, or the first traveler when nobody matches (§4.6's own pattern). */
-function myTraveler(trip, myUid) {
-  const travelers = trip.travelers || [];
-  return travelers.find((t) => t.uid === myUid) || travelers[0] || null;
-}
 
 /** Renders the Overview tab (V4 §9). Returns a single unsubscribe function. */
 export function renderOverviewPage(container, tripId, myUid) {
@@ -32,7 +24,7 @@ export function renderOverviewPage(container, tripId, myUid) {
   const tripDetailsEl = el("div", { className: "trip-details card" });
   const travelersEl = el("div", { className: "travelers-section card" });
   const travelerError = el("div", { className: "field-error-holder" });
-  const routeSummaryEl = el("div", { className: "route-summary card" });
+  const routeSummaryEl = el("div", { className: "overview-route card" });
   const costsSectionEl = el("div", { className: "costs-section card" });
   const totalsCardEl = el("div", { className: "totals-card card" });
   const albumEl = el("div", { className: "card" });
@@ -42,7 +34,7 @@ export function renderOverviewPage(container, tripId, myUid) {
     loadErrorEl.replaceChildren(el("p", { className: "field-error", textContent: message }));
   }
 
-  const addCostBtn = addCostButton({ tripId, myUid, onError: (err) => onError(friendlyError(err)) });
+  const addCostBtn = addCostButton({ tripId, myUid, getTravelers: () => (trip && trip.travelers) || [], onError: (err) => onError(friendlyError(err)) });
 
   container.replaceChildren(
     loadErrorEl,
@@ -97,45 +89,26 @@ export function renderOverviewPage(container, tripId, myUid) {
     );
   }
 
-  /** One traveler's own chosen route, as `{ idea, option }`, or null when they
-   * haven't chosen or what they chose no longer exists (§5.3). */
-  function chosenRoute(traveler) {
-    if (!traveler) return null;
-    const choice = choiceFor(trip, traveler.id, options);
-    const option = choice.optionId ? options.find((o) => o.id === choice.optionId) : null;
-    if (!option) return null;
-    const idea = ideas.find((i) => i.id === choice.ideaId);
-    if (!idea) return null;
-    return { idea, option };
-  }
-
   function renderRouteSummary() {
-    const hint = el("p", { className: "empty-state" }, [
-      "No route chosen yet. Go to ",
-      el("a", { href: `#/trip/${tripId}/routes`, textContent: "Routes" }),
-      " to pick one.",
-    ]);
-    const traveler = myTraveler(trip, myUid);
-    const route = chosenRoute(traveler);
-    if (!route || !traveler || !airports) {
-      routeSummaryEl.replaceChildren(el("h2", { textContent: "Route" }), hint);
+    const heading = el("h2", { textContent: "Route" });
+    const travelers = trip.travelers || [];
+    const routesLink = (text) => el("a", { href: `#/trip/${tripId}/routes`, textContent: text });
+    if (travelers.length === 0) {
+      routeSummaryEl.replaceChildren(heading, el("p", { className: "empty-state" }, ["Add a traveler, then pick routes on ", routesLink("Routes"), "."]));
       return;
     }
-    const homeFlights = flights.filter(
-      (f) => f.role === "home" && f.ideaId === route.idea.id && f.travelerId === traveler.id && f.picked !== false
-    );
-    const hopFlights = flights.filter((f) => f.role === "hop" && f.optionId === route.option.id);
-    const stops = stopsFor({ homeFlights, hopFlights, airports });
-    const path = [...new Set(stops.map((s) => s.city).filter(Boolean))].join(" → ");
-    const { cents, complete } = totalFor({ homeFlights, hopFlights });
-
-    routeSummaryEl.replaceChildren(
-      el("h2", { textContent: "Route" }),
-      el("p", {}, [el("a", { href: `#/trip/${tripId}/routes`, textContent: path || route.option.name })]),
-      el("p", { className: "muted" }, [
-        `${traveler.name}: ${complete ? "" : "at least "}${formatMoney(cents, trip.currency)}`,
-      ])
-    );
+    const lines = travelers.map((traveler) => {
+      const choice = choiceFor(trip, traveler.id, options);
+      const idea = ideas.find((i) => i.id === choice.ideaId);
+      const option = options.find((o) => o.id === choice.optionId);
+      const parts = [idea && idea.name, option && option.name].filter(Boolean);
+      return el("p", { className: "overview-route-line" }, [
+        el("b", { textContent: traveler.name }),
+        " · ",
+        parts.length > 0 ? routesLink(parts.join(" · ")) : routesLink("Not chosen yet"),
+      ]);
+    });
+    routeSummaryEl.replaceChildren(heading, ...lines);
   }
 
   function renderTotalsCard() {
@@ -144,13 +117,25 @@ export function renderOverviewPage(container, tripId, myUid) {
       .map((id) => stays.find((s) => s.id === id))
       .filter(Boolean);
     const result = tripBudget({ trip, travelers, options, flights, stays: chosenStays, costs, airports });
+    const money = (cents) => formatMoney(cents, trip.currency);
+    const part = (label, cents) =>
+      el("div", { className: "totals-part" }, [el("span", { textContent: label }), el("span", { textContent: money(cents) })]);
 
     const rows = result.travelerTotals.map((t) =>
-      el("div", { className: "totals-row" }, [el("span", { textContent: t.name }), el("span", { textContent: formatMoney(t.totalCents, trip.currency) })])
+      el("details", { className: "totals-traveler" }, [
+        el("summary", { className: "totals-row" }, [
+          el("span", { textContent: t.name }),
+          el("span", { textContent: `${t.complete ? "" : "at least "}${money(t.totalCents)}` }),
+        ]),
+        part("Flights from home", t.homeCents),
+        part("Option flights", t.hopCents),
+        part("Stays", t.stayCents),
+        part("Split costs", t.costCents),
+      ])
     );
     const combinedRow = el("div", { className: "totals-row totals-combined" }, [
       el("span", { textContent: "Everyone together" }),
-      el("span", { textContent: formatMoney(result.combinedCents, trip.currency) }),
+      el("span", { textContent: money(result.combinedCents) }),
     ]);
     const heading = el("h3", { textContent: result.complete ? "Total" : "Total so far (missing some prices)" });
     const body = [heading, ...rows, combinedRow];

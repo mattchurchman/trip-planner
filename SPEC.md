@@ -470,9 +470,9 @@ Any place, stay, or the trip itself can have a thread. Show the count, expand in
 
 - Editable: trip name (non-blank), start and end dates (end not before start). Currency is fixed at USD and not shown as a field.
 - **Travelers** (`travelers.js`): add by choosing an app member or typing a name; edit name, home city and home airport inline; **Remove** with confirmation. At least one traveler must remain. Removing someone asks whether to delete their flights too, since Routes lists home flights per traveler and nobody could reach them afterwards.
-- **Route**: the signed-in traveler's own chosen option as a one-line path ("Rome → Florence → Barcelona → Rome", linking to Routes) with their total beneath it, shown as "at least $X" when a price is missing. With nothing chosen, a hint pointing at Routes.
-- **Split costs** (`splitCosts.js`): add, edit and delete a label, amount and note. Split equally between the travelers the cost is for — everyone, unless it says otherwise (§11).
-- **Budget**: one row per traveler — their picked home flights for *their own* chosen idea, plus every hop, chosen stay and split cost they're for — then an "Everyone together" row. If anything is missing, the card is headed **Total so far (missing some prices)** and lists what's missing. Never show a missing price as $0 (§11).
+- **Route**: one line per traveler — their chosen idea and option names ("Sam · Rome round trip · Florence + Barcelona"), linking to Routes, or "Not chosen yet".
+- **Split costs** (`splitCosts.js`): add, edit and delete a label, amount, note and **Who's this for?** (Everyone, or chosen travelers). Split equally between the travelers it's for (§11); a cost for some shows "÷ 2 · Matt, Sam".
+- **Budget**: one row per traveler with their total ("at least $X" while a price is missing), each a collapsed `<details>` opening to four parts — Flights from home, Option flights, Stays, Split costs — that add up to it. Then an "Everyone together" row. If anything is missing, the card is headed **Total so far (missing some prices)** and lists what's missing. Never show a missing price as $0 (§11).
 - **Album**: paste a Google Photos or iCloud shared album link into `albumUrl`, validated with §9.5, with **Open album** once it's set.
 - **Trip comments** at the bottom (§7.4).
 
