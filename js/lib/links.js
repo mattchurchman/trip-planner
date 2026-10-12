@@ -75,15 +75,21 @@ function coordString(loc) {
 }
 
 /**
- * Walking-route directions link(s) for a day (§9.2). Places without coordinates
- * are skipped; order among the located ones is preserved. At most 8 waypoints
- * per link — a day with more than 10 located places splits into consecutive
+ * Walking-route directions link(s) for a day (§9.2, T39). Places without
+ * coordinates are skipped; order among the located ones is preserved. With a
+ * located `home` (the day's chosen stay), the route starts and ends there
+ * and every located place is a waypoint in between; otherwise the first
+ * located place is the origin and the last is the destination, as before.
+ * At most 8 waypoints per link — more than 10 points splits into consecutive
  * "Route part N" links, each starting where the previous one ended. Returns
- * [] with fewer than 2 located places. `|` is encoded as %7C.
+ * [] with fewer than 2 located places (or, with a home, none at all). `|` is
+ * encoded as %7C.
  */
-export function walkingRouteLinks(places) {
-  const points = (places || []).filter((p) => p && p.lat != null && p.lng != null);
-  if (points.length < 2) return [];
+export function walkingRouteLinks(places, home) {
+  const located = (places || []).filter((p) => p && p.lat != null && p.lng != null);
+  const hasHome = home && home.lat != null && home.lng != null;
+  if (hasHome ? located.length < 1 : located.length < 2) return [];
+  const points = hasHome ? [home, ...located, home] : located;
 
   const totalParts = Math.max(1, Math.ceil((points.length - 1) / 9));
   const links = [];

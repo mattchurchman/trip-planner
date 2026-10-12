@@ -1702,6 +1702,12 @@ textarea:focus {
   margin-bottom: var(--space-5);
 }
 
+/* The selected day's chosen stay on the Days map (T39, §7.8): the stay pill
+   style with a house mark so it reads as home base, not another stop. */
+.day-home-pin {
+  gap: 4px;
+}
+
 .day-card {
   display: flex;
   flex-direction: column;

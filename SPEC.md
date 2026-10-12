@@ -558,10 +558,11 @@ One Leaflet map with place pins and stay price pins together, and one list below
 
 - **Create days from route** makes one day per date of the merged route, titled with that date's city; a travel day belongs to the city you arrive in, and dates that already have a day are skipped (`dayplan.js`). Before anyone has chosen an option, the same button reads **Create days from trip dates**. **Add day** makes an undated day. Days are sorted by `order`.
 - Selecting a day shows that city's places on the map as pins numbered and colored by day. Tapping a pin offers the days to put the place on, or **Remove from day** when it's already on one.
+- **Home base (T39):** a dated day inside a chosen, located stay's nights (`stayForDate`, `dayplan.js`; a departure day still counts, since you slept there the night before) shows that stay on the map with the stay pill style plus a house mark, popup naming it. Undated days never show one.
 - Each day card shows its date or label, title, focus, notes and its places in `dayOrder`, with **▲** / **▼** to reorder (each with an `aria-label` naming the place and direction) and **Remove** to send a place back to the pool. No drag-and-drop. Deleting a day returns its places to the pool.
 - The **Not planned** pool lists the selected day's city's places with no `dayId`, Loved first.
 - Events whose `eventStart`–`eventEnd` range overlaps a dated day show "Happening this day".
-- **Open walking route** builds Google Maps directions through the day's located places in order (§9.2).
+- **Open walking route** builds Google Maps directions through the day's located places in order; with a home base (T39, above), the route starts and ends at the stay instead of the first and last place (§9.2).
 - **Export** (§10): **Take it to Google Maps** downloads the day-by-day map file, and the plain places CSV and KML are there too. The box says how many places have no pin and will be left out, and links to the help page's import steps.
 
 ### 7.9 Price control (flights and stays)
@@ -602,7 +603,7 @@ All builders live in `js/lib/links.js` (and `mapsurl.js`) and are unit tested. A
 
 - Open a place: `https://www.google.com/maps/search/?api=1&query=` + encode(`<name>, <city>`). When the place has a saved `googleMapsUrl` accepted by `safeUrl`, open that instead. `<city>` is the Map tab's selected stop chip (§7.7), or empty with none selected.
 - Find a place (`googleMapsFindUrl(text, city, country)`): `https://www.google.com/maps/search/?api=1&query=` + encode of the non-empty parts of `<text>, <city>, <country>` joined with ", ". `country` is unused since T31 — callers pass the Map tab's selected stop chip's city alone, or a stay's own stop's city.
-- Walking route for a day: `https://www.google.com/maps/dir/?api=1&travelmode=walking&origin=<lat,lng>&destination=<lat,lng>&waypoints=<lat,lng>|<lat,lng>…` using the first located place as origin and the last as destination. At most 8 waypoints per link; a day with more than 10 located places splits into consecutive links ("Route part 1", "Route part 2"…), each starting where the previous ended. Encode `|` as `%7C`.
+- Walking route for a day: `https://www.google.com/maps/dir/?api=1&travelmode=walking&origin=<lat,lng>&destination=<lat,lng>&waypoints=<lat,lng>|<lat,lng>…` using the first located place as origin and the last as destination, or (T39) the day's home base stay as both origin and destination with every located place as a waypoint, when there is one. At most 8 waypoints per link; more than 10 points splits into consecutive links ("Route part 1", "Route part 2"…), each starting where the previous ended. Encode `|` as `%7C`.
 
 ### 9.3 Reading Google Maps URLs (`mapsurl.js`)
 

@@ -166,4 +166,52 @@ export const tests = [
     assert.deepEqual(walkingRouteLinks([pt(0, 0)]), []);
     assert.deepEqual(walkingRouteLinks([pt(0, 0), { lat: null, lng: null }]), []);
   }],
+  ["walkingRouteLinks with a home: origin and destination are the stay, places are waypoints", () => {
+    const home = pt(9, 9);
+    const links = walkingRouteLinks([pt(0, 0), pt(1, 1)], home);
+    assert.equal(links.length, 1);
+    assert.equal(links[0].label, "Open walking route");
+    assert.equal(
+      links[0].url,
+      "https://www.google.com/maps/dir/?api=1&travelmode=walking&origin=9,9&destination=9,9&waypoints=0,0%7C1,1"
+    );
+  }],
+  ["walkingRouteLinks with a home and a single place: there and back", () => {
+    const home = pt(9, 9);
+    const links = walkingRouteLinks([pt(0, 0)], home);
+    assert.equal(links.length, 1);
+    assert.equal(
+      links[0].url,
+      "https://www.google.com/maps/dir/?api=1&travelmode=walking&origin=9,9&destination=9,9&waypoints=0,0"
+    );
+  }],
+  ["walkingRouteLinks with a home but no located places returns nothing", () => {
+    assert.deepEqual(walkingRouteLinks([], pt(9, 9)), []);
+    assert.deepEqual(walkingRouteLinks([{ lat: null, lng: null }], pt(9, 9)), []);
+  }],
+  ["walkingRouteLinks ignores an unlocated home, falling back to current behavior", () => {
+    const links = walkingRouteLinks([pt(0, 0), pt(1, 1)], { lat: null, lng: null });
+    assert.equal(links[0].url, "https://www.google.com/maps/dir/?api=1&travelmode=walking&origin=0,0&destination=1,1");
+  }],
+  ["walkingRouteLinks with a home and 8 places: still one link, right at the 8-waypoint cap", () => {
+    const home = pt(20, 20);
+    const places = Array.from({ length: 8 }, (_, i) => pt(i, i));
+    const links = walkingRouteLinks(places, home);
+    assert.equal(links.length, 1);
+    assert.equal(links[0].label, "Open walking route");
+    const waypointsPart = links[0].url.split("waypoints=")[1];
+    assert.equal(waypointsPart.split("%7C").length, 8);
+  }],
+  ["walkingRouteLinks with a home and 9 places splits once more points are needed", () => {
+    const home = pt(20, 20);
+    const places = Array.from({ length: 9 }, (_, i) => pt(i, i));
+    const links = walkingRouteLinks(places, home);
+    assert.equal(links.length, 2);
+    assert.equal(links[0].label, "Route part 1");
+    assert.match(links[0].url, /origin=20,20/);
+    assert.match(links[0].url, /destination=8,8/);
+    assert.equal(links[1].label, "Route part 2");
+    assert.match(links[1].url, /origin=8,8/); // part 2 starts where part 1 ended
+    assert.match(links[1].url, /destination=20,20/);
+  }],
 ];

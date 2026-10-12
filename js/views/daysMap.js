@@ -22,6 +22,21 @@ function plainMarker(place, color, opacity) {
   return window.L.circleMarker([place.lat, place.lng], { radius: 7, color: "#fff", weight: 2, fillColor: color, fillOpacity: opacity });
 }
 
+/** The chosen stay for the selected day (T39, §7.8): the stay pill style
+ * (`.stay-pin`/`.stay-pin-chosen` from the Map tab) plus a house mark, so the
+ * day's home base stands out among the day's own numbered/plain pins. Its
+ * popup names it, unlike the plain tooltip on place pins. */
+function homeMarker(stay) {
+  const pillEl = el("div", { className: "stay-pin stay-pin-chosen day-home-pin" }, [
+    el("span", { textContent: "🏠" }),
+    el("span", { textContent: stay.name || "Stay" }),
+  ]);
+  const icon = window.L.divIcon({ html: pillEl, className: "stay-pin-icon", iconSize: null });
+  const marker = window.L.marker([stay.lat, stay.lng], { icon });
+  marker.bindPopup(stay.name || "Stay");
+  return marker;
+}
+
 /** The sheet a tapped pin opens (T27): the place, its vote summary, one
  * button per day in its city, and Remove from day. `daysInCity` is
  * `{ id, label, color }` in order; `onAssign`/`onRemove` are async and may throw. */
@@ -111,8 +126,9 @@ export function createDaysMap({ onAssign, onRemove }) {
   }
 
   /** `cityPlaces`: this city's places (any day, or none). `daysInCity`:
-   * `{ id, label, color }` in order. `selectedDayId`: whose pins get numbered. */
-  function render(cityPlaces, daysInCity, selectedDayId) {
+   * `{ id, label, color }` in order. `selectedDayId`: whose pins get numbered.
+   * `homeStay` (T39): the selected day's chosen, located stay, or null. */
+  function render(cityPlaces, daysInCity, selectedDayId, homeStay) {
     ensureMap();
     if (!markerLayer) return;
     markerLayer.clearLayers();
@@ -150,8 +166,13 @@ export function createDaysMap({ onAssign, onRemove }) {
     if (onSelected.length >= 2) {
       window.L.polyline(onSelected.map((p) => [p.lat, p.lng]), { dashArray: "6,6", color: selectedColor }).addTo(markerLayer);
     }
-    if (located.length > 0) {
-      map.fitBounds(located.map((p) => [p.lat, p.lng]), { padding: [30, 30], maxZoom: 16 });
+
+    const hasHome = homeStay && homeStay.lat != null && homeStay.lng != null;
+    if (hasHome) homeMarker(homeStay).addTo(markerLayer);
+
+    const boundsPoints = hasHome ? [...located, homeStay] : located;
+    if (boundsPoints.length > 0) {
+      map.fitBounds(boundsPoints.map((p) => [p.lat, p.lng]), { padding: [30, 30], maxZoom: 16 });
     } else {
       map.setView([20, 0], 2);
     }

@@ -16,7 +16,7 @@ import { renderExportSection } from "./exportSection.js";
 import { sortByRank, voteSummary, voteCounts } from "../lib/votes.js";
 import { rangesOverlap } from "../lib/dates.js";
 import { walkingRouteLinks } from "../lib/links.js";
-import { datesBetween, daysFromStops, missingDays } from "../lib/dayplan.js";
+import { datesBetween, daysFromStops, missingDays, stayForDate } from "../lib/dayplan.js";
 import { mergedStops } from "../lib/choices.js";
 import { createDaysMap, dayColor } from "./daysMap.js";
 import { loadAirports } from "../lookup.js";
@@ -147,8 +147,9 @@ export function renderDaysPage(container, tripId, myUid) {
     }
   }
 
-  function renderDayCard(day) {
+  function renderDayCard(day, chosenStays) {
     const dayPlaces = scopedPlaces.filter((p) => p.dayId === day.id).sort((a, b) => (a.dayOrder ?? 0) - (b.dayOrder ?? 0));
+    const homeStay = stayForDate(day.date, chosenStays);
     const errorHolder = el("div", { className: "field-error-holder" });
 
     const selectBtn = el("button", {
@@ -219,7 +220,7 @@ export function renderDaysPage(container, tripId, myUid) {
       ]);
     });
 
-    const routeLinks = walkingRouteLinks(dayPlaces);
+    const routeLinks = walkingRouteLinks(dayPlaces, homeStay);
     const routeEl = el(
       "div",
       { className: "day-routes" },
@@ -310,6 +311,7 @@ export function renderDaysPage(container, tripId, myUid) {
     const stops = chosenStops(trip, flights, options, airports);
     createDaysBtn.textContent = stops.length > 0 ? "Create days from route" : "Create days from trip dates";
     createDaysBtn.disabled = stops.length === 0 && (!trip.startDate || !trip.endDate);
+    const chosenStays = stays.filter((s) => chosenStayIds(trip).includes(s.id));
 
     const sorted = [...days].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     if (!selectedDayId || !sorted.some((d) => d.id === selectedDayId)) selectedDayId = sorted[0] ? sorted[0].id : null;
@@ -319,17 +321,17 @@ export function renderDaysPage(container, tripId, myUid) {
         el("p", { className: "empty-state", textContent: "No days yet. Use Create days from route (or from trip dates), or Add day to start one." })
       );
     } else {
-      daysListEl.replaceChildren(...sorted.map(renderDayCard));
+      daysListEl.replaceChildren(...sorted.map((day) => renderDayCard(day, chosenStays)));
     }
 
     const selectedDay = sorted.find((d) => d.id === selectedDayId) || null;
     const cityKey = selectedDay ? selectedDay.cityKey || null : null;
     const daysInCity = sorted.filter((d) => (d.cityKey || null) === cityKey).map((d, i) => ({ id: d.id, label: dayLabel(d), color: dayColor(i) }));
     const cityPlaces = cityKey ? scopedPlaces.filter((p) => p.stopKey === cityKey) : scopedPlaces;
+    const homeStay = selectedDay ? stayForDate(selectedDay.date, chosenStays) : null;
 
-    daysMapSection.render(cityPlaces, daysInCity, selectedDay ? selectedDay.id : null);
+    daysMapSection.render(cityPlaces, daysInCity, selectedDay ? selectedDay.id : null, homeStay);
     renderUnplanned(cityPlaces, daysInCity);
-    const chosenStays = stays.filter((s) => chosenStayIds(trip).includes(s.id));
     exportSectionHolder.replaceChildren(renderExportSection({ trip, places: scopedPlaces, days, chosenStays }));
   }
 

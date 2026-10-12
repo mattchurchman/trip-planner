@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createAirportIndex } from "../js/lib/airports.js";
 import { stopsFor } from "../js/lib/route.js";
-import { datesBetween, daysFromStops, missingDays } from "../js/lib/dayplan.js";
+import { datesBetween, daysFromStops, missingDays, stayForDate } from "../js/lib/dayplan.js";
 
 const airports = createAirportIndex({
   DEN: ["Denver", "US", 39.86, -104.67],
@@ -85,5 +85,38 @@ export const tests = [
     const wanted = [{ date: "2026-05-15", cityKey: "Rome, IT", title: "Rome" }, { date: "2026-05-18", cityKey: "Florence, IT", title: "Florence" }];
     const existing = [{ id: "d1", date: "2026-05-15" }];
     assert.deepEqual(missingDays(existing, wanted), [wanted[1]]);
+  }],
+
+  ["stayForDate: matches a night inside the stay", () => {
+    const stay = { id: "s1", checkIn: "2026-06-01", checkOut: "2026-06-04", lat: 41.9, lng: 12.5 };
+    assert.equal(stayForDate("2026-06-02", [stay]), stay);
+  }],
+
+  ["stayForDate: matches the departure day, the morning after the last night", () => {
+    const stay = { id: "s1", checkIn: "2026-06-01", checkOut: "2026-06-04", lat: 41.9, lng: 12.5 };
+    assert.equal(stayForDate("2026-06-04", [stay]), stay);
+  }],
+
+  ["stayForDate: null outside the stay's range", () => {
+    const stay = { id: "s1", checkIn: "2026-06-01", checkOut: "2026-06-04", lat: 41.9, lng: 12.5 };
+    assert.equal(stayForDate("2026-06-05", [stay]), null);
+    assert.equal(stayForDate("2026-05-31", [stay]), null);
+  }],
+
+  ["stayForDate: skips a chosen stay with no pin", () => {
+    const stay = { id: "s1", checkIn: "2026-06-01", checkOut: "2026-06-04", lat: null, lng: null };
+    assert.equal(stayForDate("2026-06-02", [stay]), null);
+  }],
+
+  ["stayForDate: null for an undated day or with no chosen stays", () => {
+    assert.equal(stayForDate(null, [{ checkIn: "2026-06-01", checkOut: "2026-06-04", lat: 1, lng: 1 }]), null);
+    assert.equal(stayForDate("2026-06-02", []), null);
+    assert.equal(stayForDate("2026-06-02", undefined), null);
+  }],
+
+  ["stayForDate: picks the first matching stay on a double-booked night", () => {
+    const first = { id: "s1", checkIn: "2026-06-01", checkOut: "2026-06-04", lat: 1, lng: 1 };
+    const second = { id: "s2", checkIn: "2026-06-02", checkOut: "2026-06-05", lat: 2, lng: 2 };
+    assert.equal(stayForDate("2026-06-02", [first, second]), first);
   }],
 ];

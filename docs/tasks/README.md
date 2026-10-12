@@ -57,7 +57,7 @@ If a task fails twice, say "Revert the last commit" and rerun it in a fresh sess
 | T36 | [Routes: choose ideas and options separately, clear costs](T36-routes-choose-and-costs.md) | Sonnet | high | T35 | Done (2026-10-12) |
 | T37 | [Overview: each traveler's costs](T37-overview-costs.md) | Sonnet | medium | T35 | Done (2026-10-12) |
 | T38 | [Stays: merged stops, stays find their stop, Choose button](T38-stays-merged.md) | Sonnet | high | T35 | Done (2026-10-12) |
-| T39 | [Chosen stays on the Days map and walking routes](T39-stays-on-days.md) | Sonnet | high | T38 | To do |
+| T39 | [Chosen stays on the Days map and walking routes](T39-stays-on-days.md) | Sonnet | high | T38 | Done (2026-10-12) |
 | T40 | [Help page, wording and final review](T40-review-round5.md) | Opus | medium | T32–T39 | To do |
 
 **Order.** T32 and T33 touch nothing else and can run any time. T34 → T35 → T36 → T37 → T38 → T39 → T40 one at a time; T36–T38 all depend only on T35 but share screens, so don't run them side by side.
