@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Trip Planner Routes Mock</title>
+<title>Routes Mock v5</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap">
 <style>
-/* Layout: phone-first app shell. One idea at a time; inside it, a vertical "rail" of stops and flights per option. */
+/* Layout: phone-first app shell (same tokens as the approved 4.0 mock). Per-traveler choices; a merged group route; a sticky per-traveler total. */
 :root{
   --bg:#f4f6f5; --surface:#ffffff; --sunk:#e9eeec; --line:#d5dedb;
   --ink:#12211f; --muted:#566864;
@@ -31,245 +31,308 @@
   --sun:#f2a25c; --sun-soft:#3c2613;
   --good:#6fd39a; --bad:#ff8a80; color-scheme:dark}
 *{box-sizing:border-box}
-body{background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--body);padding-inline:16px;padding-block:0 96px}
+body{background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--body);padding-inline:16px;padding-block:0 160px}
 .wrap{max-width:680px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
 button{font:inherit;color:inherit;cursor:pointer}
-button:focus-visible,input:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+button:focus-visible,textarea:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .muted{color:var(--muted)}
 .label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-
 .sample{background:var(--sun-soft);color:var(--ink);border-radius:0 0 12px 12px;padding:8px 12px;font-size:13px}
 header{display:flex;flex-direction:column;gap:12px;padding-top:8px}
 h1{font:700 30px/1.1 var(--display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h2{font:600 20px/1.2 var(--display);margin:0;text-wrap:balance}
 .window{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .chip{background:var(--sunk);border-radius:999px;padding:4px 12px;font-size:13px;font-weight:500}
-.who{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .seg{display:flex;background:var(--sunk);border-radius:12px;padding:4px;gap:4px;flex-wrap:wrap}
-.seg button{border:0;background:transparent;border-radius:9px;padding:8px 14px;font-weight:500;min-height:40px;flex:1 1 auto}
+.seg button{border:0;background:transparent;border-radius:9px;padding:8px 14px;font-weight:500;min-height:44px;flex:1 1 auto;display:flex;flex-direction:column;align-items:center;line-height:1.2}
+.seg button small{font-size:11px;color:var(--muted);font-weight:500}
 .seg button[aria-pressed="true"]{background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.14);font-weight:600}
-
-h2{font:600 20px/1.2 var(--display);margin:0}
 .row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .row>*{min-width:0}
-.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 14px;font-weight:600;min-height:40px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 14px;font-weight:600;min-height:44px}
 .btn.primary{background:var(--teal);border-color:var(--teal);color:var(--on-teal)}
+.btn.on{background:var(--teal-soft);border-color:var(--teal);color:var(--teal)}
 .btn.quiet{border-color:transparent;background:transparent;color:var(--teal);padding-inline:8px}
-
-.gateway{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px}
-.flightline{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.code{font:600 17px var(--mono)}
-.dash{flex:1 1 24px;min-width:24px;border-top:2px dotted var(--line);position:relative;height:0}
-.kind{font-size:12px;font-weight:600;color:var(--teal);background:var(--teal-soft);border-radius:999px;padding:2px 10px}
+.btn.sm{min-height:36px;padding:6px 12px;font-size:14px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px}
+.card.chosen,.option.chosen{border-color:var(--teal);box-shadow:0 0 0 1px var(--teal)}
+.frow{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.frow:first-of-type{border-top:0}
+.code{font:600 16px var(--mono)}
+.kind{font-size:12px;font-weight:600;color:var(--teal);background:var(--teal-soft);border-radius:999px;padding:2px 10px;white-space:nowrap}
 .price{font:600 17px var(--mono);font-variant-numeric:tabular-nums}
 .meta{font-size:13px;color:var(--muted)}
-.delta-down{color:var(--good);font-weight:600}.delta-up{color:var(--bad);font-weight:600}
-
 .option{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow:hidden}
-.option.chosen{border-color:var(--teal);box-shadow:0 0 0 1px var(--teal)}
 .ohead{width:100%;border:0;background:transparent;text-align:left;padding:16px;display:flex;flex-direction:column;gap:8px}
 .oname{font:600 18px/1.2 var(--display)}
 .total{font:600 22px var(--mono);font-variant-numeric:tabular-nums}
 .badge{font-size:12px;font-weight:600;border-radius:999px;padding:2px 10px;background:var(--sun-soft);color:var(--sun)}
 .badge.teal{background:var(--teal-soft);color:var(--teal)}
-.path{font-size:13px;color:var(--muted)}
+.init{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--sunk);border:1px solid var(--line);font-size:11px;font-weight:600}
 .obody{padding:0 16px 16px;display:flex;flex-direction:column;gap:14px}
-
-/* the rail: stops are nodes, flights sit between them */
 .rail{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 .rail li{display:grid;grid-template-columns:20px 1fr;column-gap:12px}
 .rail .track{display:flex;flex-direction:column;align-items:center}
 .node{width:12px;height:12px;border-radius:50%;background:var(--teal);margin-top:5px;flex:none}
-.node.home{background:var(--surface);border:2px solid var(--muted)}
 .stem{flex:1;width:2px;background:var(--line);min-height:10px}
 .rail li:last-child .stem{display:none}
 .stop{padding-bottom:10px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
-.stop b{font-weight:600}
 .hop{background:var(--sunk);border-radius:12px;padding:10px 12px;margin-bottom:10px;display:flex;flex-direction:column;gap:8px;min-width:0}
-.hop .plane{color:var(--muted);font-size:13px}
-.check{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:14px}
-.check input{width:96px;border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--surface);color:var(--ink);font:600 15px var(--mono)}
-.btn.sm{min-height:36px;padding:6px 12px;font-size:14px}
-.warn{background:var(--sun-soft);border-radius:10px;padding:8px 12px;font-size:13px}
-.foot{display:flex;gap:8px;flex-wrap:wrap}
-
+.forrow{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:13px}
+.pill{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 12px;font-size:13px;font-weight:600;min-height:32px}
+.pill[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:var(--on-teal)}
+.sheet{background:var(--sunk);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.sheet textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--surface);color:var(--ink);font:14px var(--mono);resize:vertical}
+.target{font-weight:600}
+.preview{background:var(--surface);border-radius:10px;padding:10px 12px;font-size:14px}
+.group{display:flex;flex-direction:column;gap:0}
+.gstop{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:10px 0;border-top:1px solid var(--line)}
+.gstop:first-child{border-top:0}
+.nights{display:flex;gap:3px;flex-wrap:wrap;grid-column:1/-1}
+.n{width:22px;height:22px;border-radius:5px;font:600 10px/22px var(--mono);text-align:center;background:var(--teal-soft);color:var(--teal)}
+.n.part{background:var(--sun-soft);color:var(--sun)}
+.sum{position:fixed;left:0;right:0;bottom:calc(64px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;padding:0 16px;pointer-events:none}
+.sum div{pointer-events:auto;width:100%;max-width:680px;background:var(--ink);color:var(--bg);border-radius:14px;padding:10px 14px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;font-size:13px}
+.sum b{font:600 18px var(--mono)}
 nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center}
 nav div{display:flex;gap:4px;width:100%;max-width:680px}
-nav button{flex:1;border:0;background:transparent;border-radius:10px;padding:8px 4px;font-size:12px;font-weight:600;color:var(--muted);min-height:48px;display:flex;flex-direction:column;align-items:center;gap:2px}
+nav button{flex:1;border:0;background:transparent;border-radius:10px;padding:6px 4px;font-size:12px;font-weight:600;color:var(--muted);min-height:48px;display:flex;flex-direction:column;align-items:center;gap:2px}
 nav button[aria-current="page"]{color:var(--teal);background:var(--teal-soft)}
 nav svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-#toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:13px;font-weight:500;max-width:calc(100% - 32px);text-align:center}
-@media (prefers-reduced-motion:no-preference){.seg button,.btn{transition:background .15s}}
+#toast{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:13px;font-weight:500;max-width:calc(100% - 32px);text-align:center;z-index:5}
+@media (prefers-reduced-motion:no-preference){.seg button,.btn,.pill{transition:background .15s}}
 </style>
 </head>
 <body>
 
 <div class="wrap">
-  <div class="sample"><b>Mock with made-up flights and prices.</b> Nothing is saved, and Recheck does not open Google here.</div>
+  <div class="sample"><b>Proof of concept, made-up flights.</b> Nothing is saved. Try switching traveler, choosing, pasting and "Who's this for?".</div>
   <header>
     <div class="label">Trip window</div>
     <h1>Europe, spring 2027</h1>
-    <div class="window">
-      <span class="chip">Fri 14 May → Fri 28 May</span>
-      <span class="chip">13 nights on the ground</span>
-    </div>
-    <div class="who">
-      <span class="label">Flights from home for</span>
-      <div class="seg" id="who" role="group" aria-label="Traveler"></div>
-    </div>
+    <div class="window"><span class="chip">Fri 14 May → Fri 28 May</span></div>
+    <div class="label">Choosing for</div>
+    <div class="seg" id="who" role="group" aria-label="Traveler"></div>
   </header>
 
   <section style="display:flex;flex-direction:column;gap:12px">
-    <div class="row"><h2>Ideas for this window</h2><button class="btn sm" id="addIdea">+ Idea</button></div>
+    <div class="row"><h2>Ideas: getting there and back</h2></div>
     <div class="seg" id="ideas" role="group" aria-label="Idea"></div>
+    <div id="home"></div>
   </section>
-
-  <section id="gateway"></section>
 
   <section style="display:flex;flex-direction:column;gap:12px">
     <div class="row"><h2>Options once you land</h2><button class="btn sm" id="addOpt">+ Option</button></div>
     <div id="options" style="display:flex;flex-direction:column;gap:12px"></div>
   </section>
+
+  <section style="display:flex;flex-direction:column;gap:12px">
+    <div><h2>Group route</h2><div class="meta">Everyone's choices merged. Map, Stays and Days use this.</div></div>
+    <div class="card" id="group"></div>
+  </section>
 </div>
 
+<div class="sum" aria-live="polite"><div id="sum"></div></div>
 <nav aria-label="Trip sections"><div id="tabs"></div></nav>
 <div id="toast" role="status" hidden></div>
 
 <script>
-const CITY={FCO:"Rome",FLR:"Florence",BCN:"Barcelona",ATH:"Athens",IST:"Istanbul",LHR:"London",AMS:"Amsterdam",MAD:"Madrid",DEN:"Denver",ORD:"Chicago"};
+const CITY={FCO:"Rome",FLR:"Florence",BCN:"Barcelona",ATH:"Athens",LHR:"London",AMS:"Amsterdam",MAD:"Madrid",DEN:"Denver",ORD:"Chicago"};
 const travelers=[{id:"m",name:"Matt",home:"DEN"},{id:"s",name:"Sam",home:"ORD"}];
 const ideas=[
- {id:"rome",name:"Rome round trip",arrive:"2027-05-15",leave:"2027-05-28",inCode:"FCO",outCode:"FCO",kind:"Round trip",
-  gate:{m:{price:742,air:"United · 1 stop"},s:{price:688,air:"ITA · Nonstop"}},
+ {id:"rome",name:"Rome round trip",inCode:"FCO",outCode:"FCO",
+  home:{
+   m:[{id:"m1",dir:"Out",from:"DEN",to:"FCO",date:"2027-05-14",lands:"2027-05-15",price:398,air:"United · 1 stop",picked:true},
+      {id:"m2",dir:"Back",from:"FCO",to:"DEN",date:"2027-05-28",price:344,air:"United · 1 stop",picked:true},
+      {id:"m3",dir:"Both ways",from:"DEN",to:"FCO",date:"2027-05-14",lands:"2027-05-15",back:"2027-05-28",price:781,air:"Lufthansa · 1 stop",picked:false}],
+   s:[{id:"s1",dir:"Both ways",from:"ORD",to:"FCO",date:"2027-05-16",lands:"2027-05-17",back:"2027-05-28",price:688,air:"ITA · Nonstop",picked:true}]},
   options:[
    {id:"a",name:"Florence + Barcelona",hops:[
-     {from:"FCO",to:"FLR",date:"2027-05-18",price:64,air:"ITA 1675",kind:"One way"},
-     {from:"FLR",to:"BCN",date:"2027-05-22",price:89,air:"Vueling 6005",kind:"One way"},
-     {from:"BCN",to:"FCO",date:"2027-05-26",price:71,air:"Ryanair 6342",kind:"One way"}]},
-   {id:"b",name:"Athens + Istanbul",hops:[
-     {from:"FCO",to:"ATH",date:"2027-05-18",price:95,air:"Aegean 651",kind:"One way"},
-     {from:"ATH",to:"IST",date:"2027-05-21",back:"2027-05-24",price:148,air:"Turkish 1846 / 1845",kind:"Round trip"},
-     {from:"ATH",to:"FCO",date:"2027-05-27",price:102,air:"Aegean 650",kind:"One way"}]}]},
- {id:"lon",name:"London in, Madrid out",arrive:"2027-05-15",leave:"2027-05-28",inCode:"LHR",outCode:"MAD",kind:"Two one-ways",
-  gate:{m:{price:810,air:"British Airways out · Iberia back"},s:{price:765,air:"American out · Iberia back"}},
-  options:[
-   {id:"c",name:"Via Amsterdam",hops:[
-     {from:"LHR",to:"AMS",date:"2027-05-19",price:58,air:"KLM 1002",kind:"One way"},
-     {from:"AMS",to:"MAD",date:"2027-05-23",price:112,air:"Iberia 3721",kind:"One way"}]}]}
+     {id:"h1",from:"FCO",to:"FLR",date:"2027-05-19",price:64,air:"ITA 1675",forIds:null},
+     {id:"h2",from:"FLR",to:"BCN",date:"2027-05-22",price:89,air:"Vueling 6005",forIds:null},
+     {id:"h3",from:"BCN",to:"FCO",date:"2027-05-26",price:71,air:"Ryanair 6342",forIds:null}]},
+   {id:"b",name:"Athens",hops:[
+     {id:"h4",from:"FCO",to:"ATH",date:"2027-05-20",price:95,air:"Aegean 651",forIds:null},
+     {id:"h5",from:"ATH",to:"FCO",date:"2027-05-25",price:102,air:"Aegean 650",forIds:null}]}]},
+ {id:"lon",name:"London in, Madrid out",inCode:"LHR",outCode:"MAD",
+  home:{m:[{id:"m4",dir:"Out",from:"DEN",to:"LHR",date:"2027-05-14",lands:"2027-05-15",price:455,air:"British Airways",picked:true},
+           {id:"m5",dir:"Back",from:"MAD",to:"DEN",date:"2027-05-28",price:402,air:"Iberia",picked:true}],s:[]},
+  options:[{id:"c",name:"Amsterdam",hops:[
+     {id:"h6",from:"LHR",to:"AMS",date:"2027-05-19",price:58,air:"KLM 1002",forIds:null},
+     {id:"h7",from:"AMS",to:"MAD",date:"2027-05-23",price:112,air:"Iberia 3721",forIds:null}]}]}
 ];
-const state={who:"m",idea:"rome",open:{a:true},chosen:null,checking:null,changed:false,checks:{}};
-const $=(t,p={},kids=[])=>{const e=document.createElement(t);for(const k in p){if(k==="text")e.textContent=p[k];else if(k==="cls")e.className=p[k];else if(k.startsWith("on"))e.addEventListener(k.slice(2),p[k]);else e.setAttribute(k,p[k]);}for(const c of [].concat(kids))if(c)e.append(c);return e;};
+const choices={m:{idea:"rome",opt:"a"},s:{idea:"rome",opt:null}};
+const state={who:"m",idea:"rome",open:{a:true},paste:null,pasteText:"",editFor:null};
+let seq=0;
+
+const $=(t,p={},kids=[])=>{const e=document.createElement(t);for(const k in p){const v=p[k];if(v==null)continue;if(k==="text")e.textContent=v;else if(k==="cls")e.className=v;else if(k.startsWith("on"))e.addEventListener(k.slice(2),v);else e.setAttribute(k,v);}for(const c of [].concat(kids))if(c!=null&&c!==false)e.append(c);return e;};
 const d=s=>new Date(s+"T00:00:00Z");
 const fmt=s=>d(s).toLocaleDateString("en-US",{weekday:"short",day:"numeric",month:"short",timeZone:"UTC"});
-const nights=(a,b)=>Math.round((d(b)-d(a))/864e5);
+const short=s=>d(s).toLocaleDateString("en-US",{day:"numeric",month:"short",timeZone:"UTC"});
+const addDays=(s,n)=>{const x=d(s);x.setUTCDate(x.getUTCDate()+n);return x.toISOString().slice(0,10);};
 const money=n=>"$"+n.toLocaleString("en-US");
-function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,2600);}
+const tname=id=>travelers.find(t=>t.id===id).name;
+function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,3000);}
+const ideaById=id=>ideas.find(i=>i.id===id);
+const optById=id=>{for(const i of ideas)for(const o of i.options)if(o.id===id)return {idea:i,opt:o};return null;};
 
-// A stop list derived from the hops: where you sleep, and for how many nights.
-function stops(idea,opt){
-  const out=[];let here=idea.inCode,since=idea.arrive;
-  for(const h of opt.hops){
-    if(h.back){ // side trip: leave and come back to the same city
-      out.push({code:here,from:since,to:h.date,hop:h});
-      out.push({code:h.to,from:h.date,to:h.back,ret:h});
-      since=h.back;
-    }else{
-      out.push({code:here,from:since,to:h.date,hop:h});
-      here=h.to;since=h.date;
-    }
-  }
-  out.push({code:here,from:since,to:idea.leave,last:true});
-  return out;
+// Who a hop is for: set by hand, or everyone who chose its option.
+const autoFor=opt=>travelers.filter(t=>choices[t.id].opt===opt.id).map(t=>t.id);
+const forOf=(hop,opt)=>hop.forIds||autoFor(opt);
+const pickedHome=(idea,tid)=>(idea.home[tid]||[]).filter(f=>f.picked);
+
+// One traveler's stops: land from their picked outbound, then follow the hops they're on.
+function stopsFor(tid){
+  const c=choices[tid]; if(!c.idea||!c.opt)return [];
+  const idea=ideaById(c.idea), found=optById(c.opt); if(!found||found.idea!==idea)return [];
+  const home=pickedHome(idea,tid), out=home.find(f=>f.lands), back=home.find(f=>f.back)||home.find(f=>f.dir==="Back");
+  if(!out||!back)return [];
+  const hops=found.opt.hops.filter(h=>forOf(h,found.opt).includes(tid)).sort((a,b)=>a.date.localeCompare(b.date));
+  const res=[];let here=idea.inCode,since=out.lands;
+  for(const h of hops){res.push({code:here,from:since,to:h.date});here=h.to;since=h.date;}
+  res.push({code:here,from:since,to:back.back||back.date});
+  return res;
 }
-const total=(idea,opt)=>idea.gate[state.who].price+opt.hops.reduce((s,h)=>s+h.price,0);
-
-function priceBlock(key,item){
-  const c=state.checks[key];
-  const box=$("div",{cls:"row"});
-  const left=$("div",{cls:"meta"});
-  if(c){const diff=item.price-c.was;
-    left.append(diff===0?"No change · ":$("span",{cls:diff<0?"delta-down":"delta-up",text:(diff<0?"▼ ":"▲ ")+money(Math.abs(diff))+(diff<0?" lower":" higher")}),diff===0?"":" · ","checked just now");
-  }else left.textContent="Checked 3 days ago";
-  box.append(left);
-  if(state.checking===key){
-    const wrap=$("div",{cls:"check"});
-    if(!state.changed){
-      wrap.append($("span",{text:"Still "+money(item.price)+"?"}),
-        $("button",{cls:"btn sm primary",text:"Same",onclick:()=>{state.checks[key]={was:item.price};state.checking=null;render();}}),
-        $("button",{cls:"btn sm",text:"Changed",onclick:()=>{state.changed=true;render();document.getElementById("np").focus();}}));
-    }else{
-      const inp=$("input",{id:"np",inputmode:"numeric","aria-label":"New price in dollars",placeholder:String(item.price)});
-      const save=()=>{const n=parseInt(inp.value.replace(/[^0-9]/g,""),10);if(!n){toast("Type the price you see, like 412");return;}
-        state.checks[key]={was:item.price};item.price=n;state.checking=null;state.changed=false;render();};
-      inp.addEventListener("keydown",e=>{if(e.key==="Enter")save();});
-      wrap.append($("span",{text:"New price"}),inp,$("button",{cls:"btn sm primary",text:"Save",onclick:save}),
-        $("button",{cls:"btn sm quiet",text:"Cancel",onclick:()=>{state.checking=null;state.changed=false;render();}}));
-    }
-    return $("div",{style:"display:flex;flex-direction:column;gap:8px"},[box,wrap]);
+// Merge everyone's stops by city: earliest arrival to latest departure, with who's there each night.
+function mergedStops(){
+  const by=new Map();
+  for(const t of travelers)for(const s of stopsFor(t.id)){
+    const g=by.get(s.code)||{code:s.code,from:s.from,to:s.to,nights:{}};
+    if(s.from<g.from)g.from=s.from; if(s.to>g.to)g.to=s.to;
+    for(let n=s.from;n<s.to;n=addDays(n,1))(g.nights[n]=g.nights[n]||[]).push(t.id);
+    by.set(s.code,g);
   }
-  box.append($("button",{cls:"btn sm quiet",text:"Recheck ↗",onclick:()=>{state.checking=key;state.changed=false;render();}}));
-  return box;
+  return [...by.values()].sort((a,b)=>a.from.localeCompare(b.from));
+}
+function breakdown(tid){
+  const c=choices[tid], idea=c.idea?ideaById(c.idea):null;
+  const home=idea?pickedHome(idea,tid).reduce((s,f)=>s+f.price,0):0;
+  const found=c.opt?optById(c.opt):null;
+  let hops=0; for(const i of ideas)for(const o of i.options)for(const h of o.hops)if(forOf(h,o).includes(tid))hops+=h.price;
+  return {idea,opt:found&&found.opt,home,hops,total:home+hops};
+}
+
+function pasteSheet(kind,target){
+  const ta=$("textarea",{id:"paste-"+kind,rows:"2",placeholder:"Paste the address from Google Flights…","aria-label":"Google Flights link"});
+  ta.value=state.pasteText;
+  const prev=$("div",{cls:"preview",hidden:""});
+  const add=$("button",{cls:"btn primary sm",text:"Add",disabled:""});
+  const read=()=>{state.pasteText=ta.value;const ok=ta.value.trim().length>8;prev.hidden=!ok;add.disabled=!ok;
+    prev.textContent=kind==="home"?"Read: "+travelerHome()+" → "+target.inCode+" · Fri 14 May · Delta · Google showed $512":"Read: "+target.lastCity+" → MAD · Mon 24 May · Iberia 3301 · Google showed $77";};
+  ta.addEventListener("input",read); ta.addEventListener("paste",()=>setTimeout(read,0));
+  add.onclick=()=>{ if(kind==="home"){(target.home[state.who]=target.home[state.who]||[]).push({id:"x"+(++seq),dir:"Out",from:travelerHome(),to:target.inCode,date:"2027-05-14",lands:"2027-05-15",price:512,air:"Delta · 1 stop",picked:false});toast("Added to "+target.name+" for "+tname(state.who)+". Tap Use this to count it.");}
+    else {target.opt.hops.push({id:"x"+(++seq),from:target.lastCity,to:"MAD",date:"2027-05-24",price:77,air:"Iberia 3301",forIds:null});toast("Added to "+target.opt.name+". It now has "+target.opt.hops.length+" flights.");}
+    state.paste=null;state.pasteText="";render();};
+  read();
+  setTimeout(()=>ta.focus(),0);
+  return $("div",{cls:"sheet"},[
+    $("div",{},[$("span",{cls:"meta",text:"Adding to "}),$("span",{cls:"target",text:kind==="home"?target.name+" · "+tname(state.who):target.opt.name})]),
+    ta,prev,$("div",{cls:"actions"},[add,$("button",{cls:"btn sm quiet",text:"Cancel",onclick:()=>{state.paste=null;state.pasteText="";render();}})])]);
+}
+const travelerHome=()=>travelers.find(t=>t.id===state.who).home;
+
+function forControl(hop,opt){
+  const ids=forOf(hop,opt), editing=state.editFor===hop.id;
+  const label=ids.length?ids.map(tname).join(", "):"no one yet";
+  const row=$("div",{cls:"forrow"},[$("span",{cls:"meta",text:"For: "}),$("b",{text:label}),
+    $("span",{cls:"meta",text:hop.forIds?"· set by hand":"· automatic"}),
+    $("button",{cls:"btn sm quiet",text:editing?"Done":"Who's this for?",onclick:()=>{state.editFor=editing?null:hop.id;render();}})]);
+  if(!editing)return row;
+  const pills=$("div",{cls:"forrow"},[
+    $("button",{cls:"pill","aria-pressed":String(!hop.forIds),text:"Automatic",onclick:()=>{hop.forIds=null;render();}}),
+    ...travelers.map(t=>$("button",{cls:"pill","aria-pressed":String(!!hop.forIds&&hop.forIds.includes(t.id)),text:t.name,onclick:()=>{
+      const cur=new Set(hop.forIds||autoFor(opt)); cur.has(t.id)?cur.delete(t.id):cur.add(t.id); hop.forIds=[...cur]; render();}}))]);
+  return $("div",{style:"display:flex;flex-direction:column;gap:6px"},[row,pills]);
 }
 
 function render(){
-  const idea=ideas.find(i=>i.id===state.idea), me=travelers.find(t=>t.id===state.who);
-  const who=document.getElementById("who");who.replaceChildren(...travelers.map(t=>$("button",{"aria-pressed":String(t.id===state.who),text:t.name+" · "+t.home,onclick:()=>{state.who=t.id;render();}})));
-  document.getElementById("ideas").replaceChildren(...ideas.map(i=>$("button",{"aria-pressed":String(i.id===state.idea),text:i.name,onclick:()=>{state.idea=i.id;state.checking=null;render();}})));
+  const idea=ideaById(state.idea), me=travelers.find(t=>t.id===state.who), mine=choices[state.who];
+  document.getElementById("who").replaceChildren(...travelers.map(t=>{const b=breakdown(t.id);
+    return $("button",{"aria-pressed":String(t.id===state.who),onclick:()=>{state.who=t.id;state.paste=null;state.editFor=null;render();}},[
+      $("span",{text:t.name+" · "+t.home}),$("small",{text:b.idea?b.idea.name+(b.opt?" · "+b.opt.name:" · no option"):"Nothing chosen"})]);}));
+  document.getElementById("ideas").replaceChildren(...ideas.map(i=>$("button",{"aria-pressed":String(i.id===state.idea),onclick:()=>{state.idea=i.id;state.paste=null;render();}},[
+    $("span",{text:i.name+(mine.idea===i.id?" ✓":"")}),$("small",{text:travelers.filter(t=>choices[t.id].idea===i.id).map(t=>t.name).join(", ")||"no one yet"})])));
 
-  const g=idea.gate[state.who];
-  const line=(a,b)=>$("div",{cls:"flightline"},[$("span",{cls:"code",text:a}),$("span",{cls:"dash"}),$("span",{cls:"code",text:b})]);
-  document.getElementById("gateway").replaceChildren($("div",{cls:"gateway"},[
-    $("div",{cls:"row"},[$("div",{},[$("div",{cls:"label",text:me.name+"'s flights to and from the region"}),$("div",{cls:"meta",text:g.air})]),$("span",{cls:"kind",text:idea.kind})]),
-    $("div",{cls:"row"},[$("div",{style:"flex:1 1 200px;display:flex;flex-direction:column;gap:6px"},[
-        $("div",{},[line(me.home,idea.inCode),$("div",{cls:"meta",text:"Lands "+fmt(idea.arrive)})]),
-        $("div",{},[line(idea.outCode,me.home),$("div",{cls:"meta",text:"Leaves "+fmt(idea.leave)})])]),
-      $("span",{cls:"price",text:money(g.price)})]),
-    priceBlock("g:"+idea.id+":"+state.who,g)
+  // Flights from home for this traveler, under this idea.
+  const flights=idea.home[state.who]||[], picked=flights.filter(f=>f.picked), ideaChosen=mine.idea===idea.id;
+  const list=$("div",{},flights.length?flights.map(f=>$("div",{cls:"frow"},[
+    $("div",{},[$("div",{},[$("span",{cls:"code",text:f.from+" → "+f.to})," ",$("span",{cls:"kind",text:f.dir})]),
+      $("div",{cls:"meta",text:fmt(f.date)+(f.back?" out, "+fmt(f.back)+" back":"")+" · "+f.air})]),
+    $("div",{cls:"actions",style:"justify-content:flex-end"},[$("span",{cls:"price",text:money(f.price)}),
+      $("button",{cls:"btn sm"+(f.picked?" on":""),text:f.picked?"Using":"Use this",onclick:()=>{
+        if(f.dir==="Both ways")flights.forEach(x=>x.picked=x===f?!f.picked:false);
+        else {flights.forEach(x=>{if(x.dir==="Both ways"||(x!==f&&x.dir===f.dir))x.picked=false;});f.picked=!f.picked;}
+        render();}})])])):[$("p",{cls:"meta",text:"No flights from home yet for "+me.name+". Paste one below."})]);
+  document.getElementById("home").replaceChildren($("div",{cls:"card"+(ideaChosen?" chosen":"")},[
+    $("div",{cls:"row"},[$("div",{},[$("div",{cls:"label",text:me.name+"'s flights from home"}),
+        $("div",{cls:"meta",text:picked.length?"Counting "+picked.length+" of "+flights.length:"Pick the flights to count"})]),
+      $("span",{cls:"total",text:money(picked.reduce((s,f)=>s+f.price,0))})]),
+    list,
+    state.paste==="home"?pasteSheet("home",idea):null,
+    $("div",{cls:"actions"},[
+      $("button",{cls:"btn "+(ideaChosen?"on":"primary"),text:ideaChosen?"Chosen ✓ · Unchoose":"Choose idea for "+me.name,onclick:()=>{mine.idea=ideaChosen?null:idea.id;render();toast(ideaChosen?"Unchosen for "+me.name+".":"Chosen for "+me.name+" only. Their option is unchanged.");}}),
+      state.paste==="home"?null:$("button",{cls:"btn",text:"Paste flight link",onclick:()=>{state.paste="home";state.pasteText="";render();}}),
+      $("button",{cls:"btn sm quiet",text:"Rename",onclick:()=>toast("Real app: rename this idea.")})])
   ]));
 
-  const cheapest=Math.min(...idea.options.map(o=>total(idea,o)));
-  document.getElementById("options").replaceChildren(...idea.options.map(opt=>{
-    const st=stops(idea,opt), isOpen=!!state.open[opt.id], isChosen=state.chosen===opt.id, t=total(idea,opt);
-    const path=[...new Set(st.map(s=>CITY[s.code]))].join(" → ");
+  // Options under this idea: their own flights only, priced per person.
+  const totals=idea.options.map(o=>o.hops.reduce((s,h)=>s+h.price,0)), cheapest=Math.min(...totals);
+  document.getElementById("options").replaceChildren(...idea.options.map((opt,oi)=>{
+    const isOpen=!!state.open[opt.id], isChosen=mine.opt===opt.id, t=totals[oi];
+    const others=travelers.filter(x=>x.id!==state.who&&choices[x.id].opt===opt.id);
     const head=$("button",{cls:"ohead","aria-expanded":String(isOpen),onclick:()=>{state.open[opt.id]=!isOpen;render();}},[
       $("div",{cls:"row"},[$("span",{cls:"oname",text:opt.name}),$("span",{cls:"total",text:money(t)})]),
-      $("div",{cls:"row"},[$("span",{cls:"path",text:path}),$("span",{cls:"meta",text:"per person, all flights"})]),
-      $("div",{style:"display:flex;gap:6px;flex-wrap:wrap"},[
-        isChosen?$("span",{cls:"badge teal",text:"Chosen ✓"}):null,
-        (t===cheapest&&idea.options.length>1)?$("span",{cls:"badge",text:"Cheapest"}):null,
-        $("span",{cls:"meta",text:opt.hops.length+" flights · "+(isOpen?"hide":"show")+" details"})])
-    ]);
+      $("div",{cls:"row"},[$("span",{cls:"meta",text:opt.hops.length+" flights · "+(isOpen?"hide":"show")}),$("span",{cls:"meta",text:"per person, option flights only"})]),
+      $("div",{cls:"actions"},[
+        isChosen?$("span",{cls:"badge teal",text:"Chosen by "+me.name+" ✓"}):null,
+        ...others.map(o=>$("span",{cls:"init",title:"Chosen by "+o.name,text:o.name[0]})),
+        (t===cheapest&&idea.options.length>1)?$("span",{cls:"badge",text:"Cheapest"}):null])]);
     const card=$("article",{cls:"option"+(isChosen?" chosen":"")},[head]);
     if(!isOpen)return card;
     const rail=$("ol",{cls:"rail"});
-    st.forEach((s,i)=>{
-      const n=nights(s.from,s.to), h=s.hop||s.ret;
-      const right=$("div",{},[$("div",{cls:"stop"},[$("span",{},[$("b",{text:CITY[s.code]})," ",$("span",{cls:"mono muted",text:s.code})]),
-        $("span",{cls:"meta",text:n+(n===1?" night":" nights")+" · "+fmt(s.from)+" – "+fmt(s.to)})])]);
-      if(s.hop){const key="h:"+opt.id+":"+opt.hops.indexOf(h);
-        right.append($("div",{cls:"hop"},[
-          $("div",{cls:"row"},[$("span",{},[$("span",{cls:"mono",text:h.from+" → "+h.to})," ",$("span",{cls:"kind",text:h.kind})]),$("span",{cls:"price",text:money(h.price)})]),
-          $("div",{cls:"plane",text:fmt(h.date)+(h.back?" out, "+fmt(h.back)+" back":"")+" · "+h.air}),
-          priceBlock(key,h)]));}
-      if(s.ret)right.append($("div",{cls:"hop"},[$("div",{cls:"plane",text:"Return half of the "+CITY[h.from]+" ⇄ "+CITY[h.to]+" round trip · "+fmt(h.back)})]));
-      if(n<=0)right.append($("div",{cls:"warn",text:"These dates overlap. Check the flight before and after this stop."}));
-      rail.append($("li",{},[$("div",{cls:"track"},[$("span",{cls:"node"}),$("span",{cls:"stem"})]),right]));
-    });
-    rail.append($("li",{},[$("div",{cls:"track"},[$("span",{cls:"node home"})]),$("div",{cls:"stop"},[$("span",{},[$("b",{text:"Fly home"})," ",$("span",{cls:"mono muted",text:idea.outCode+" → "+me.home})]),$("span",{cls:"meta",text:fmt(idea.leave)})])]));
-    card.append($("div",{cls:"obody"},[rail,$("div",{cls:"foot"},[
-      $("button",{cls:"btn primary",text:isChosen?"Unchoose":"Choose this option",onclick:()=>{state.chosen=isChosen?null:opt.id;render();if(!isChosen)toast("Chosen. Stops and dates would now fill in Map and Days.");}}),
-      $("button",{cls:"btn",text:"Paste flight link",onclick:()=>toast("Real app: reads the Google Flights link from your clipboard and adds the flight here.")})])]));
+    const hops=[...opt.hops].sort((a,b)=>a.date.localeCompare(b.date));
+    let here=idea.inCode;
+    for(const h of hops){
+      rail.append($("li",{},[$("div",{cls:"track"},[$("span",{cls:"node"}),$("span",{cls:"stem"})]),
+        $("div",{},[$("div",{cls:"stop"},[$("b",{text:CITY[here]||here})]),
+          $("div",{cls:"hop"},[
+            $("div",{cls:"row"},[$("span",{cls:"mono",text:h.from+" → "+h.to}),$("span",{cls:"price",text:money(h.price)})]),
+            $("div",{cls:"meta",text:fmt(h.date)+" · "+h.air}),
+            forControl(h,opt)])])]));
+      here=h.to;
+    }
+    rail.append($("li",{},[$("div",{cls:"track"},[$("span",{cls:"node"})]),$("div",{cls:"stop"},[$("b",{text:CITY[here]||here}),$("span",{cls:"meta",text:"then home"})])]));
+    card.append($("div",{cls:"obody"},[rail,
+      state.paste===opt.id?pasteSheet("opt",{opt,lastCity:here}):null,
+      $("div",{cls:"actions"},[
+        $("button",{cls:"btn "+(isChosen?"on":"primary"),text:isChosen?"Chosen ✓ · Unchoose":"Choose for "+me.name,onclick:()=>{mine.opt=isChosen?null:opt.id;render();toast(isChosen?"Unchosen.":"Chosen for "+me.name+". Their idea stays as it was.");}}),
+        state.paste===opt.id?null:$("button",{cls:"btn",text:"Paste flight link",onclick:()=>{state.paste=opt.id;state.pasteText="";render();}})])]));
     return card;
   }));
+
+  // Group route: everyone's stops merged.
+  const g=mergedStops(), n=travelers.length;
+  document.getElementById("group").replaceChildren(...(g.length?[$("div",{cls:"group"},g.map(s=>{
+    const dates=Object.keys(s.nights).sort();
+    return $("div",{cls:"gstop"},[$("b",{text:CITY[s.code]}),$("span",{cls:"meta mono",text:short(s.from)+" – "+short(s.to)}),
+      $("div",{cls:"nights"},dates.map(dt=>{const w=s.nights[dt];return $("span",{cls:"n"+(w.length<n?" part":""),title:short(dt)+": "+w.map(tname).join(", "),text:w.length+"/"+n});}))]);})),
+    $("p",{cls:"meta",text:"Each square is a night: how many of you are there. Orange means not everyone."})]
+    :[$("p",{cls:"meta",text:"Nobody has a full route yet. Choose an idea, pick flights from home, and choose an option."})]));
+
+  const b=breakdown(state.who);
+  document.getElementById("sum").replaceChildren(
+    $("span",{text:me.name+": home "+money(b.home)+" + option flights "+money(b.hops)+(b.idea?"":" (no idea chosen)")}),
+    $("b",{text:money(b.total)}));
 }
-const ICON={Overview:"M4 11l8-7 8 7v9h-5v-6H9v6H4z",Routes:"M3 17l6-2 4 3 8-12M3 17v.01M21 6v.01",Map:"M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.500C5 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z",Days:"M5 5h14v15H5zM5 10h14M9 3v4M15 3v4"};
-document.getElementById("tabs").replaceChildren(...Object.keys(ICON).map(n=>{
-  const b=$("button",{onclick:()=>{if(n!=="Routes")toast("This mock only covers Routes. "+n+" comes next.");}});
-  if(n==="Routes")b.setAttribute("aria-current","page");
+const ICON={Overview:"M4 11l8-7 8 7v9h-5v-6H9v6H4z",Routes:"M3 17l6-2 4 3 8-12M3 17v.01M21 6v.01",Map:"M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z",Days:"M5 5h14v15H5zM5 10h14M9 3v4M15 3v4"};
+document.getElementById("tabs").replaceChildren(...Object.keys(ICON).map(nm=>{
+  const bt=$("button",{onclick:()=>{if(nm!=="Routes")toast("This mock covers Routes only.");}});
+  if(nm==="Routes")bt.setAttribute("aria-current","page");
   const s=document.createElementNS("http://www.w3.org/2000/svg","svg");s.setAttribute("viewBox","0 0 24 24");s.setAttribute("aria-hidden","true");
-  const p=document.createElementNS("http://www.w3.org/2000/svg","path");p.setAttribute("d",ICON[n]);s.append(p);b.append(s,n);return b;}));
-document.getElementById("addIdea").onclick=()=>toast("Real app: name the idea, then paste the flights to and from the region.");
-document.getElementById("addOpt").onclick=()=>toast("Real app: starts an empty option under this idea. Paste flights to build it.");
+  const p=document.createElementNS("http://www.w3.org/2000/svg","path");p.setAttribute("d",ICON[nm]);s.append(p);bt.append(s,nm);return bt;}));
+document.getElementById("addOpt").onclick=()=>toast("Real app: starts an empty option under this idea. Paste flights into it.");
 render();
 </script>
 </body>
