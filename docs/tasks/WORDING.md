@@ -35,7 +35,7 @@ How Trip Planner talks. Every agent follows this once T07 is done. The owner can
 | Use this link | Read this link | Location picker |
 | Location needed for this destination — this will be set once the Places map is built (Phase 2). | We couldn't find this city on the map. Use **Set on map** on the Places tab to place it. | Overview (stale text — must change) |
 | Search by OpenStreetMap Nominatim | Search results from OpenStreetMap | Search results credit |
-| Plan trips with your friends. | Plan trips with your friends — from "where should we go?" to the recap. | Sign-in card |
+| Plan trips with your friends. | Plan trips with your friends — from "where should we go?" to the recap. | Sign-in screen |
 | No trips yet. Start one! | No trips yet. Start one with **New trip**. | Trips list |
 
 Tab names stay: **Overview · Places · Flights & stays · Days · Recap**.

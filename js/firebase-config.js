@@ -2,7 +2,7 @@
 // Safe to commit: firestore.rules, not secrecy, protects the data (see SPEC.md §6).
 export const firebaseConfig = {
   apiKey: "AIzaSyAUM2aYNS-K57D4ypeDsFqabpEgp9ve3P4",
-  authDomain: "trip-planner-mattchurchman.firebaseapp.com",
+  authDomain: "trip-planner-mattchurchman.web.app",
   projectId: "trip-planner-mattchurchman",
   storageBucket: "trip-planner-mattchurchman.firebasestorage.app",
   messagingSenderId: "91276643666",

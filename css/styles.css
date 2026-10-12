@@ -287,6 +287,55 @@ textarea:focus {
   margin: 0 auto var(--space-3);
 }
 
+.sign-in-card {
+  text-align: left;
+}
+
+.sign-in-card > .center-card-logo,
+.sign-in-card > h1,
+.sign-in-card > p:first-of-type {
+  text-align: center;
+}
+
+.sign-in-google,
+.sign-in-submit {
+  width: 100%;
+}
+
+.sign-in-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--muted);
+  font-size: 0.875rem;
+  margin: var(--space-4) 0;
+}
+
+.sign-in-divider::before,
+.sign-in-divider::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--border);
+}
+
+.sign-in-heading {
+  font-size: 1.1rem;
+  margin: 0 0 var(--space-3);
+}
+
+.sign-in-options {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-3);
+  margin: var(--space-4) 0 0;
+}
+
+.sign-in-note {
+  color: var(--muted);
+  font-size: 0.9em;
+  margin: 4px 0;
+}
+
 .top-bar {
   display: flex;
   align-items: center;

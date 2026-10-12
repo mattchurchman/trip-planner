@@ -1,6 +1,6 @@
-import { auth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, isConfigured } from "./firebase.js";
+import { auth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, signOut, onAuthStateChanged, isConfigured } from "./firebase.js";
 import { checkAllowlist, ensureUserDoc, watchTrip } from "./store.js";
-import { el, setPending, friendlyError } from "./ui.js";
+import { el, friendlyError } from "./ui.js";
 import { tripStage } from "./lib/stage.js";
 import { renderTripsView } from "./views/trips.js";
 import { renderOverviewPage } from "./views/overview.js";
@@ -8,6 +8,7 @@ import { renderPlacesPage } from "./views/places.js";
 import { renderTravelPage } from "./views/travel.js";
 import { renderDaysPage } from "./views/days.js";
 import { renderRecapPage } from "./views/recap.js";
+import { renderSignIn, renderEmailConfirmation } from "./views/signin.js";
 
 const TABS = [
   { key: "overview", label: "Overview", render: renderOverviewPage },
@@ -20,6 +21,7 @@ const TABS = [
 const root = document.getElementById("app");
 let tripWatchers = [];
 let removeRouter = null;
+let redirectError = "";
 
 function clearTripWatchers() {
   for (const unsubscribe of tripWatchers) unsubscribe();
@@ -35,29 +37,45 @@ function showSetupMessage() {
   );
 }
 
+function useRedirectSignIn() {
+  return window.matchMedia("(max-width: 767px)").matches
+    || window.matchMedia("(display-mode: standalone)").matches
+    || navigator.standalone === true;
+}
+
 function showSignedOut() {
-  const signInBtn = el("button", { className: "btn btn-primary", textContent: "Sign in with Google" });
-  const errorHolder = el("div", { className: "field-error-holder" });
-  signInBtn.addEventListener("click", async () => {
-    setPending(signInBtn, true, "Signing in…");
-    errorHolder.replaceChildren();
-    try {
-      await signInWithPopup(auth, new GoogleAuthProvider());
-    } catch (err) {
-      errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
-    } finally {
-      setPending(signInBtn, false);
-    }
-  });
-  root.replaceChildren(
-    el("div", { className: "center-card" }, [
-      el("img", { className: "center-card-logo", src: "./img/logo.svg", alt: "", width: 64, height: 64 }),
-      el("h1", { textContent: "Trip Planner" }),
-      el("p", { textContent: "Plan trips with your friends — from \"where should we go?\" to the recap." }),
-      signInBtn,
-      errorHolder,
-    ])
-  );
+  root.replaceChildren(renderSignIn({
+    google: () => useRedirectSignIn()
+      ? signInWithRedirect(auth, new GoogleAuthProvider())
+      : signInWithPopup(auth, new GoogleAuthProvider()),
+    signIn: (email, password) => signInWithEmailAndPassword(auth, email, password),
+    create: async (email, password) => {
+      const credential = await createUserWithEmailAndPassword(auth, email, password);
+      await sendEmailVerification(credential.user);
+    },
+    reset: async (email) => {
+      await sendPasswordResetEmail(auth, email);
+      return "Check your email for a password-reset link.";
+    },
+  }, redirectError));
+  redirectError = "";
+}
+
+function showEmailConfirmation(user, error = "") {
+  root.replaceChildren(renderEmailConfirmation(user, {
+    continue: async () => {
+      await user.reload();
+      await user.getIdToken(true);
+      if (!user.emailVerified) return "That email is not confirmed yet. Open the link, then try again.";
+      await handleSignedIn(user);
+      return "";
+    },
+    resend: async () => {
+      await sendEmailVerification(user);
+      return "We sent another confirmation email.";
+    },
+    signOut: () => signOut(auth),
+  }, error));
 }
 
 function showNotAllowed(user) {
@@ -168,6 +186,10 @@ function startApp(user) {
 }
 
 async function handleSignedIn(user) {
+  if (!user.emailVerified) {
+    showEmailConfirmation(user);
+    return;
+  }
   let allowlistSnap;
   try {
     allowlistSnap = await checkAllowlist(user.email);
@@ -188,11 +210,15 @@ async function handleSignedIn(user) {
   startApp(user);
 }
 
-function init() {
+async function init() {
   if (!isConfigured) {
     showSetupMessage();
     return;
   }
+  getRedirectResult(auth).catch((error) => {
+    redirectError = error.message || "Google sign-in didn't finish. Try again.";
+    if (!auth.currentUser) showSignedOut();
+  });
   onAuthStateChanged(auth, (user) => {
     clearTripWatchers();
     if (removeRouter) removeRouter();
