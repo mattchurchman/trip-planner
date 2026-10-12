@@ -24,7 +24,7 @@ If a task fails twice, say "Revert the last commit" and rerun it in a fresh sess
 | T15 | [Sign-in that sticks on iPhone](T15-sign-in.md) | Sonnet | high | T14 | Done (2026-10-11) |
 | T16 | [New look and phone navigation](T16-design-refresh.md) | Sonnet | high | T15 | Done (2026-10-11) |
 | T17 | [Airport lookup](T17-airports.md) | Sonnet | low | — | Done (2026-10-11) |
-| T18 | [Route logic](T18-route-logic.md) | Opus | high | T17 | To do |
+| T18 | [Route logic](T18-route-logic.md) | Opus | high | T17 | Done (2026-10-11) |
 | T19 | [Routes tab](T19-routes-screen.md) | Sonnet | high | T16, T18 | To do |
 | T20 | [Paste a flight link and it files itself](T20-paste-flights.md) | Sonnet | high | T19 | To do |
 | T21 | [Two-tap price check](T21-price-check.md) | Sonnet | medium | T20 | To do |
