@@ -38,7 +38,7 @@ How Trip Planner talks. Every agent follows this once T07 is done. The owner can
 | Plan trips with your friends. | Plan trips with your friends — from "where should we go?" to the recap. | Sign-in screen |
 | No trips yet. Start one! | No trips yet. Start one with **New trip**. | Trips list |
 
-Tab names stay: **Overview · Places · Flights & stays · Days · Recap**, plus the new **Routes** tab (T19) between Overview and Places.
+Tab names stay: **Overview · Places · Flights & stays · Days · Recap**, plus the new **Routes** tab (T19) between Overview and Places. T20 renames **Flights & stays** to **Stays** (for now — flights moved to Routes) and adds **Paste flight link**.
 
 ## Routes (T19, V4 round 3)
 
@@ -53,3 +53,14 @@ Tab names stay: **Overview · Places · Flights & stays · Days · Recap**, plus
 | No flights yet for {name}. Add one below. | Routes, empty home-flights card |
 | No options yet. Add one above to start building stops. | Routes, idea with no options |
 | No flights yet for this option. Add one below. | Routes, open option with no hops yet |
+
+## Paste flight link (T20)
+
+| Wording | Where |
+|---|---|
+| Paste flight link | Routes, top of the tab and inside each open option — replaces Add flight as the way in |
+| No ideas yet. Paste a flight link to start, or add an idea yourself. | Routes, empty tab |
+| No flights yet for {name}. Paste a flight link above. | Routes, empty home-flights card |
+| Adding to: | Paste sheet, the idea/option it will join (with selects to change either) |
+| Earlier flights ({N}) | Routes, collapsed list of flights saved before Routes existed |
+| Move to… | Earlier flights row — picks a traveler (home) or a shared hop, plus the idea and option |

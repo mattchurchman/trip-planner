@@ -91,7 +91,7 @@ export function renderOptionCard({
   onChoose,
   onRename,
   onDelete,
-  onAddFlight,
+  onPasteFlight,
   onEditFlight,
   onDeleteFlight,
 }) {
@@ -167,8 +167,8 @@ export function renderOptionCard({
     rail.append(el("li", { className: "route-rail-item" }, [railNode(true), homeLine]));
   }
 
-  const addFlightBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Add flight" });
-  addFlightBtn.addEventListener("click", onAddFlight);
+  const pasteFlightBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Paste flight link" });
+  pasteFlightBtn.addEventListener("click", onPasteFlight);
   const chooseBtn = el("button", { type: "button", className: "btn btn-primary", textContent: isChosen ? "Unchoose" : "Choose this option" });
   chooseBtn.addEventListener("click", onChoose);
   const renameBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Rename" });
@@ -179,7 +179,7 @@ export function renderOptionCard({
   card.append(
     el("div", { className: "route-option-body" }, [
       rail,
-      el("div", { className: "route-option-foot" }, [chooseBtn, addFlightBtn, renameBtn, deleteBtn]),
+      el("div", { className: "route-option-foot" }, [chooseBtn, pasteFlightBtn, renameBtn, deleteBtn]),
     ])
   );
   return card;

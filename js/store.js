@@ -302,39 +302,76 @@ export function watchFlights(tripId, onChange, onError) {
   return watchSubcollection(tripId, "flights", onChange, onError);
 }
 
+// Shared by addFlight and addPastedFlight (V4 §4.2, §4.5). A flight added from
+// the pre-V4 "Flights & stays" tab passes no `role`, so it stays absent —
+// route.js reads a missing role as "a flight from before V4" and leaves it
+// off the rail, as an "Earlier flight".
+function flightDocFields(fields) {
+  return {
+    travelerId: fields.travelerId ?? null,
+    label: fields.label || "",
+    fromCity: fields.fromCity || "",
+    fromAirport: fields.fromAirport || "",
+    toCity: fields.toCity || "",
+    toAirport: fields.toAirport || "",
+    outboundDate: fields.outboundDate || null,
+    outboundDetails: fields.outboundDetails || "",
+    returnDate: fields.returnDate || null,
+    returnDetails: fields.returnDetails || "",
+    legs: Array.isArray(fields.legs) ? fields.legs : [],
+    link: fields.link || null,
+    notes: fields.notes || "",
+    // Optional "Price you saw" from the add form (§7.7), already a full PriceEntry
+    // built by the caller (same shape as pricePanel.js's Log price).
+    prices: fields.firstPriceEntry ? [fields.firstPriceEntry] : [],
+    ...(fields.role ? { role: fields.role } : {}),
+    ...(fields.role ? { ideaId: fields.ideaId ?? null } : {}),
+    ...(fields.role === "hop" ? { optionId: fields.optionId ?? null } : {}),
+    ...(fields.role === "home" ? { direction: fields.direction ?? null } : {}),
+    ...(fields.role === "home" ? { landsDate: fields.landsDate ?? null } : {}),
+    ...(fields.role === "home" ? { picked: fields.picked ?? true } : {}),
+  };
+}
+
 export function addFlight(tripId, fields, uid) {
-  return addSubDoc(
-    tripId,
-    "flights",
-    {
-      travelerId: fields.travelerId ?? null,
-      label: fields.label || "",
-      fromCity: fields.fromCity || "",
-      fromAirport: fields.fromAirport || "",
-      toCity: fields.toCity || "",
-      toAirport: fields.toAirport || "",
-      outboundDate: fields.outboundDate || null,
-      outboundDetails: fields.outboundDetails || "",
-      returnDate: fields.returnDate || null,
-      returnDetails: fields.returnDetails || "",
-      legs: Array.isArray(fields.legs) ? fields.legs : [],
-      link: fields.link || null,
-      notes: fields.notes || "",
-      // Optional "Price you saw" from the add form (§7.7), already a full PriceEntry
-      // built by the caller (same shape as pricePanel.js's Log price).
-      prices: fields.firstPriceEntry ? [fields.firstPriceEntry] : [],
-      // V4 Routes fields (§4.2). A flight added from the pre-V4 "Flights & stays"
-      // tab passes none of these, so `role` stays absent — route.js reads a
-      // missing role as "a flight from before V4" and leaves it off the rail.
-      ...(fields.role ? { role: fields.role } : {}),
-      ...(fields.role ? { ideaId: fields.ideaId ?? null } : {}),
-      ...(fields.role === "hop" ? { optionId: fields.optionId ?? null } : {}),
-      ...(fields.role === "home" ? { direction: fields.direction ?? null } : {}),
-      ...(fields.role === "home" ? { landsDate: fields.landsDate ?? null } : {}),
-      ...(fields.role === "home" ? { picked: fields.picked ?? true } : {}),
-    },
-    uid
-  );
+  return addSubDoc(tripId, "flights", flightDocFields(fields), uid);
+}
+
+/**
+ * Saves a pasted flight (V4 §4.5) in one batch, creating its idea and/or
+ * option alongside it when either is new — so a dropped connection never
+ * leaves a flight pointing at an idea or option that was never written.
+ * `idea` is `{ id }` to join an existing idea, or `{ name, order }` to create
+ * one. `option` (hops only) is the same shape, or omitted for a home flight.
+ * Resolves `{ ideaId, optionId, flightId }`.
+ */
+export async function addPastedFlight(tripId, { flight, idea, option }, uid) {
+  const batch = writeBatch(db);
+  const now = serverTimestamp();
+
+  const ideaRef = idea.id ? doc(db, "trips", tripId, "ideas", idea.id) : doc(collection(db, "trips", tripId, "ideas"));
+  if (!idea.id) {
+    batch.set(ideaRef, { name: idea.name, nameEdited: false, order: idea.order, addedBy: uid, createdAt: now, updatedAt: now });
+  }
+
+  let optionRef = null;
+  if (option) {
+    optionRef = option.id ? doc(db, "trips", tripId, "options", option.id) : doc(collection(db, "trips", tripId, "options"));
+    if (!option.id) {
+      batch.set(optionRef, { ideaId: ideaRef.id, name: option.name, nameEdited: false, order: option.order, addedBy: uid, createdAt: now, updatedAt: now });
+    }
+  }
+
+  const flightRef = doc(collection(db, "trips", tripId, "flights"));
+  batch.set(flightRef, {
+    ...flightDocFields({ ...flight, ideaId: ideaRef.id, optionId: optionRef ? optionRef.id : null }),
+    addedBy: uid,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  await batch.commit();
+  return { ideaId: ideaRef.id, optionId: optionRef ? optionRef.id : null, flightId: flightRef.id };
 }
 
 export function updateFlight(tripId, flightId, fields) {

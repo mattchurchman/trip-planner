@@ -154,6 +154,19 @@ export function renderWhenIdle(container, render) {
   });
 }
 
+/** Reads the clipboard for Paste flight link (V4 §4.5). Resolves the text, or
+ * null when the browser has no Clipboard API, refuses, or the user never
+ * grants the permission prompt — the caller falls back to a text box the
+ * owner pastes into by hand (iPhone shows its own Paste bubble there). */
+export async function readClipboardText() {
+  try {
+    if (!navigator.clipboard || !navigator.clipboard.readText) return null;
+    return await navigator.clipboard.readText();
+  } catch {
+    return null;
+  }
+}
+
 /** A labeled form field: a <label> wrapping a caption span and the given input/select/textarea. */
 export function field(labelText, input) {
   return el("label", { className: "field" }, [el("span", { textContent: labelText }), input]);

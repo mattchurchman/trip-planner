@@ -3,7 +3,6 @@ import { el, confirmDialog, friendlyError, field, dialogShell } from "../ui.js";
 import { parseMoney, formatMoney } from "../lib/money.js";
 import { computeTotals } from "../lib/totals.js";
 import { chosenFlightIds, chosenStayIds } from "../lib/selection.js";
-import { createFlightsSection } from "./flights.js";
 import { createStaysSection } from "./stays.js";
 
 function costFormDialog(existing) {
@@ -40,7 +39,9 @@ function costFormDialog(existing) {
   });
 }
 
-/** Renders the Flights & stays tab (§7.7). Returns a single unsubscribe function. */
+/** Renders the Stays tab (§7.7; V4 §4.6 moved flights to Routes). Returns a
+ * single unsubscribe function. Flights are still watched here only to feed
+ * the totals card — Routes is where they're added and edited now. */
 export function renderTravelPage(container, tripId, myUid) {
   let trip = null;
   let usersById = {};
@@ -57,7 +58,6 @@ export function renderTravelPage(container, tripId, myUid) {
     loadErrorEl.replaceChildren(el("p", { className: "field-error", textContent: message }));
   }
 
-  const flightsSection = createFlightsSection({ tripId, myUid, onError });
   const staysSection = createStaysSection({ tripId, myUid, onError });
 
   const addCostBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Add a split cost" });
@@ -73,7 +73,6 @@ export function renderTravelPage(container, tripId, myUid) {
 
   container.replaceChildren(
     loadErrorEl,
-    flightsSection.element,
     staysSection.element,
     el("div", { className: "costs-header" }, [el("h2", { textContent: "Split costs" }), addCostBtn]),
     costsSectionEl,
@@ -146,7 +145,6 @@ export function renderTravelPage(container, tripId, myUid) {
 
   function rerenderAll() {
     if (!trip) return;
-    flightsSection.render(flights, trip, usersById);
     staysSection.render(stays, trip, usersById, places);
     renderCostsSection();
     renderTotalsCard();
@@ -171,10 +169,7 @@ export function renderTravelPage(container, tripId, myUid) {
     tripId,
     (f) => {
       flights = f;
-      if (trip) {
-        flightsSection.render(flights, trip, usersById);
-        renderTotalsCard();
-      }
+      if (trip) renderTotalsCard();
     },
     (err) => onError(friendlyError(err))
   );
@@ -216,7 +211,6 @@ export function renderTravelPage(container, tripId, myUid) {
     unsubStays();
     unsubPlaces();
     unsubCosts();
-    flightsSection.unsubscribe();
     staysSection.unsubscribe();
   };
 }

@@ -12,15 +12,17 @@ import {
   deleteOption,
   setChosenOption,
   setFlightPicked,
-  addFlight,
+  addPastedFlight,
   updateFlight,
   deleteFlight,
+  updateTravelers,
 } from "../store.js";
-import { el, confirmDialog, promptDialog, friendlyError, setPending, renderWhenIdle } from "../ui.js";
+import { el, confirmDialog, promptDialog, friendlyError, setPending, renderWhenIdle, readClipboardText } from "../ui.js";
 import { loadAirports } from "../lookup.js";
 import { latestEntry } from "../lib/totals.js";
-import { homeDirection, guessLandsDate, totalFor } from "../lib/route.js";
-import { addFlightFormDialog, editFlightFormDialog } from "./flightForm.js";
+import { totalFor } from "../lib/route.js";
+import { editFlightFormDialog } from "./flightForm.js";
+import { pasteFlightDialog, moveFlightDialog, renderEarlierFlights } from "./pasteFlight.js";
 import { renderFlightRow, renderOptionCard } from "./routeRail.js";
 
 /** Direction groups that conflict with picking `direction` (V4 §4.4): picking
@@ -65,8 +67,13 @@ export function renderRoutesPage(container, tripId, myUid) {
   const optionsListEl = el("div", { className: "route-options-list" });
   const addIdeaBtn = el("button", { type: "button", className: "btn btn-small", textContent: "+ Idea" });
   const addOptionBtn = el("button", { type: "button", className: "btn btn-small", textContent: "+ Option" });
+  const earlierFlightsEl = el("div", { className: "route-earlier", hidden: true });
+
+  const pasteTopBtn = el("button", { type: "button", className: "btn btn-primary", textContent: "Paste flight link" });
+  pasteTopBtn.addEventListener("click", () => onPasteFlight(null));
 
   const mainWrap = el("div", { className: "routes-main" }, [
+    el("div", { className: "row" }, [el("h2", { textContent: "Add a flight" }), pasteTopBtn]),
     el("div", { className: "who" }, [el("span", { className: "label", textContent: "Flights from home for" }), travelerSwitchEl]),
     el("section", {}, [
       el("div", { className: "row" }, [el("h2", { textContent: "Ideas for this window" }), addIdeaBtn]),
@@ -76,14 +83,17 @@ export function renderRoutesPage(container, tripId, myUid) {
     homeFlightsSectionEl,
     el("section", {}, [el("div", { className: "row" }, [el("h2", { textContent: "Options once you land" }), addOptionBtn]), optionsListEl]),
   ]);
+  const pasteEmptyBtn = el("button", { type: "button", className: "btn btn-primary", textContent: "Paste flight link" });
+  pasteEmptyBtn.addEventListener("click", () => onPasteFlight(null));
+  const addIdeaEmptyBtn = el("button", { type: "button", className: "btn btn-small", textContent: "+ Idea" });
+  addIdeaEmptyBtn.addEventListener("click", () => onAddIdea());
   const emptyWrap = el("div", { className: "card" }, [
-    el("p", { className: "empty-state", textContent: "No ideas yet. Add one to start planning flights." }),
-    el("button", { type: "button", className: "btn btn-primary", textContent: "+ Idea" }),
+    el("p", { className: "empty-state", textContent: "No ideas yet. Paste a flight link to start, or add an idea yourself." }),
+    el("div", { className: "route-idea-actions" }, [pasteEmptyBtn, addIdeaEmptyBtn]),
   ]);
-  emptyWrap.querySelector("button").addEventListener("click", () => onAddIdea());
   mainWrap.hidden = true;
 
-  container.replaceChildren(loadErrorEl, mainWrap, emptyWrap);
+  container.replaceChildren(loadErrorEl, mainWrap, emptyWrap, earlierFlightsEl);
 
   function onError(message) {
     loadErrorEl.replaceChildren(el("p", { className: "field-error", textContent: message }));
@@ -109,12 +119,6 @@ export function renderRoutesPage(container, tripId, myUid) {
 
   function hopFlightsFor(optionId) {
     return flights.filter((f) => f.role === "hop" && f.optionId === optionId);
-  }
-
-  function priceEntryFor(priceAmountCents) {
-    return priceAmountCents
-      ? { id: crypto.randomUUID(), amountCents: priceAmountCents, checkedAt: new Date().toISOString(), byUid: myUid, note: "" }
-      : undefined;
   }
 
   /** Prompts for a name (defaulting to `defaultName`), falling back to it if
@@ -155,32 +159,60 @@ export function renderRoutesPage(container, tripId, myUid) {
     });
   }
 
-  function onAddHomeFlight(traveler, idea, siblings) {
+  /** Opens the Paste flight link sheet (V4 §4.5) for the traveler currently
+   * selected. `defaultOptionId` pins the hop target when this was pressed
+   * inside an already-open option; null means "work it out" (the idea's
+   * first option, or a new Option 1). */
+  function onPasteFlight(defaultOptionId) {
     return run(async () => {
-      const result = await addFlightFormDialog(traveler, trip, siblings.length);
+      const traveler = travelers().find((t) => t.id === selectedTravelerId);
+      if (!traveler) {
+        onError("Add a traveler on Overview first.");
+        return;
+      }
+      const homeFlightsByIdea = {};
+      for (const idea of ideas) homeFlightsByIdea[idea.id] = homeFlightsFor(idea.id, traveler.id);
+      const clipboardText = await readClipboardText();
+      const result = await pasteFlightDialog({
+        clipboardText,
+        traveler,
+        trip,
+        airports,
+        ideas,
+        options,
+        flights,
+        homeFlightsByIdea,
+        currentIdeaId: selectedIdeaId,
+        defaultOptionId,
+        myUid,
+      });
       if (!result) return;
-      const { priceAmountCents, ...fields } = result;
-      const direction = homeDirection(fields, traveler, airports);
-      const landsDate = direction === "out" || direction === "both" ? guessLandsDate(fields.fromAirport, fields.toAirport, fields.outboundDate, airports) : null;
-      const alreadyPicked = siblings.some((f) => f.direction === direction && f.picked !== false);
-      await addFlight(
-        tripId,
-        { ...fields, travelerId: traveler.id, firstPriceEntry: priceEntryFor(priceAmountCents), role: "home", ideaId: idea.id, direction, landsDate, picked: !alreadyPicked },
-        myUid
-      );
+      await savePastedFlight(result, traveler);
     });
   }
 
-  function onAddHopFlight(option, idea) {
+  /** Saves what the paste sheet resolved: creates the idea and/or option in
+   * the same batch when they're new, and learns the traveler's home airport
+   * the one time §4.5 step 3 calls for it. */
+  async function savePastedFlight(result, traveler) {
+    if (result.homeAirport && !traveler.homeAirport) {
+      await updateTravelers(tripId, travelers().map((t) => (t.id === traveler.id ? { ...t, homeAirport: result.homeAirport } : t)));
+    }
+
+    const saved = await addPastedFlight(
+      tripId,
+      { flight: { ...result.flight, travelerId: result.travelerId, picked: result.picked }, idea: result.idea, option: result.option },
+      myUid
+    );
+
+    selectedIdeaId = saved.ideaId;
+    if (saved.optionId) openOptionIds.add(saved.optionId);
+  }
+
+  function onMoveFlight(flight) {
     return run(async () => {
-      const result = await addFlightFormDialog(null, trip, hopFlightsFor(option.id).length);
-      if (!result) return;
-      const { priceAmountCents, ...fields } = result;
-      await addFlight(
-        tripId,
-        { ...fields, travelerId: null, firstPriceEntry: priceEntryFor(priceAmountCents), role: "hop", ideaId: idea.id, optionId: option.id, picked: true },
-        myUid
-      );
+      const result = await moveFlightDialog({ flight, travelers: travelers(), ideas, options, airports });
+      if (result) await updateFlight(tripId, flight.id, result);
     });
   }
 
@@ -298,15 +330,13 @@ export function renderRoutesPage(container, tripId, myUid) {
     }
     const travelerHomeFlights = homeFlightsFor(idea.id, traveler.id);
     const sorted = [...travelerHomeFlights].sort(cheapestFirst);
-    const addBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Add flight" });
-    addBtn.addEventListener("click", () => onAddHomeFlight(traveler, idea, travelerHomeFlights));
 
     const body =
       sorted.length === 0
-        ? [el("p", { className: "empty-state", textContent: `No flights yet for ${traveler.name}. Add one below.` })]
+        ? [el("p", { className: "empty-state", textContent: `No flights yet for ${traveler.name}. Paste a flight link above.` })]
         : sorted.map((f) => homeFlightRow(f, traveler, travelerHomeFlights));
 
-    homeFlightsSectionEl.replaceChildren(el("h3", { textContent: `${traveler.name}'s flights to and from the region` }), ...body, addBtn);
+    homeFlightsSectionEl.replaceChildren(el("h3", { textContent: `${traveler.name}'s flights to and from the region` }), ...body);
   }
 
   function renderOptionsList() {
@@ -350,7 +380,7 @@ export function renderRoutesPage(container, tripId, myUid) {
           onChoose: () => onChooseOption(option),
           onRename: () => onRenameOption(option),
           onDelete: () => onDeleteOption(option),
-          onAddFlight: () => onAddHopFlight(option, idea),
+          onPasteFlight: () => onPasteFlight(option.id),
           onEditFlight: (flight) => onEditFlight(flight, null),
           onDeleteFlight: (flight) => onDeleteFlight(flight),
         })
@@ -358,8 +388,29 @@ export function renderRoutesPage(container, tripId, myUid) {
     );
   }
 
+  /** Flights saved before V4 gave flights a `role` (V4 §4.6), shown regardless
+   * of whether any idea exists yet, so nothing from before this round goes
+   * missing. */
+  function renderEarlierFlightsSection() {
+    const node = renderEarlierFlights({
+      flights,
+      trip,
+      usersById,
+      onMove: onMoveFlight,
+      onEdit: (flight) => onEditFlight(flight, null),
+      onDelete: (flight) => onDeleteFlight(flight),
+    });
+    earlierFlightsEl.hidden = !node;
+    earlierFlightsEl.replaceChildren(...(node ? [node] : []));
+  }
+
   function renderDynamicSections() {
     if (!trip) return;
+    if (!travelers().some((t) => t.id === selectedTravelerId)) {
+      selectedTravelerId = (travelers().find((t) => t.uid === myUid) || travelers()[0] || {}).id ?? null;
+    }
+    renderEarlierFlightsSection();
+
     if (ideas.length === 0) {
       mainWrap.hidden = true;
       emptyWrap.hidden = false;
@@ -368,9 +419,6 @@ export function renderRoutesPage(container, tripId, myUid) {
     mainWrap.hidden = false;
     emptyWrap.hidden = true;
 
-    if (!travelers().some((t) => t.id === selectedTravelerId)) {
-      selectedTravelerId = (travelers().find((t) => t.uid === myUid) || travelers()[0] || {}).id ?? null;
-    }
     if (!ideas.some((i) => i.id === selectedIdeaId)) {
       selectedIdeaId = ideas[0]?.id ?? null;
     }
