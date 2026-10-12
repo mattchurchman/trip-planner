@@ -75,7 +75,7 @@ export function createTrip(name, user) {
         homeAirport: "",
       },
     ],
-    chosenOptionId: null,
+    choices: {},
     selectedStayIds: [],
     albumUrl: null,
     createdBy: user.uid,
@@ -270,6 +270,8 @@ export function watchFlights(tripId, onChange, onError) {
 function flightDocFields(fields) {
   return {
     travelerId: fields.travelerId ?? null,
+    // Who the price is for; null means work it out from the flight (§11).
+    forTravelerIds: fields.forTravelerIds ?? null,
     label: fields.label || "",
     fromCity: fields.fromCity || "",
     fromAirport: fields.fromAirport || "",
@@ -401,10 +403,23 @@ export async function deleteOption(tripId, optionId) {
   return deleteSubDoc(tripId, "options", optionId);
 }
 
-/** Sets or clears the trip's chosen route option (V4 §4.6's Choose this option /
- * Unchoose). There is only ever one at a time. */
-export function setChosenOption(tripId, optionId) {
-  return updateTripFields(tripId, { chosenOptionId: optionId });
+/**
+ * Sets one traveler's chosen idea and/or option (§5.3, §7.6). Each field is
+ * written on its own with a field path, so choosing never overwrites another
+ * traveler's choice — or the other half of this traveler's. Pass only the
+ * key you mean to change; `null` clears it. Traveler ids are UUIDs, which
+ * contain nothing Firestore reserves in a dotted path.
+ */
+export function setChoice(tripId, travelerId, { ideaId, optionId }) {
+  const fields = {};
+  if (ideaId !== undefined) fields[`choices.${travelerId}.ideaId`] = ideaId;
+  if (optionId !== undefined) fields[`choices.${travelerId}.optionId`] = optionId;
+  return updateTripFields(tripId, fields);
+}
+
+/** Sets who a flight, stay or cost is for, or `null` to work it out (§11). */
+export function setForTravelers(tripId, subcollection, id, ids) {
+  return updateSubDoc(tripId, subcollection, id, { forTravelerIds: ids === undefined ? null : ids });
 }
 
 export function watchStays(tripId, onChange, onError) {
@@ -430,6 +445,8 @@ export function addStay(tripId, fields, uid) {
       // for "No stop yet" — set when "Add stay" is pressed inside a stop.
       stopKey: fields.stopKey ?? null,
       out: false,
+      // Who the price is split between; null means work it out (§11).
+      forTravelerIds: fields.forTravelerIds ?? null,
       // Optional "Price you saw" from the add form (§7.7), already a full PriceEntry
       // built by the caller (same shape as pricePanel.js's Log price).
       prices: fields.firstPriceEntry ? [fields.firstPriceEntry] : [],
@@ -502,7 +519,18 @@ export function watchCosts(tripId, onChange, onError) {
 }
 
 export function addCost(tripId, fields, uid) {
-  return addSubDoc(tripId, "costs", { label: fields.label, amountCents: fields.amountCents, note: fields.note || "" }, uid);
+  return addSubDoc(
+    tripId,
+    "costs",
+    {
+      label: fields.label,
+      amountCents: fields.amountCents,
+      // Who the cost is split between; null means everyone (§11).
+      forTravelerIds: fields.forTravelerIds ?? null,
+      note: fields.note || "",
+    },
+    uid
+  );
 }
 
 export function updateCost(tripId, costId, fields) {

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { latestEntry, priceDelta, isNewLow, perNightCents, computeBudget, priceAgeDays, isStale, stalePriceQueue } from "../js/lib/totals.js";
+import { latestEntry, priceDelta, isNewLow, perNightCents, priceAgeDays, isStale, stalePriceQueue } from "../js/lib/totals.js";
 
 export const tests = [
   ["latestEntry picks the greatest checkedAt regardless of array order", () => {
@@ -61,63 +61,6 @@ export const tests = [
   ["perNightCents is null with no nights", () => {
     assert.equal(perNightCents(90000, null), null);
     assert.equal(perNightCents(90000, 0), null);
-  }],
-  ["computeBudget: no chosen route names every traveler as missing, but still totals the stays and costs", () => {
-    const travelers = [
-      { id: "t1", name: "Sam" },
-      { id: "t2", name: "Alex" },
-    ];
-    const stays = [{ name: "Casa Alfama", prices: [{ id: "p1", amountCents: 100001, checkedAt: "2026-03-01T00:00:00.000Z" }] }];
-    const sharedCosts = [{ amountCents: 10000 }];
-    const result = computeBudget({ travelers, homeFlightsByTraveler: {}, hopFlights: [], stays, sharedCosts });
-    assert.equal(result.complete, false);
-    assert.deepEqual(result.missing, ["No flight chosen for Sam", "No flight chosen for Alex"]);
-    const sumOfTravelerTotals = result.travelerTotals.reduce((sum, t) => sum + t.totalCents, 0);
-    assert.equal(sumOfTravelerTotals, result.combinedCents);
-    assert.equal(result.combinedCents, 100001 + 10000);
-  }],
-  ["computeBudget names a home flight's label when it has no price, without labeling the budget complete", () => {
-    const travelers = [{ id: "t1", name: "Sam" }];
-    const homeFlightsByTraveler = { t1: [{ label: "Nonstop, Tuesday out", prices: [] }] };
-    const result = computeBudget({ travelers, homeFlightsByTraveler, hopFlights: [], stays: [], sharedCosts: [] });
-    assert.equal(result.complete, false);
-    assert.deepEqual(result.missing, [`No price logged for Sam's flight "Nonstop, Tuesday out"`]);
-    assert.equal(result.travelerTotals[0].totalCents, 0);
-  }],
-  ["computeBudget sums two travelers' different home flights plus the shared hop, matching the combined total exactly", () => {
-    const travelers = [
-      { id: "t1", name: "Sam" },
-      { id: "t2", name: "Alex" },
-    ];
-    const homeFlightsByTraveler = {
-      t1: [{ label: "Sam's flight", prices: [{ id: "p1", amountCents: 42000, checkedAt: "2026-03-01T00:00:00.000Z" }] }],
-      t2: [{ label: "Alex's flight", prices: [{ id: "p2", amountCents: 61000, checkedAt: "2026-03-01T00:00:00.000Z" }] }],
-    };
-    const hopFlights = [{ label: "Shared hop", prices: [{ id: "p3", amountCents: 5000, checkedAt: "2026-03-01T00:00:00.000Z" }] }];
-    const result = computeBudget({ travelers, homeFlightsByTraveler, hopFlights, stays: [], sharedCosts: [] });
-    assert.equal(result.complete, true);
-    assert.deepEqual(result.missing, []);
-    assert.equal(result.travelerTotals[0].totalCents, 42000 + 5000);
-    assert.equal(result.travelerTotals[1].totalCents, 61000 + 5000);
-    assert.equal(result.combinedCents, 42000 + 61000 + 5000 + 5000);
-  }],
-  ["computeBudget splits a shared cost across 3 travelers, shares adding exactly to the whole", () => {
-    const travelers = [
-      { id: "t1", name: "Sam" },
-      { id: "t2", name: "Alex" },
-      { id: "t3", name: "Jo" },
-    ];
-    const sharedCosts = [{ amountCents: 10001 }];
-    const result = computeBudget({ travelers, homeFlightsByTraveler: {}, hopFlights: [], stays: [], sharedCosts });
-    const sumOfTravelerTotals = result.travelerTotals.reduce((sum, t) => sum + t.totalCents, 0);
-    assert.equal(sumOfTravelerTotals, 10001);
-  }],
-  ["computeBudget: no stay chosen is still complete", () => {
-    const travelers = [{ id: "t1", name: "Sam" }];
-    const homeFlightsByTraveler = { t1: [{ label: "Only option", prices: [{ id: "p1", amountCents: 10000, checkedAt: "2026-03-01T00:00:00.000Z" }] }] };
-    const result = computeBudget({ travelers, homeFlightsByTraveler, hopFlights: [], stays: [], sharedCosts: [] });
-    assert.equal(result.complete, true);
-    assert.deepEqual(result.missing, []);
   }],
   ["priceAgeDays is null with no prices, 0 right after checking, and whole days later", () => {
     const now = new Date("2026-03-10T00:00:00.000Z");

@@ -2,6 +2,12 @@ import assert from "node:assert/strict";
 import { tripStage } from "../js/lib/stage.js";
 
 export const tests = [
+  ["tripStage: one traveler choosing an option is enough to count as a chosen route", () => {
+    const dates = { startDate: "2026-12-25" };
+    assert.equal(tripStage({ ...dates, choices: {} }, "2026-09-28").key, "exploring");
+    assert.equal(tripStage({ ...dates, choices: { t1: { ideaId: "i1", optionId: null } } }, "2026-09-28").key, "exploring");
+    assert.equal(tripStage({ ...dates, choices: { t1: { ideaId: null, optionId: "o1" } } }, "2026-09-28").key, "upcoming");
+  }],
   ["tripStage: no chosen route → exploring", () => {
     const result = tripStage({ chosenOptionId: null, startDate: "2026-12-25" }, "2026-09-28");
     assert.equal(result.key, "exploring");

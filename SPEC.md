@@ -1,6 +1,6 @@
 # Trip Planner — Specification
 
-Spec version: **4.0** (October 2026)
+Spec version: **4.1** (October 2026)
 
 This is the source of truth for what the app is and how it works. `docs/V4.md` (the agreed design for round 3) is folded into this file and is now history. The original build phases are in `PHASES.md` (all built); current work is in `docs/tasks/`. The working rules for every coding agent are in `AGENTS.md`, and the words on screen are governed by `docs/tasks/WORDING.md`. If code and this spec disagree, the spec wins unless the owner approves a change and this file is updated in the same commit.
 
@@ -82,6 +82,7 @@ js/lib/ — pure logic, no DOM and no Firebase, each with tests in tests/
   airlines.js         airline code -> name ("AS" -> "Alaska")
   auth-errors.js      Firebase auth error codes -> plain sentences
   categories.js       the place categories and their colors (§4)
+  choices.js          per-traveler choices, who a cost is for, merged stops, the budget (§11)
   coverage.js         night coverage of a stop by its chosen stays (§7.7)
   dates.js            date math and formatting
   dayplan.js          dates of a route, and the days to create from it (§7.8)
@@ -100,7 +101,7 @@ js/lib/ — pure logic, no DOM and no Firebase, each with tests in tests/
   staylink.js         read provider, name, dates and guests from stay links (§9.6)
   staypins.js         stay map pin labels (§7.7)
   stops.js            nearest route stop to a pin, and stop-chip order (§7.7)
-  totals.js           latest price, deltas, staleness, per-traveler budget
+  totals.js           latest price, deltas, staleness, per-night
   votes.js            Love/Like/Pass scores, summaries and sort
 
 js/views/
@@ -240,7 +241,9 @@ travelers: [ {
   homeCity: string,
   homeAirport: string                // IATA code or ""
 } ]
-chosenOptionId: string | null        // the option whose stops Map and Days read (§7.6)
+choices: {                           // one entry per traveler who has chosen (§7.6)
+  [travelerId]: { ideaId: string | null, optionId: string | null }
+}
 selectedStayIds: [stayId]            // the group may choose several stays; may be empty
 albumUrl: string | null              // shared photo album
 createdBy: uid
@@ -248,11 +251,13 @@ createdAt: timestamp
 updatedAt: timestamp
 ```
 
-A new trip starts with `currency: "USD"`, empty `notes`, null dates, one traveler (the creator, linked by uid, with empty home fields), `chosenOptionId: null`, `selectedStayIds: []` and `albumUrl: null`.
+A new trip starts with `currency: "USD"`, empty `notes`, null dates, one traveler (the creator, linked by uid, with empty home fields), `choices: {}`, `selectedStayIds: []` and `albumUrl: null`.
+
+**Choosing a route (`choices`).** Every traveler chooses for themselves, and the idea and the option are two separate choices: choosing an option does not choose its idea, and nothing one traveler chooses changes another's. Write one field at a time with a field path (`choices.<travelerId>.ideaId`, `choices.<travelerId>.optionId`), never the whole map, so two people choosing at once never overwrite each other. A traveler with no entry falls back to the retired `chosenOptionId` (and that option's idea), so trips from before 4.1 still show the choice they had. Nothing writes `chosenOptionId` again. The two ids are independent and may disagree — a traveler can be looking at one idea's flights while their option belongs to another.
 
 **Choosing stays.** Add or remove one at a time with `arrayUnion` / `arrayRemove` on `selectedStayIds`, so two people choosing at once never overwrite each other.
 
-**Retired fields.** Trips made before 4.0 may still hold `destination`, `destinationId`, `selectedFlights`, `actualSpendCents` and `status`. Nothing reads or writes them any more: leave the old values alone. A traveler's picked flights are now the `picked` flag on each flight document, and the stage badge is computed from `chosenOptionId` and the dates (§11).
+**Retired fields.** Trips made before 4.0 may still hold `destination`, `destinationId`, `selectedFlights`, `actualSpendCents` and `status`. Nothing reads or writes them any more: leave the old values alone. A traveler's picked flights are now the `picked` flag on each flight document, and the stage badge is computed from `choices` and the dates (§11). `chosenOptionId` is retired as of 4.1: it is still **read** as the fallback for a traveler with no `choices` entry, and never written. Don't delete it from existing trips.
 
 **Trips made before 2.0** may hold a `selectedStayId` string field. `js/lib/selection.js` merges it into the stay list. The first time someone changes a legacy value, write the whole field as a list (`selectedStayIds: [old, new]` plus `selectedStayId: deleteField()`) instead of using `arrayUnion`, because `arrayUnion` on a value living in the wrong field wouldn't touch it at all.
 
@@ -284,6 +289,7 @@ travelerId: string | null            // home flights only; hops are shared
 direction: "both" | "out" | "back" | null   // home flights only
 landsDate: string | null             // outbound home flights: the day you land
 picked: boolean                      // home flights only; counts toward this traveler's total
+forTravelerIds: [travelerId] | null  // who the price is for; null = work it out (§11)
 label: string                        // e.g. "Alaska + 2 more · 3 stops"
 fromCity: string, fromAirport: string
 toCity: string, toAirport: string
@@ -332,6 +338,7 @@ guests: integer (≥ 1)
 note: string
 stopKey: string | null               // which stop of the route this stay is for (§7.7)
 out: boolean                         // ruled out: dimmed and sorted last
+forTravelerIds: [travelerId] | null  // who the price is split between; null = work it out (§11)
 prices: [ PriceEntry ]               // each amount is the TOTAL for the whole stay
 ```
 
@@ -339,6 +346,7 @@ prices: [ PriceEntry ]               // each amount is the TOTAL for the whole s
 ```
 label: string                        // e.g. "Rental car", "Food estimate"
 amountCents: integer (≥ 0)
+forTravelerIds: [travelerId] | null  // who the cost is split between; null = everyone (§11)
 note: string
 ```
 
@@ -462,9 +470,9 @@ Any place, stay, or the trip itself can have a thread. Show the count, expand in
 
 - Editable: trip name (non-blank), start and end dates (end not before start). Currency is fixed at USD and not shown as a field.
 - **Travelers** (`travelers.js`): add by choosing an app member or typing a name; edit name, home city and home airport inline; **Remove** with confirmation. At least one traveler must remain. Removing someone asks whether to delete their flights too, since Routes lists home flights per traveler and nobody could reach them afterwards.
-- **Route**: the chosen option as a one-line path ("Rome → Florence → Barcelona → Rome", linking to Routes) with the signed-in traveler's total beneath it, shown as "at least $X" when a price is missing. With nothing chosen, a hint pointing at Routes.
-- **Split costs** (`splitCosts.js`): add, edit and delete a label, amount and note. Split equally across all travelers.
-- **Budget**: one row per traveler — their picked home flights for the chosen option's idea, plus their share of the option's hops, every chosen stay and every split cost — then an "Everyone together" row. If anything is missing, the card is headed **Total so far (missing some prices)** and lists what's missing. Never show a missing price as $0 (§11).
+- **Route**: the signed-in traveler's own chosen option as a one-line path ("Rome → Florence → Barcelona → Rome", linking to Routes) with their total beneath it, shown as "at least $X" when a price is missing. With nothing chosen, a hint pointing at Routes.
+- **Split costs** (`splitCosts.js`): add, edit and delete a label, amount and note. Split equally between the travelers the cost is for — everyone, unless it says otherwise (§11).
+- **Budget**: one row per traveler — their picked home flights for *their own* chosen idea, plus every hop, chosen stay and split cost they're for — then an "Everyone together" row. If anything is missing, the card is headed **Total so far (missing some prices)** and lists what's missing. Never show a missing price as $0 (§11).
 - **Album**: paste a Google Photos or iCloud shared album link into `albumUrl`, validated with §9.5, with **Open album** once it's set.
 - **Trip comments** at the bottom (§7.4).
 
@@ -506,7 +514,7 @@ Stops — where you sleep and for how many nights — are **never typed**. They 
 
 - A traveler segmented control and an idea segmented control (with **Rename idea** / **Delete idea**). Travelers may have different dates; stops and totals always show for the selected traveler. Both selections live in memory only and reset when the tab is left.
 - **The home-flights card** lists every alternative the selected traveler has for this idea, cheapest first with unpriced last, each with **Use this** / **Using**. Picking a both-ways flight clears any separate out/back picks and vice versa.
-- **Option cards** show the option's total, the path line, **Chosen** and **Cheapest** badges, and open to reveal the rail: stops as dots with their nights and warnings, and the hop flights inset between them. **Choose this option** sets `chosenOptionId`, which is what Map and Days read; pressing it on the chosen option unchooses it.
+- **Option cards** show the option's total, the path line, **Chosen** and **Cheapest** badges, and open to reveal the rail: stops as dots with their nights and warnings, and the hop flights inset between them. **Choose this option** sets `choices.<travelerId>.optionId` **for the traveler on screen only** — another traveler's choice never moves with it — and pressing it on their chosen option unchooses it. Map, Stays and Days read the merged route built from everyone's choices (§11), not one traveler's.
 - The price on every flight is the control (§7.9) — there is no separate "Recheck" link.
 - **Earlier flights** (no `role`, saved before 4.0) sit in a collapsed list with **Move to…** (pick a traveler's home flights, or a shared hop under an idea and option) and **Delete**.
 - Editing a flight by hand stays available (`flightForm.js`, opened from a flight's **Edit**) as the fallback, not the path. Pasting a new link into it re-reads the route, dates and legs.
@@ -515,7 +523,7 @@ Stops — where you sleep and for how many nights — are **never typed**. They 
 
 One Leaflet map with place pins and stay price pins together, and one list below it (beside it from 760 px).
 
-- **Stop chips** across the top: **All**, then each city of the chosen option in route order (first occurrence wins when the route visits a city twice), then **Elsewhere**. They filter the map and the list together. With no chosen option, the chips list every city across every option and a hint says to choose one on Routes.
+- **Stop chips** across the top: **All**, then each city of the merged route in route order (first occurrence wins when the route visits a city twice), then **Elsewhere**. They filter the map and the list together. With nobody having chosen an option, the chips list every city across every option and a hint says to choose one on Routes.
 - A **Places / Stays** switch under the chips picks which list shows below the map.
 
 **Places**
@@ -535,7 +543,7 @@ One Leaflet map with place pins and stay price pins together, and one list below
 
 **Stays**
 
-- A stay belongs to a stop. Stays are grouped under the chosen route's stops, with anything unmatched under **No stop yet**. Up to 10 stays per trip. Each has a stable **number** — its position in `createdAt` order — shown as ① ② … on its card and its map pin.
+- A stay belongs to a stop. Stays are grouped under the merged route's stops, with anything unmatched under **No stop yet**. Up to 10 stays per trip. Each has a stable **number** — its position in `createdAt` order — shown as ① ② … on its card and its map pin.
 - Status per stay: shortlisted (default), **Out** (dimmed, sorted last) or **Chosen** (in `selectedStayIds`). Sort: chosen first, then not-Out before Out, then lowest price per night.
 - **Night coverage** per stop: one cell per night showing covered, not covered, or double-booked by the chosen stays, with "{N} of {N} nights covered", the chosen total and the per-person share (`coverage.js`).
 - **Add stay** from a stop pre-fills check-in and check-out with that stop's dates, and guests with the number of travelers. **Duplicate** copies a stay without its price and opens it for editing, for splitting one stay into two.
@@ -545,7 +553,7 @@ One Leaflet map with place pins and stay price pins together, and one list below
 
 ### 7.8 Days tab
 
-- **Create days from route** makes one day per date of the chosen option, titled with that date's city; a travel day belongs to the city you arrive in, and dates that already have a day are skipped (`dayplan.js`). Before an option is chosen, the same button reads **Create days from trip dates**. **Add day** makes an undated day. Days are sorted by `order`.
+- **Create days from route** makes one day per date of the merged route, titled with that date's city; a travel day belongs to the city you arrive in, and dates that already have a day are skipped (`dayplan.js`). Before anyone has chosen an option, the same button reads **Create days from trip dates**. **Add day** makes an undated day. Days are sorted by `order`.
 - Selecting a day shows that city's places on the map as pins numbered and colored by day. Tapping a pin offers the days to put the place on, or **Remove from day** when it's already on one.
 - Each day card shows its date or label, title, focus, notes and its places in `dayOrder`, with **▲** / **▼** to reorder (each with an `aria-label` naming the place and direction) and **Remove** to send a place back to the pool. No drag-and-drop. Deleting a day returns its places to the pool.
 - The **Not planned** pool lists the selected day's city's places with no `dayId`, Loved first.
@@ -690,7 +698,7 @@ Every export includes only places with coordinates. Downloads use a `Blob` and a
 - KML 2.2 with a `<Document>` named after the trip and one `<Folder>` per category that has places.
 - Each `<Placemark>` has `<name>`, a `<description>` (neighborhood, note, link and ranking on separate lines), and `<Point><coordinates>lng,lat,0</coordinates></Point>`. Longitude comes first.
 
-## 11. Calculations (`totals.js`, `money.js`, `dates.js`, `route.js`, `coverage.js`, `stage.js`)
+## 11. Calculations (`totals.js`, `money.js`, `dates.js`, `route.js`, `coverage.js`, `stage.js`, `choices.js`)
 
 - **Parse money:** strip spaces, a currency symbol and thousands commas, then require `^\d+(\.\d{1,2})?$`, and convert to integer cents without floating-point error (split on `.`). Return `null` when invalid.
 - **Format money:** `Intl.NumberFormat(locale, { style: "currency", currency })` on `cents / 100`.
@@ -702,12 +710,24 @@ Every export includes only places with coordinates. Downloads use a `Blob` and a
 - **Per night:** the latest stay total divided by nights, rounded to the nearest cent for display only. Never stored.
 - **Equal split** `split(amountCents, n)`: `base = floor(amount / n)` and `remainder = amount − base × n`. The first `remainder` travelers (in `travelers` array order) get `base + 1`, the rest get `base`. The shares always add up exactly to the amount.
 - **Night coverage:** one cell per night of a stop; a night is covered when exactly one chosen stay spans it, double-booked when two or more do, open when none does.
-- **Traveler total:** the latest price of each of their picked home flights for the chosen option's idea, plus their share of each of the option's hops, each chosen stay and each split cost, where every hop, stay and cost is split separately.
+- **A traveler's choice** (`choiceFor(trip, travelerId, options)`): their `choices` entry, or — when they have none — the retired `chosenOptionId` and that option's idea (§5.3). Returns `{ ideaId, optionId }`, either of which may be null. Someone who has chosen an option but no idea reads as being on that option's own idea: it's the only idea their home flights could come from.
+- **Who an item is for** (`forTravelers(item, kind, ctx)`): a non-null `forTravelerIds` wins, narrowed to travelers who still exist. Otherwise it is worked out:
+
+  | Item | Travelers | How the price is split |
+  |---|---|---|
+  | Home flight | the traveler it belongs to | its price only — the price is per person |
+  | Hop | everyone whose chosen option is its option | the full price to each — the price is per person |
+  | Stay | everyone sleeping on any of its nights, read from their own stops | the total split equally |
+  | Split cost | everyone | split equally |
+
+  A stay nobody is present for — including one with no dates, and any stay before anyone has stops — is for everyone, so a price is never left unpaid.
+- **A traveler's total** (`travelerBreakdown`): their picked home flights under *their* chosen idea, plus every hop they're for, plus their share of each chosen stay and each split cost, each split separately. Returns `{ homeCents, hopCents, stayCents, costCents, totalCents, complete, missing }`.
 - **Everyone together:** the sum of traveler totals.
 - **Complete:** every traveler has at least one picked home flight, every counted flight has a price, and every chosen stay has a price (choosing no stay is fine). Otherwise it's a **Total so far (missing some prices)** with a list of what's missing. Missing amounts count as 0 in the sum, but they are listed and the total is never labeled complete.
+- **Merged stops** (`mergeStops`): one route for the whole group, built from each traveler's own stops — their chosen idea's picked home flights and their chosen option's hops, through `stopsFor`. A traveler with no chosen option adds nothing. Stops are merged by `cityKey` in order of first arrival (undated last): `from` is the earliest, `to` the latest, with `nights: [{ date, travelerIds }]` saying who sleeps there each night, and `travelerIds` for the stop as a whole. Map chips, Stays groups, Days creation and `stopKey` matching all read merged stops.
 - **Trip stage** (`tripStage(trip, today)`, where `today` is the viewer's local date as "YYYY-MM-DD"). Returns `{ key, label, shortLabel }`:
-  - no `chosenOptionId` → `exploring`, "Exploring"
-  - an option chosen but no `startDate` → `planning`, "Planning"
+  - nobody has chosen an option → `exploring`, "Exploring"
+  - someone has chosen an option but there's no `startDate` → `planning`, "Planning"
   - today before `startDate` → `upcoming`, "In N days" (N = whole days until the start; 1 → "Tomorrow")
   - today from `startDate` through `endDate` (or through `startDate` when there's no end) → `now`, "Happening now"
   - today after that → `done`, "Trip's over"
@@ -734,3 +754,4 @@ Changes are made by the owner (or a model the owner asks). Edit this file first,
 | 2.1 | 2026-09-28 | Wording pass (T07) across every screen, per `docs/tasks/WORDING.md`. Confirmation dialogs name their action. Day-reorder buttons got `aria-label`s. |
 | 3.0 | 2026-09-28 | Owner feedback round 2 (T08–T13). Trip `status` retired for an automatic stage badge. Added **Coffee & cafés**. Google Flights links fully decoded into `legs` by `flightlink.js`/`protobuf.js`. Flight and stay dialogs, cards and the price display redesigned for comparing. Stays got numbers, **Where is it?** and a price-pin map. |
 | 4.0 | 2026-10-12 | **Round 3, the V4 overhaul (T14–T30).** `docs/V4.md` folded in and retired. Four tabs, **Overview → Routes → Map → Days** (§1); the Recap tab and public recap page, destination ideas (candidates), the trip-wide `destination`, voting on stays, and the separate Places and Flights & stays tabs are all gone (§1, §5.3, §5.4). New look and phone navigation from `docs/mock/routes-mock.html`: teal-on-light tokens, dark mode, Bricolage Grotesque / Instrument Sans / JetBrains Mono, a bottom tab bar under 760 px (§4). Moved to Firebase Hosting with GitHub Actions, a home-screen manifest, and sign-in that sticks on iPhone (Google redirect plus email and password, `email_verified` required) (§3, §3.3, §6, §7.1). **Routes** replaces flight comparison: ideas, options and hops, with stops and nights worked out from the flights by `route.js`, auto names, warnings, and pasting a Google Flights link as the main data entry (§5.4, §7.6). Prices became a snapshot you confirm, with an age label, a stale dot past 3 days and a **Check prices** walk-through (§7.9). Places use **Love / Like / Pass** and carry a `stopKey` and `layer`; places can be imported from a Google My Maps KML export (§5.4, §7.3, §7.7, §9.7). Stays belong to a stop, with Out/Chosen status, **Duplicate**, and night coverage (§5.4, §7.7). One **Map** tab holds places and stays together behind stop chips, and **Days** plans days on a map and exports the whole plan as one KML for Google Maps (§7.7, §7.8, §10.1). Airports are bundled (§9.8). Wikipedia destination photos and `photos.js` removed with the candidates that used them. |
+| 4.1 | 2026-10-12 | **Round 5, owner testing (T32–T35).** Google sign-in works on phones; the currency field is gone (every trip is USD) and traveler details always save; pasting a flight is scoped to the button you press, so there's no guessing where it lands (§7.6). **Every traveler now chooses their own idea and their own option, as two separate choices** (`trips.choices`, §5.3): one person's choice never moves another's, and `chosenOptionId` is retired to a read-only fallback so older trips keep the choice they had. Flights, stays and costs carry `forTravelerIds`, which says who the price is for — worked out automatically and overridable (§5.4, §11). Map, Stays and Days read one merged route built from everyone's choices rather than a single traveler's (§7.7, §7.8, §11), and the stage badge counts the trip as planned once anyone has chosen an option. New `js/lib/choices.js` holds the choices, the splits, the merged stops and the budget, which moved out of `totals.js`. |

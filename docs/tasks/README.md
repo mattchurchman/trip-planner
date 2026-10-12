@@ -53,7 +53,7 @@ If a task fails twice, say "Revert the last commit" and rerun it in a fresh sess
 | T32 | [Google sign-in on phones](T32-phone-sign-in.md) | Sonnet | high | — | Done (2026-10-12) |
 | T33 | [No currency field; traveler details always save](T33-overview-fixes.md) | Sonnet | medium | — | Done (2026-10-12) |
 | T34 | [Paste where it goes: one button per section](T34-scoped-paste.md) | Sonnet | high | — | Done (2026-10-12) |
-| T35 | [Per-traveler choices, "who's it for", merged stops](T35-choices-and-costs-model.md) | Opus | high | T34 | To do |
+| T35 | [Per-traveler choices, "who's it for", merged stops](T35-choices-and-costs-model.md) | Opus | high | T34 | Done (2026-10-12) |
 | T36 | [Routes: choose ideas and options separately, clear costs](T36-routes-choose-and-costs.md) | Sonnet | high | T35 | To do |
 | T37 | [Overview: each traveler's costs](T37-overview-costs.md) | Sonnet | medium | T35 | To do |
 | T38 | [Stays: merged stops, stays find their stop, Choose button](T38-stays-merged.md) | Sonnet | high | T35 | To do |

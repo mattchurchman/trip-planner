@@ -5,7 +5,7 @@ import {
   watchIdeas,
   watchOptions,
   updateOption,
-  setChosenOption,
+  setChoice,
   setFlightPicked,
   addPastedFlight,
   updateFlight,
@@ -15,6 +15,7 @@ import {
 import { el, confirmDialog, friendlyError, renderWhenIdle } from "../ui.js";
 import { loadAirports } from "../lookup.js";
 import { totalFor, optionAutoName, directionsToClear } from "../lib/route.js";
+import { choiceFor } from "../lib/choices.js";
 import { editFlightFormDialog } from "./flightForm.js";
 import { pasteFlightDialog, moveFlightDialog, renderEarlierFlights } from "./pasteFlight.js";
 import { renderOptionCard, homeFlightsCardBody } from "./routeRail.js";
@@ -222,8 +223,10 @@ export function renderRoutesPage(container, tripId, myUid) {
     });
   }
 
-  function onChooseOption(option) {
-    return run(() => setChosenOption(tripId, trip.chosenOptionId === option.id ? null : option.id));
+  /** The traveler on screen chooses (or unchooses) this option — theirs only (§7.6). */
+  function onChooseOption(option, traveler) {
+    const chosen = choiceFor(trip, traveler.id, options).optionId;
+    return run(() => setChoice(tripId, traveler.id, { optionId: chosen === option.id ? null : option.id }));
   }
 
   function renderHomeFlightsCard() {
@@ -282,14 +285,14 @@ export function renderRoutesPage(container, tripId, myUid) {
           myUid,
           usersById,
           isOpen: openOptionIds.has(option.id),
-          isChosen: trip.chosenOptionId === option.id,
+          isChosen: choiceFor(trip, traveler.id, options).optionId === option.id,
           isCheapest: cheapestCents !== null && totalsCents[i] === cheapestCents,
           onToggle: () => {
             if (openOptionIds.has(option.id)) openOptionIds.delete(option.id);
             else openOptionIds.add(option.id);
             renderDynamicSections();
           },
-          onChoose: () => onChooseOption(option),
+          onChoose: () => onChooseOption(option, traveler),
           onRename: () => run(() => renameOptionDialog(tripId, option)),
           onDelete: () => onDeleteOption(option),
           onPasteFlight: () => onPasteHopFlight(option),

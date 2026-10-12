@@ -4,7 +4,7 @@ import { renderComments } from "./comments.js";
 import { renderTravelers } from "./travelers.js";
 import { addCostButton, renderSplitCosts } from "./splitCosts.js";
 import { formatMoney } from "../lib/money.js";
-import { computeBudget } from "../lib/totals.js";
+import { choiceFor, tripBudget } from "../lib/choices.js";
 import { chosenStayIds } from "../lib/selection.js";
 import { stopsFor, totalFor } from "../lib/route.js";
 import { safeUrl } from "../lib/links.js";
@@ -97,13 +97,14 @@ export function renderOverviewPage(container, tripId, myUid) {
     );
   }
 
-  /** This trip's chosen option, as `{ idea, option }`, or null when nothing's
-   * chosen or the chosen option no longer exists. */
-  function chosenRoute() {
-    if (!trip.chosenOptionId) return null;
-    const option = options.find((o) => o.id === trip.chosenOptionId);
+  /** One traveler's own chosen route, as `{ idea, option }`, or null when they
+   * haven't chosen or what they chose no longer exists (§5.3). */
+  function chosenRoute(traveler) {
+    if (!traveler) return null;
+    const choice = choiceFor(trip, traveler.id, options);
+    const option = choice.optionId ? options.find((o) => o.id === choice.optionId) : null;
     if (!option) return null;
-    const idea = ideas.find((i) => i.id === option.ideaId);
+    const idea = ideas.find((i) => i.id === choice.ideaId);
     if (!idea) return null;
     return { idea, option };
   }
@@ -114,8 +115,8 @@ export function renderOverviewPage(container, tripId, myUid) {
       el("a", { href: `#/trip/${tripId}/routes`, textContent: "Routes" }),
       " to pick one.",
     ]);
-    const route = chosenRoute();
     const traveler = myTraveler(trip, myUid);
+    const route = chosenRoute(traveler);
     if (!route || !traveler || !airports) {
       routeSummaryEl.replaceChildren(el("h2", { textContent: "Route" }), hint);
       return;
@@ -139,18 +140,10 @@ export function renderOverviewPage(container, tripId, myUid) {
 
   function renderTotalsCard() {
     const travelers = trip.travelers || [];
-    const route = chosenRoute();
-    const homeFlightsByTraveler = {};
-    for (const traveler of travelers) {
-      homeFlightsByTraveler[traveler.id] = route
-        ? flights.filter((f) => f.role === "home" && f.ideaId === route.idea.id && f.travelerId === traveler.id && f.picked !== false)
-        : [];
-    }
-    const hopFlights = route ? flights.filter((f) => f.role === "hop" && f.optionId === route.option.id) : [];
     const chosenStays = chosenStayIds(trip)
       .map((id) => stays.find((s) => s.id === id))
       .filter(Boolean);
-    const result = computeBudget({ travelers, homeFlightsByTraveler, hopFlights, stays: chosenStays, sharedCosts: costs });
+    const result = tripBudget({ trip, travelers, options, flights, stays: chosenStays, costs, airports });
 
     const rows = result.travelerTotals.map((t) =>
       el("div", { className: "totals-row" }, [el("span", { textContent: t.name }), el("span", { textContent: formatMoney(t.totalCents, trip.currency) })])

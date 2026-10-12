@@ -3,6 +3,7 @@ import { el, friendlyError, toast } from "../ui.js";
 import { importFromMyMapsDialog } from "./importPlaces.js";
 import { loadAirports } from "../lookup.js";
 import { stopsFor } from "../lib/route.js";
+import { mergedStops } from "../lib/choices.js";
 import { nearestStop, stopChips } from "../lib/stops.js";
 import { categoryColor } from "../lib/categories.js";
 import { voteCounts } from "../lib/votes.js";
@@ -15,11 +16,6 @@ import { createPlacesSection } from "./places.js";
 import { createStaysSection } from "./stays.js";
 
 const ELSEWHERE = "elsewhere";
-
-function myTraveler(trip, myUid) {
-  const travelers = trip.travelers || [];
-  return travelers.find((t) => t.uid === myUid) || travelers[0] || null;
-}
 
 /** `stopsFor`'s stops, each carrying its airport's coordinates and a `stopKey`
  * (its `cityKey`) for `nearestStop`/`stopChips` (V4 §6, §8). */
@@ -35,15 +31,9 @@ function hopFlightsFor(flights, optionId) {
   return flights.filter((f) => f.role === "hop" && f.optionId === optionId);
 }
 
-/** The chosen option's stops, from this traveler's picked home flights (same
- * convention Overview's route summary uses) plus that option's hops. */
-function chosenStops(trip, myUid, flights, options, airports) {
-  if (!trip.chosenOptionId) return [];
-  const option = options.find((o) => o.id === trip.chosenOptionId);
-  const traveler = option && myTraveler(trip, myUid);
-  if (!traveler) return [];
-  const homeFlights = flights.filter((f) => f.role === "home" && f.ideaId === option.ideaId && f.travelerId === traveler.id && f.picked !== false);
-  return withCoords(stopsFor({ homeFlights, hopFlights: hopFlightsFor(flights, option.id), airports }), airports);
+/** The merged route — every traveler's own stops, merged into one (§11). */
+function chosenStops(trip, flights, options, airports) {
+  return withCoords(mergedStops({ travelers: trip.travelers || [], trip, options, flights, airports }), airports);
 }
 
 /** Every city across every option (V4 §8), for the stop chips before a
@@ -294,7 +284,7 @@ export function renderMapPage(container, tripId, myUid) {
 
   function rerenderAll(forceFit = false) {
     if (!trip) return;
-    const chosen = airports ? chosenStops(trip, myUid, flights, options, airports) : [];
+    const chosen = airports ? chosenStops(trip, flights, options, airports) : [];
     const fallback = chosen.length === 0 && airports ? allOptionCities(flights, options, airports) : [];
     cities.splice(0, cities.length, ...(chosen.length > 0 ? chosen : fallback));
     const chips = stopChips(chosen, fallback);

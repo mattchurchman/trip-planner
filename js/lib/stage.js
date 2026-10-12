@@ -1,9 +1,14 @@
 // Pure: compute a trip's stage (exploring/planning/upcoming/now/done) from
 // its dates, never by reading the current time. No DOM, no Firebase.
+import { hasAnyOption } from "./choices.js";
 
-/** Returns { key, label, shortLabel } based on the chosen route option and dates. */
-export function tripStage(trip, today) {
-  if (!trip.chosenOptionId) {
+/**
+ * Returns { key, label, shortLabel } from the trip's dates and whether a route
+ * has been chosen — which it has as soon as *any* traveler has an option (§11).
+ * Pass `routeChosen` to say so yourself; by default it's read off the trip.
+ */
+export function tripStage(trip, today, routeChosen = hasAnyOption(trip)) {
+  if (!routeChosen) {
     return {
       key: "exploring",
       label: "Exploring",

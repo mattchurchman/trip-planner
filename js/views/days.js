@@ -17,7 +17,7 @@ import { sortByRank, voteSummary, voteCounts } from "../lib/votes.js";
 import { rangesOverlap } from "../lib/dates.js";
 import { walkingRouteLinks } from "../lib/links.js";
 import { datesBetween, daysFromStops, missingDays } from "../lib/dayplan.js";
-import { stopsFor } from "../lib/route.js";
+import { mergedStops } from "../lib/choices.js";
 import { createDaysMap, dayColor } from "./daysMap.js";
 import { loadAirports } from "../lookup.js";
 
@@ -51,25 +51,11 @@ function dayLabel(day) {
   return day.title || day.date || "Undated day";
 }
 
-function myTraveler(trip, myUid) {
-  const travelers = trip.travelers || [];
-  return travelers.find((t) => t.uid === myUid) || travelers[0] || null;
-}
-
-function hopFlightsFor(flights, optionId) {
-  return flights.filter((f) => f.role === "hop" && f.optionId === optionId);
-}
-
-/** The chosen option's stops, from this traveler's picked home flights (same
- * convention the Map tab uses) plus that option's hops — the raw material
- * `daysFromStops` turns into one day per date (T27, V4 §8). */
-function chosenStops(trip, myUid, flights, options, airports) {
-  if (!trip.chosenOptionId || !airports) return [];
-  const option = options.find((o) => o.id === trip.chosenOptionId);
-  const traveler = option && myTraveler(trip, myUid);
-  if (!traveler) return [];
-  const homeFlights = flights.filter((f) => f.role === "home" && f.ideaId === option.ideaId && f.travelerId === traveler.id && f.picked !== false);
-  return stopsFor({ homeFlights, hopFlights: hopFlightsFor(flights, option.id), airports });
+/** The merged route's stops — everyone's, merged into one (§11) — which is the
+ * raw material `daysFromStops` turns into one day per date (T27, V4 §8). */
+function chosenStops(trip, flights, options, airports) {
+  if (!airports) return [];
+  return mergedStops({ travelers: trip.travelers || [], trip, options, flights, airports });
 }
 
 /** Renders the Days tab (§7.9, T27 V4 §8). Returns a single unsubscribe function. */
@@ -120,7 +106,7 @@ export function renderDaysPage(container, tripId, myUid) {
     loadErrorEl.replaceChildren();
     try {
       let order = nextOrder();
-      const stops = chosenStops(trip, myUid, flights, options, airports);
+      const stops = chosenStops(trip, flights, options, airports);
       if (stops.length > 0) {
         const missing = missingDays(days, daysFromStops(stops));
         for (const day of missing) {
@@ -321,7 +307,7 @@ export function renderDaysPage(container, tripId, myUid) {
     // ideas); the Map tab already treats the whole list this way.
     scopedPlaces = places;
 
-    const stops = chosenStops(trip, myUid, flights, options, airports);
+    const stops = chosenStops(trip, flights, options, airports);
     createDaysBtn.textContent = stops.length > 0 ? "Create days from route" : "Create days from trip dates";
     createDaysBtn.disabled = stops.length === 0 && (!trip.startDate || !trip.endDate);
 
