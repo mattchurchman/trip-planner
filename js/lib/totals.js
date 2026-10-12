@@ -72,40 +72,50 @@ export function stalePriceQueue(items, now = new Date()) {
 }
 
 /**
- * Per-traveler and combined totals (§11, §5.3 multi-select).
- * `selectedFlightIdsByTraveler`: { [travelerId]: [flightId] }, from selection.js.
- * `flightsById`: all of the trip's flight docs, keyed by id.
- * `stays`: the chosen stay docs (0 or more — choosing none is fine).
- * `sharedCosts`: array of cost docs, each split separately across all travelers.
- * Missing amounts count as 0 in the sums but are named in `missing`; `complete` is
- * false whenever anything's missing (never label a partial total complete). Each
- * stay and each cost is split separately, so shares always add up exactly.
+ * Overview's per-traveler budget (V4 §9). `homeFlightsByTraveler`: the chosen
+ * route option's idea's picked home flights, keyed by traveler id — see
+ * route.js's `isPicked`. `hopFlights`: the chosen option's hop flights, shared
+ * by every traveler. `stays`: the chosen stay docs. `sharedCosts`: cost docs,
+ * each split separately across all travelers. With no chosen route, pass empty
+ * `homeFlightsByTraveler` entries and `hopFlights` — every traveler is then
+ * named in `missing` and only stays/costs count toward the total. Missing
+ * amounts count as 0 in the sums but are named in `missing`; `complete` is
+ * false whenever anything's missing (never label a partial total complete).
+ * Each stay and each cost is split separately, so shares always add up exactly.
  */
-export function computeTotals({ travelers, selectedFlightIdsByTraveler, flightsById, stays, sharedCosts }) {
+export function computeBudget({ travelers, homeFlightsByTraveler, hopFlights, stays, sharedCosts }) {
   const n = travelers.length;
   const missing = [];
 
-  const flightAmounts = travelers.map((traveler) => {
-    const flightIds = selectedFlightIdsByTraveler[traveler.id] || [];
-    if (flightIds.length === 0) {
-      missing.push(`No flight chosen for ${traveler.name}`);
+  function priceOf(flight, missingLabel) {
+    const latest = latestEntry(flight.prices);
+    if (!latest) {
+      missing.push(missingLabel);
       return 0;
     }
-    let sum = 0;
-    for (const flightId of flightIds) {
-      const flight = flightsById[flightId];
-      const latest = flight && latestEntry(flight.prices);
-      if (!latest) {
-        missing.push(`No price logged for ${traveler.name}'s flight "${flight ? flight.label : ""}"`);
-      } else {
-        sum += latest.amountCents;
-      }
+    return latest.amountCents;
+  }
+
+  const hopCents = (hopFlights || []).reduce(
+    (sum, flight) => sum + priceOf(flight, `No price logged for "${flight.label || "a flight"}"`),
+    0
+  );
+
+  const flightTotals = travelers.map((traveler) => {
+    const homeFlights = (homeFlightsByTraveler && homeFlightsByTraveler[traveler.id]) || [];
+    if (homeFlights.length === 0) {
+      missing.push(`No flight chosen for ${traveler.name}`);
+      return hopCents;
     }
-    return sum;
+    const homeCents = homeFlights.reduce(
+      (sum, flight) => sum + priceOf(flight, `No price logged for ${traveler.name}'s flight "${flight.label || "flight"}"`),
+      0
+    );
+    return homeCents + hopCents;
   });
 
   const stayShareTotals = travelers.map(() => 0);
-  for (const stay of stays) {
+  for (const stay of stays || []) {
     const latest = latestEntry(stay.prices);
     if (!latest) {
       missing.push(`No price logged for ${stay.name}`);
@@ -117,7 +127,7 @@ export function computeTotals({ travelers, selectedFlightIdsByTraveler, flightsB
   }
 
   const costShareTotals = travelers.map(() => 0);
-  for (const cost of sharedCosts) {
+  for (const cost of sharedCosts || []) {
     split(cost.amountCents, n).forEach((share, i) => {
       costShareTotals[i] += share;
     });
@@ -126,7 +136,7 @@ export function computeTotals({ travelers, selectedFlightIdsByTraveler, flightsB
   const travelerTotals = travelers.map((traveler, i) => ({
     travelerId: traveler.id,
     name: traveler.name,
-    totalCents: flightAmounts[i] + stayShareTotals[i] + costShareTotals[i],
+    totalCents: flightTotals[i] + stayShareTotals[i] + costShareTotals[i],
   }));
 
   const combinedCents = travelerTotals.reduce((sum, t) => sum + t.totalCents, 0);

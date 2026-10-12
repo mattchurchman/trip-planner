@@ -15,11 +15,6 @@ How Trip Planner talks. Every agent follows this once T07 is done. The owner can
 
 | Old wording | New wording | Where |
 |---|---|---|
-| Candidate destinations | Destination ideas | Overview heading |
-| Add candidate destination | Add a destination idea | Overview |
-| No candidates yet. | No ideas yet. Add a place you'd love to go — Google Flights Explore is a good place to look. | Overview |
-| Choose this destination | Pick this destination | Candidate card |
-| Discover | Search the web | Overview panel heading |
 | Must / Nice / Skip | Love / Like / Pass, with tooltips "Love it", "Like it", "Pass" | Rank control |
 | Ranking (sort) | Group favorites | Places sort |
 | Not ranked by me | I haven't ranked yet | Filters |
@@ -30,15 +25,12 @@ How Trip Planner talks. Every agent follows this once T07 is done. The owner can
 | Add shared cost | Add a split cost | Flights & stays |
 | Partial total | Total so far (missing some prices) | Totals card |
 | Combined | Everyone together | Totals card |
-| Place reactions | How was it? | Recap |
-| Next time | Didn't get to | Recap |
 | Use this link | Read this link | Location picker |
-| Location needed for this destination — this will be set once the Places map is built (Phase 2). | We couldn't find this city on the map. Use **Set on map** on the Places tab to place it. | Overview (stale text — must change) |
 | Search by OpenStreetMap Nominatim | Search results from OpenStreetMap | Search results credit |
 | Plan trips with your friends. | Plan trips with your friends — from "where should we go?" to the recap. | Sign-in screen |
 | No trips yet. Start one! | No trips yet. Start one with **New trip**. | Trips list |
 
-Tab names stay: **Overview · Places · Flights & stays · Days · Recap**, plus the new **Routes** tab (T19) between Overview and Places. T20 renames **Flights & stays** to **Stays** (for now — flights moved to Routes) and adds **Paste flight link**.
+Tab names: **Overview · Routes · Places · Stays · Days** (T23 removes Recap).
 
 ## Routes (T19, V4 round 3)
 

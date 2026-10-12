@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { latestEntry, priceDelta, isNewLow, perNightCents, computeTotals, priceAgeDays, isStale, stalePriceQueue } from "../js/lib/totals.js";
+import { latestEntry, priceDelta, isNewLow, perNightCents, computeBudget, priceAgeDays, isStale, stalePriceQueue } from "../js/lib/totals.js";
 
 export const tests = [
   ["latestEntry picks the greatest checkedAt regardless of array order", () => {
@@ -62,68 +62,60 @@ export const tests = [
     assert.equal(perNightCents(90000, null), null);
     assert.equal(perNightCents(90000, 0), null);
   }],
-  ["computeTotals sums two travelers' flights, half the stay each, and a shared cost, matching the combined total exactly", () => {
+  ["computeBudget: no chosen route names every traveler as missing, but still totals the stays and costs", () => {
     const travelers = [
       { id: "t1", name: "Sam" },
       { id: "t2", name: "Alex" },
     ];
-    const selectedFlightIdsByTraveler = { t1: ["f1"], t2: ["f2"] };
-    const flightsById = {
-      f1: { prices: [{ id: "p1", amountCents: 42000, checkedAt: "2026-03-01T00:00:00.000Z" }] },
-      f2: { prices: [{ id: "p2", amountCents: 61000, checkedAt: "2026-03-01T00:00:00.000Z" }] },
-    };
-    const stays = [{ name: "Casa Alfama", prices: [{ id: "p3", amountCents: 100001, checkedAt: "2026-03-01T00:00:00.000Z" }] }];
+    const stays = [{ name: "Casa Alfama", prices: [{ id: "p1", amountCents: 100001, checkedAt: "2026-03-01T00:00:00.000Z" }] }];
     const sharedCosts = [{ amountCents: 10000 }];
-    const result = computeTotals({ travelers, selectedFlightIdsByTraveler, flightsById, stays, sharedCosts });
-    assert.equal(result.complete, true);
-    assert.deepEqual(result.missing, []);
+    const result = computeBudget({ travelers, homeFlightsByTraveler: {}, hopFlights: [], stays, sharedCosts });
+    assert.equal(result.complete, false);
+    assert.deepEqual(result.missing, ["No flight chosen for Sam", "No flight chosen for Alex"]);
     const sumOfTravelerTotals = result.travelerTotals.reduce((sum, t) => sum + t.totalCents, 0);
     assert.equal(sumOfTravelerTotals, result.combinedCents);
-    assert.equal(result.combinedCents, 42000 + 61000 + 100001 + 10000);
+    assert.equal(result.combinedCents, 100001 + 10000);
   }],
-  ["computeTotals reports a partial total and names the flight's label when it has no price, without labeling it complete", () => {
+  ["computeBudget names a home flight's label when it has no price, without labeling the budget complete", () => {
     const travelers = [{ id: "t1", name: "Sam" }];
-    const selectedFlightIdsByTraveler = { t1: ["f1"] };
-    const flightsById = { f1: { label: "Nonstop, Tuesday out", prices: [] } };
-    const result = computeTotals({ travelers, selectedFlightIdsByTraveler, flightsById, stays: [], sharedCosts: [] });
+    const homeFlightsByTraveler = { t1: [{ label: "Nonstop, Tuesday out", prices: [] }] };
+    const result = computeBudget({ travelers, homeFlightsByTraveler, hopFlights: [], stays: [], sharedCosts: [] });
     assert.equal(result.complete, false);
     assert.deepEqual(result.missing, [`No price logged for Sam's flight "Nonstop, Tuesday out"`]);
     assert.equal(result.travelerTotals[0].totalCents, 0);
   }],
-  ["computeTotals sums two chosen flights for the same traveler ($300.00 + $120.50)", () => {
-    const travelers = [{ id: "t1", name: "Sam" }];
-    const selectedFlightIdsByTraveler = { t1: ["f1", "f2"] };
-    const flightsById = {
-      f1: { label: "Outbound", prices: [{ id: "p1", amountCents: 30000, checkedAt: "2026-03-01T00:00:00.000Z" }] },
-      f2: { label: "Return", prices: [{ id: "p2", amountCents: 12050, checkedAt: "2026-03-01T00:00:00.000Z" }] },
+  ["computeBudget sums two travelers' different home flights plus the shared hop, matching the combined total exactly", () => {
+    const travelers = [
+      { id: "t1", name: "Sam" },
+      { id: "t2", name: "Alex" },
+    ];
+    const homeFlightsByTraveler = {
+      t1: [{ label: "Sam's flight", prices: [{ id: "p1", amountCents: 42000, checkedAt: "2026-03-01T00:00:00.000Z" }] }],
+      t2: [{ label: "Alex's flight", prices: [{ id: "p2", amountCents: 61000, checkedAt: "2026-03-01T00:00:00.000Z" }] }],
     };
-    const result = computeTotals({ travelers, selectedFlightIdsByTraveler, flightsById, stays: [], sharedCosts: [] });
+    const hopFlights = [{ label: "Shared hop", prices: [{ id: "p3", amountCents: 5000, checkedAt: "2026-03-01T00:00:00.000Z" }] }];
+    const result = computeBudget({ travelers, homeFlightsByTraveler, hopFlights, stays: [], sharedCosts: [] });
     assert.equal(result.complete, true);
-    assert.equal(result.travelerTotals[0].totalCents, 30000 + 12050);
-    assert.equal(result.combinedCents, 30000 + 12050);
+    assert.deepEqual(result.missing, []);
+    assert.equal(result.travelerTotals[0].totalCents, 42000 + 5000);
+    assert.equal(result.travelerTotals[1].totalCents, 61000 + 5000);
+    assert.equal(result.combinedCents, 42000 + 61000 + 5000 + 5000);
   }],
-  ["computeTotals splits two chosen stays across 3 travelers, shares adding exactly to the whole", () => {
+  ["computeBudget splits a shared cost across 3 travelers, shares adding exactly to the whole", () => {
     const travelers = [
       { id: "t1", name: "Sam" },
       { id: "t2", name: "Alex" },
       { id: "t3", name: "Jo" },
     ];
-    const selectedFlightIdsByTraveler = { t1: [], t2: [], t3: [] };
-    const stays = [
-      { name: "Casa Alfama", prices: [{ id: "p1", amountCents: 100001, checkedAt: "2026-03-01T00:00:00.000Z" }] },
-      { name: "Side trip stay", prices: [{ id: "p2", amountCents: 45000, checkedAt: "2026-03-01T00:00:00.000Z" }] },
-    ];
-    // Every traveler has 0 chosen flights here, so this is a Partial total (missing
-    // flights) -- but the stay math itself must still add up exactly regardless.
-    const result = computeTotals({ travelers, selectedFlightIdsByTraveler, flightsById: {}, stays, sharedCosts: [] });
+    const sharedCosts = [{ amountCents: 10001 }];
+    const result = computeBudget({ travelers, homeFlightsByTraveler: {}, hopFlights: [], stays: [], sharedCosts });
     const sumOfTravelerTotals = result.travelerTotals.reduce((sum, t) => sum + t.totalCents, 0);
-    assert.equal(sumOfTravelerTotals, 100001 + 45000);
+    assert.equal(sumOfTravelerTotals, 10001);
   }],
-  ["computeTotals: no stay chosen is still complete", () => {
+  ["computeBudget: no stay chosen is still complete", () => {
     const travelers = [{ id: "t1", name: "Sam" }];
-    const selectedFlightIdsByTraveler = { t1: ["f1"] };
-    const flightsById = { f1: { label: "Only option", prices: [{ id: "p1", amountCents: 10000, checkedAt: "2026-03-01T00:00:00.000Z" }] } };
-    const result = computeTotals({ travelers, selectedFlightIdsByTraveler, flightsById, stays: [], sharedCosts: [] });
+    const homeFlightsByTraveler = { t1: [{ label: "Only option", prices: [{ id: "p1", amountCents: 10000, checkedAt: "2026-03-01T00:00:00.000Z" }] }] };
+    const result = computeBudget({ travelers, homeFlightsByTraveler, hopFlights: [], stays: [], sharedCosts: [] });
     assert.equal(result.complete, true);
     assert.deepEqual(result.missing, []);
   }],

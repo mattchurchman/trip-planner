@@ -39,10 +39,5 @@ service cloud.firestore {
         allow read, write: if allowed();
       }
     }
-
-    match /publicRecaps/{tripId} {
-      allow read: if true;
-      allow write: if allowed();
-    }
   }
 }

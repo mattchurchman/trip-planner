@@ -8,7 +8,6 @@ import { renderRoutesPage } from "./views/routes.js";
 import { renderPlacesPage } from "./views/places.js";
 import { renderTravelPage } from "./views/travel.js";
 import { renderDaysPage } from "./views/days.js";
-import { renderRecapPage } from "./views/recap.js";
 import { renderSignIn, renderEmailConfirmation } from "./views/signin.js";
 
 const TABS = [
@@ -17,7 +16,6 @@ const TABS = [
   { key: "places", label: "Places", icon: "M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z", render: renderPlacesPage },
   { key: "travel", label: "Stays", icon: "M3 17l6-2 4 3 8-12M3 17v.01M21 6v.01", render: renderTravelPage },
   { key: "days", label: "Days", icon: "M5 5h14v15H5zM5 10h14M9 3v4M15 3v4", render: renderDaysPage },
-  { key: "recap", label: "Recap", icon: "M5 3v18M5 5h11l-2 4 2 4H5", render: renderRecapPage },
 ];
 
 const root = document.getElementById("app");
@@ -149,9 +147,7 @@ function renderTripShell(main, tripId, myUid, tabKey) {
       root.querySelector(".top-trip-name").textContent = trip.name;
       const today = new Date().toISOString().slice(0, 10);
       const stage = tripStage(trip, today);
-      const stageBadge = stage.key === "done"
-        ? el("a", { className: `stage-badge stage-${stage.key}`, href: `#/trip/${tripId}/recap`, textContent: stage.label })
-        : el("span", { className: `stage-badge stage-${stage.key}`, textContent: stage.label });
+      const stageBadge = el("span", { className: `stage-badge stage-${stage.key}`, textContent: stage.label });
       header.replaceChildren(
         el("h1", { textContent: trip.name }),
         stageBadge

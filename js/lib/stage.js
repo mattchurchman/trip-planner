@@ -1,9 +1,9 @@
 // Pure: compute a trip's stage (exploring/planning/upcoming/now/done) from
 // its dates, never by reading the current time. No DOM, no Firebase.
 
-/** Returns { key, label, shortLabel } based on destination and dates. */
+/** Returns { key, label, shortLabel } based on the chosen route option and dates. */
 export function tripStage(trip, today) {
-  if (!trip.destinationId) {
+  if (!trip.chosenOptionId) {
     return {
       key: "exploring",
       label: "Exploring",
@@ -47,7 +47,7 @@ export function tripStage(trip, today) {
   // Today is after the trip.
   return {
     key: "done",
-    label: "Trip's over — add your recap",
+    label: "Trip's over",
     shortLabel: "Trip's over",
   };
 }

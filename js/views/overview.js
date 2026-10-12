@@ -1,82 +1,118 @@
 import {
   watchTrip,
   watchUsers,
-  watchCandidates,
+  watchFlights,
+  watchIdeas,
+  watchOptions,
+  watchStays,
+  watchCosts,
   updateTripFields,
   updateTravelers,
-  adoptUnassignedPlaces,
   getTravelerFlights,
   removeTraveler,
   deleteFlight,
+  addCost,
+  updateCost,
+  deleteCost,
 } from "../store.js";
-import { el, setPending, confirmDialog, friendlyError, copyLinkButton, field, dialogShell, renderWhenIdle } from "../ui.js";
-import { pendingDestinationPin } from "./places.js";
-import { createCandidatesSection } from "./candidates.js";
-import { nominatimSearch } from "../lookup.js";
-import {
-  googleFlightsExploreUrl,
-  googleFlightsSearchUrl,
-  googleHotelsUrl,
-  bookingUrl,
-  airbnbUrl,
-  googleSearchUrl,
-  ideaQueries,
-} from "../lib/links.js";
+import { el, setPending, confirmDialog, friendlyError, field, dialogShell, renderWhenIdle } from "../ui.js";
+import { renderComments } from "./comments.js";
+import { parseMoney, formatMoney } from "../lib/money.js";
+import { computeBudget } from "../lib/totals.js";
+import { chosenStayIds } from "../lib/selection.js";
+import { stopsFor, totalFor } from "../lib/route.js";
+import { safeUrl } from "../lib/links.js";
+import { loadAirports } from "../lookup.js";
 
-function externalLinkRow(url, label) {
-  const anchor = el("a", {
-    className: "discover-link",
-    href: url,
-    target: "_blank",
-    rel: "noopener noreferrer",
-    textContent: label,
+function costFormDialog(existing) {
+  return dialogShell("cost-dialog", (finish) => {
+    const labelInput = el("input", { type: "text", value: existing?.label || "" });
+    const amountInput = el("input", { type: "text", value: existing ? (existing.amountCents / 100).toFixed(2) : "" });
+    const noteInput = el("input", { type: "text", value: existing?.note || "" });
+    const errorHolder = el("div", { className: "field-error-holder" });
+    const cancelBtn = el("button", { type: "button", className: "btn btn-secondary", textContent: "Cancel" });
+    const okBtn = el("button", { type: "submit", className: "btn btn-primary", textContent: existing ? "Save" : "Add" });
+    const form = el("form", { method: "dialog" }, [
+      field("Label", labelInput),
+      field("Amount", amountInput),
+      field("Note", noteInput),
+      errorHolder,
+      el("div", { className: "dialog-actions" }, [cancelBtn, okBtn]),
+    ]);
+    cancelBtn.addEventListener("click", () => finish(null));
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const label = labelInput.value.trim();
+      const cents = parseMoney(amountInput.value);
+      if (!label) {
+        errorHolder.replaceChildren(el("p", { className: "field-error", textContent: "Label is required." }));
+        return;
+      }
+      if (cents === null || cents < 0) {
+        errorHolder.replaceChildren(el("p", { className: "field-error", textContent: "That amount didn't look right — try something like 245 or 245.50." }));
+        return;
+      }
+      finish({ label, amountCents: cents, note: noteInput.value.trim() });
+    });
+    return { form, focusEl: labelInput };
   });
-  return el("div", { className: "discover-row" }, [anchor, copyLinkButton(url)]);
 }
 
-/** Renders the Overview tab (§7.5) into `container`. Returns a single unsubscribe function. */
+/** The traveler the budget and chosen-route summary focus on: whoever's
+ * signed in, or the first traveler when nobody matches (§4.6's own pattern). */
+function myTraveler(trip, myUid) {
+  const travelers = trip.travelers || [];
+  return travelers.find((t) => t.uid === myUid) || travelers[0] || null;
+}
+
+/** Renders the Overview tab (V4 §9). Returns a single unsubscribe function. */
 export function renderOverviewPage(container, tripId, myUid) {
   let trip = null;
   let usersById = {};
-  let candidates = [];
+  let flights = [];
+  let ideas = [];
+  let options = [];
+  let stays = [];
+  let costs = [];
+  let airports = null;
 
   const loadErrorEl = el("div", { className: "field-error-holder" });
   const tripDetailsEl = el("div", { className: "trip-details card" });
   const travelersEl = el("div", { className: "travelers-section card" });
   const travelerError = el("div", { className: "field-error-holder" });
-  const discoverEl = el("div", { className: "discover-section card" });
+  const routeSummaryEl = el("div", { className: "route-summary card" });
+  const costsSectionEl = el("div", { className: "costs-section card" });
+  const totalsCardEl = el("div", { className: "totals-card card" });
+  const albumEl = el("div", { className: "card" });
+  const commentsEl = el("div", {});
 
-  async function chooseDestination(candidate, button, errorHolder) {
-    errorHolder.replaceChildren();
-    setPending(button, true, "Setting…");
-    try {
-      let { lat, lng } = candidate;
-      if (lat == null || lng == null) {
-        const results = await nominatimSearch(`${candidate.city}, ${candidate.country}`);
-        if (results && results.length > 0) {
-          lat = Number(results[0].lat);
-          lng = Number(results[0].lon);
-        } else {
-          lat = null;
-          lng = null;
-        }
-      }
-      const fields = {
-        destination: { city: candidate.city, country: candidate.country, lat, lng, airport: candidate.airport || "" },
-        destinationId: candidate.id,
-      };
-      await updateTripFields(tripId, fields);
-      await adoptUnassignedPlaces(tripId, candidate.id);
-    } catch (err) {
-      errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
-    } finally {
-      setPending(button, false);
-    }
+  function onError(message) {
+    loadErrorEl.replaceChildren(el("p", { className: "field-error", textContent: message }));
   }
 
-  const candidatesSection = createCandidatesSection({ tripId, myUid, onChoose: chooseDestination });
+  const addCostBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Add a split cost" });
+  addCostBtn.addEventListener("click", async () => {
+    const result = await costFormDialog(null);
+    if (!result) return;
+    try {
+      await addCost(tripId, result, myUid);
+    } catch (err) {
+      onError(friendlyError(err));
+    }
+  });
 
-  container.replaceChildren(loadErrorEl, tripDetailsEl, travelersEl, candidatesSection.element, discoverEl);
+  container.replaceChildren(
+    loadErrorEl,
+    tripDetailsEl,
+    travelersEl,
+    routeSummaryEl,
+    el("div", { className: "costs-header" }, [el("h2", { textContent: "Split costs" }), addCostBtn]),
+    costsSectionEl,
+    el("h2", { textContent: "Budget" }),
+    totalsCardEl,
+    albumEl,
+    commentsEl
+  );
 
   function renderTripDetails() {
     const fieldError = el("div", { className: "field-error-holder" });
@@ -84,7 +120,6 @@ export function renderOverviewPage(container, tripId, myUid) {
     const startInput = el("input", { type: "date", value: trip.startDate || "" });
     const endInput = el("input", { type: "date", value: trip.endDate || "" });
     const currencyInput = el("input", { type: "text", value: trip.currency, maxLength: 3 });
-    const notesInput = el("textarea", { rows: 3, value: trip.notes });
 
     function save(fields) {
       fieldError.replaceChildren();
@@ -124,13 +159,11 @@ export function renderOverviewPage(container, tripId, myUid) {
       }
       save({ currency: value });
     });
-    notesInput.addEventListener("change", () => save({ notes: notesInput.value }));
 
     tripDetailsEl.replaceChildren(
       field("Trip name", nameInput),
       el("div", { className: "field-row" }, [field("Start date", startInput), field("End date", endInput)]),
       field("Currency", currencyInput),
-      field("Notes", notesInput),
       fieldError
     );
   }
@@ -169,8 +202,8 @@ export function renderOverviewPage(container, tripId, myUid) {
       if (!confirmed) return;
       const travelers = trip.travelers.filter((t) => t.id !== traveler.id);
       try {
-        // Their flight options would otherwise be orphaned: the Flights tab lists
-        // options per traveler, so nobody could see or delete them afterwards (§7.5).
+        // Their flight options would otherwise be orphaned: Routes lists options
+        // per traveler, so nobody could see or delete them afterwards (§7.5).
         const theirFlights = await getTravelerFlights(tripId, traveler.id);
         if (theirFlights.length > 0) {
           const alsoDelete = await confirmDialog(
@@ -247,56 +280,140 @@ export function renderOverviewPage(container, tripId, myUid) {
     );
   }
 
-  function renderDiscover() {
-    const rows = [externalLinkRow(googleFlightsExploreUrl(), "Google Flights Explore")];
-    const dest = trip.destination;
-    if (dest) {
-      if (dest.lat == null || dest.lng == null) {
-        const setOnMapBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Set on map" });
-        setOnMapBtn.addEventListener("click", () => {
-          pendingDestinationPin.tripId = tripId;
-          location.hash = `#/trip/${tripId}/places`;
-        });
-        rows.push(
-          el("div", { className: "location-needed" }, [
-            el("p", {
-              className: "field-error",
-              textContent: "We couldn't find this city on the map. Use Set on map on the Places tab to place it.",
-            }),
-            setOnMapBtn,
-          ])
-        );
-      }
-      for (const traveler of trip.travelers || []) {
-        const url = googleFlightsSearchUrl({
-          fromCity: traveler.homeCity || "?",
-          fromAirport: traveler.homeAirport,
-          toCity: dest.city,
-          toAirport: dest.airport,
-          outboundDate: trip.startDate,
-          returnDate: trip.endDate,
-        });
-        rows.push(externalLinkRow(url, `Flights for ${traveler.name}`));
-      }
-      const adults = (trip.travelers || []).length || 1;
-      rows.push(externalLinkRow(googleHotelsUrl(dest.city), "Search Google Hotels"));
-      rows.push(
-        externalLinkRow(
-          bookingUrl({ city: dest.city, checkIn: trip.startDate, checkOut: trip.endDate, adults }),
-          "Search Booking.com"
-        )
-      );
-      rows.push(
-        externalLinkRow(
-          airbnbUrl({ city: dest.city, checkIn: trip.startDate, checkOut: trip.endDate, adults }),
-          "Search Airbnb"
-        )
-      );
-      for (const ideaQuery of ideaQueries(dest.city, trip.startDate)) {
-        rows.push(externalLinkRow(googleSearchUrl(ideaQuery), ideaQuery));
-      }
+  /** This trip's chosen option, as `{ idea, option }`, or null when nothing's
+   * chosen or the chosen option no longer exists. */
+  function chosenRoute() {
+    if (!trip.chosenOptionId) return null;
+    const option = options.find((o) => o.id === trip.chosenOptionId);
+    if (!option) return null;
+    const idea = ideas.find((i) => i.id === option.ideaId);
+    if (!idea) return null;
+    return { idea, option };
+  }
+
+  function renderRouteSummary() {
+    const hint = el("p", { className: "empty-state" }, [
+      "No route chosen yet. Go to ",
+      el("a", { href: `#/trip/${tripId}/routes`, textContent: "Routes" }),
+      " to pick one.",
+    ]);
+    const route = chosenRoute();
+    const traveler = myTraveler(trip, myUid);
+    if (!route || !traveler || !airports) {
+      routeSummaryEl.replaceChildren(el("h2", { textContent: "Route" }), hint);
+      return;
     }
-    discoverEl.replaceChildren(el("h2", { textContent: "Search the web" }), ...rows);
+    const homeFlights = flights.filter(
+      (f) => f.role === "home" && f.ideaId === route.idea.id && f.travelerId === traveler.id && f.picked !== false
+    );
+    const hopFlights = flights.filter((f) => f.role === "hop" && f.optionId === route.option.id);
+    const stops = stopsFor({ homeFlights, hopFlights, airports });
+    const path = [...new Set(stops.map((s) => s.city).filter(Boolean))].join(" → ");
+    const { cents, complete } = totalFor({ homeFlights, hopFlights });
+
+    routeSummaryEl.replaceChildren(
+      el("h2", { textContent: "Route" }),
+      el("p", {}, [el("a", { href: `#/trip/${tripId}/routes`, textContent: path || route.option.name })]),
+      el("p", { className: "muted" }, [
+        `${traveler.name}: ${complete ? "" : "at least "}${formatMoney(cents, trip.currency)}`,
+      ])
+    );
+  }
+
+  function renderCostsSection() {
+    const rows = costs.map((cost) => {
+      const editBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Edit" });
+      editBtn.addEventListener("click", async () => {
+        const result = await costFormDialog(cost);
+        if (!result) return;
+        try {
+          await updateCost(tripId, cost.id, result);
+        } catch (err) {
+          onError(friendlyError(err));
+        }
+      });
+      const deleteBtn = el("button", { type: "button", className: "btn btn-small btn-danger", textContent: "Delete" });
+      deleteBtn.addEventListener("click", async () => {
+        const confirmed = await confirmDialog(`Delete "${cost.label}"?`, "Delete");
+        if (!confirmed) return;
+        try {
+          await deleteCost(tripId, cost.id);
+        } catch (err) {
+          onError(friendlyError(err));
+        }
+      });
+      return el(
+        "div",
+        { className: "cost-row" },
+        [
+          el("span", { textContent: cost.label }),
+          el("span", { textContent: formatMoney(cost.amountCents, trip.currency) }),
+          cost.note ? el("span", { className: "muted", textContent: cost.note }) : null,
+          editBtn,
+          deleteBtn,
+        ].filter(Boolean)
+      );
+    });
+
+    const body = rows.length > 0 ? rows : [el("p", { className: "empty-state", textContent: "No split costs yet. Add one for things like a rental car or groceries." })];
+    costsSectionEl.replaceChildren(...body);
+  }
+
+  function renderTotalsCard() {
+    const travelers = trip.travelers || [];
+    const route = chosenRoute();
+    const homeFlightsByTraveler = {};
+    for (const traveler of travelers) {
+      homeFlightsByTraveler[traveler.id] = route
+        ? flights.filter((f) => f.role === "home" && f.ideaId === route.idea.id && f.travelerId === traveler.id && f.picked !== false)
+        : [];
+    }
+    const hopFlights = route ? flights.filter((f) => f.role === "hop" && f.optionId === route.option.id) : [];
+    const chosenStays = chosenStayIds(trip)
+      .map((id) => stays.find((s) => s.id === id))
+      .filter(Boolean);
+    const result = computeBudget({ travelers, homeFlightsByTraveler, hopFlights, stays: chosenStays, sharedCosts: costs });
+
+    const rows = result.travelerTotals.map((t) =>
+      el("div", { className: "totals-row" }, [el("span", { textContent: t.name }), el("span", { textContent: formatMoney(t.totalCents, trip.currency) })])
+    );
+    const combinedRow = el("div", { className: "totals-row totals-combined" }, [
+      el("span", { textContent: "Everyone together" }),
+      el("span", { textContent: formatMoney(result.combinedCents, trip.currency) }),
+    ]);
+    const heading = el("h3", { textContent: result.complete ? "Total" : "Total so far (missing some prices)" });
+    const body = [heading, ...rows, combinedRow];
+    if (result.missing.length > 0) {
+      body.push(el("ul", { className: "totals-missing" }, result.missing.map((m) => el("li", { textContent: m }))));
+    }
+    totalsCardEl.replaceChildren(...body);
+  }
+
+  function renderAlbum() {
+    const fieldError = el("div", { className: "field-error-holder" });
+    const urlInput = el("input", { type: "text", value: trip.albumUrl || "", placeholder: "https://photos.app.goo.gl/…" });
+    urlInput.addEventListener("change", () => {
+      fieldError.replaceChildren();
+      const value = urlInput.value.trim();
+      updateTripFields(tripId, { albumUrl: value || null }).catch((err) => {
+        fieldError.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
+      });
+    });
+    const url = trip.albumUrl ? safeUrl(trip.albumUrl) : null;
+    const children = [el("h2", { textContent: "Album" }), field("Album link", urlInput), fieldError];
+    if (url) children.push(el("a", { href: url, target: "_blank", rel: "noopener noreferrer", textContent: "Open album" }));
+    albumEl.replaceChildren(...children);
+  }
+
+  let unsubComments = null;
+
+  // Comments keep their own draft/open state across recreation (comments.js),
+  // so rebuilding this on every render — to pick up fresh usersById — is safe.
+  function renderTripComments() {
+    if (unsubComments) unsubComments();
+    const { element, unsubscribe } = renderComments({ tripId, targetType: "trip", targetId: tripId, myUid, usersById });
+    commentsEl.replaceChildren(el("h2", { textContent: "Trip comments" }), element);
+    unsubComments = unsubscribe;
   }
 
   // Each section defers its own rebuild while someone is typing in it (§8), so a
@@ -305,8 +422,11 @@ export function renderOverviewPage(container, tripId, myUid) {
     if (!trip) return;
     renderWhenIdle(tripDetailsEl, renderTripDetails);
     renderWhenIdle(travelersEl, renderTravelers);
-    candidatesSection.render(candidates, trip, usersById);
-    renderDiscover();
+    renderRouteSummary();
+    renderCostsSection();
+    renderTotalsCard();
+    renderAlbum();
+    renderTripComments();
   }
 
   const unsubTrip = watchTrip(
@@ -324,19 +444,74 @@ export function renderOverviewPage(container, tripId, myUid) {
     },
     () => {}
   );
-  const unsubCandidates = watchCandidates(
+  const unsubFlights = watchFlights(
+    tripId,
+    (f) => {
+      flights = f;
+      if (trip) {
+        renderRouteSummary();
+        renderTotalsCard();
+      }
+    },
+    (err) => onError(friendlyError(err))
+  );
+  const unsubIdeas = watchIdeas(
+    tripId,
+    (i) => {
+      ideas = i;
+      if (trip) {
+        renderRouteSummary();
+        renderTotalsCard();
+      }
+    },
+    (err) => onError(friendlyError(err))
+  );
+  const unsubOptions = watchOptions(
+    tripId,
+    (o) => {
+      options = o;
+      if (trip) {
+        renderRouteSummary();
+        renderTotalsCard();
+      }
+    },
+    (err) => onError(friendlyError(err))
+  );
+  const unsubStays = watchStays(
+    tripId,
+    (s) => {
+      stays = s;
+      if (trip) renderTotalsCard();
+    },
+    (err) => onError(friendlyError(err))
+  );
+  const unsubCosts = watchCosts(
     tripId,
     (c) => {
-      candidates = c;
-      rerender();
+      costs = c;
+      if (trip) {
+        renderCostsSection();
+        renderTotalsCard();
+      }
     },
-    (err) => candidatesSection.renderError(friendlyError(err))
+    (err) => onError(friendlyError(err))
   );
+
+  loadAirports()
+    .then((loaded) => {
+      airports = loaded;
+      if (trip) renderRouteSummary();
+    })
+    .catch((err) => onError(friendlyError(err)));
 
   return () => {
     unsubTrip();
     unsubUsers();
-    unsubCandidates();
-    candidatesSection.unsubscribe();
+    unsubFlights();
+    unsubIdeas();
+    unsubOptions();
+    unsubStays();
+    unsubCosts();
+    if (unsubComments) unsubComments();
   };
 }

@@ -715,10 +715,7 @@ textarea:focus {
 
 .field input,
 .field select,
-.field textarea,
-.candidate-form input,
-.candidate-form textarea,
-.candidate-form select {
+.field textarea {
   padding: var(--space-2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -742,14 +739,11 @@ textarea:focus {
   color: var(--muted);
 }
 
-.travelers-section h2,
-.candidates-header h2,
-.discover-section h2 {
+.travelers-section h2 {
   margin-top: 0;
 }
 
 .travelers-header,
-.candidates-header,
 .costs-header,
 .places-header,
 .stays-header,
@@ -772,136 +766,6 @@ textarea:focus {
   padding: 6px var(--space-2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-}
-
-/* Responsive grid (§7.5): minmax(280px, 1fr) already collapses to one column
-   once two cards no longer fit side by side, so phones need no override. */
-.candidates-section {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: var(--space-3);
-}
-
-/* Padding lives on .candidate-card-body so the photo banner can sit flush
-   against the card's edges and share its rounded corners. */
-.candidate-card {
-  padding: 0;
-  overflow: hidden;
-}
-
-.candidate-card-body {
-  padding: var(--space-4);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-@media (min-width: 760px) {
-  .candidate-card-body {
-    padding: var(--space-5);
-  }
-}
-
-.candidate-photo,
-.candidate-photo-placeholder {
-  aspect-ratio: 16 / 9;
-}
-
-.candidate-photo {
-  position: relative;
-  background: var(--hero-gradient);
-}
-
-.candidate-photo-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.candidate-photo-credit {
-  position: absolute;
-  right: var(--space-2);
-  bottom: var(--space-2);
-  padding: 2px var(--space-2);
-  border-radius: var(--radius);
-  background: rgba(31, 42, 46, 0.55);
-  color: var(--on-color);
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.candidate-photo-credit:hover {
-  color: var(--on-color);
-}
-
-.candidate-photo-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--hero-gradient);
-}
-
-.candidate-photo-placeholder span {
-  font-family: var(--display);
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: var(--on-color);
-}
-
-.candidate-title-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-
-.candidate-title-row h3 {
-  margin: 0;
-}
-
-.candidate-country {
-  margin: 0;
-}
-
-.candidate-chosen-pill {
-  align-self: flex-start;
-  color: var(--secondary);
-  background: var(--secondary-soft);
-  font-weight: 600;
-  font-size: 0.8em;
-  padding: 3px var(--space-3);
-  border-radius: var(--radius-pill);
-  white-space: nowrap;
-}
-
-/* Labeled details (§4 type table: small caps-style label). */
-.candidate-details {
-  margin: 0;
-}
-
-.candidate-details dt {
-  font-size: 0.75rem;
-  line-height: 1.3;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-top: var(--space-2);
-}
-
-.candidate-details dt:first-child {
-  margin-top: 0;
-}
-
-.candidate-details dd {
-  margin: 2px 0 0;
-}
-
-.candidate-actions {
-  display: flex;
-  gap: var(--space-2);
-  flex-wrap: wrap;
 }
 
 .rank-control {
@@ -1000,36 +864,8 @@ textarea:focus {
   border-radius: var(--radius);
 }
 
-.discover-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.discover-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-
-.location-needed {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-
-.location-needed p {
-  margin: 0;
-}
-
 .destination-pin-hint {
   margin: 0 0 var(--space-3);
-}
-
-.discover-link {
-  flex: 1;
 }
 
 .copy-link {
@@ -1045,7 +881,6 @@ textarea:focus {
   max-width: 220px;
 }
 
-.candidate-dialog,
 .traveler-dialog {
   max-width: 420px;
 }
@@ -1509,9 +1344,9 @@ textarea:focus {
   border-color: var(--secondary);
 }
 
-/* The standalone "Chosen ✓" pill (§7.7) next to a flight/stay's title — unlike
+/* The standalone "Chosen ✓" pill next to a flight/stay's title — unlike
    .badge-chosen above, this isn't layered onto a .btn, so it carries its own
-   padding and shape (same recipe as candidates.js's chosen pill, §4 tokens). */
+   padding and shape (§4 tokens). */
 .chosen-badge {
   align-self: flex-start;
   color: var(--secondary);
@@ -1951,103 +1786,6 @@ textarea:focus {
   font-size: 0.85em;
 }
 
-.recap-album,
-.recap-next-time,
-.recap-actuals,
-.recap-publish {
-  margin-bottom: var(--space-4);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.recap-album input {
-  padding: var(--space-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  width: 100%;
-  max-width: 480px;
-}
-
-.recap-places-list {
-  display: grid;
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
-}
-
-.recap-place-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.reaction-row {
-  display: flex;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.reaction-row input {
-  padding: 6px var(--space-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-
-.recap-other-notes {
-  margin: 0;
-  padding-left: 20px;
-  color: var(--muted);
-  font-size: 0.9em;
-}
-
-.next-time-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.recap-public-header {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: var(--space-5) var(--space-4) 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.recap-public-brand {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
-}
-
-.recap-public-map {
-  max-width: 900px;
-  margin: var(--space-4) auto;
-  height: 360px;
-  border-radius: var(--radius-card);
-  border: 1px solid var(--border);
-}
-
-.recap-public-list {
-  max-width: 900px;
-  margin: 0 auto var(--space-7);
-  display: grid;
-  gap: var(--space-3);
-  padding: 0 var(--space-4);
-}
-
-.recap-public-place {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
 .help-main {
   max-width: 720px;
   padding-bottom: var(--space-7);
@@ -2315,7 +2053,6 @@ textarea:focus {
   .top-bar-user .btn-link { min-height: 32px; padding: var(--space-1); }
 
   .travelers-header,
-  .candidates-header,
   .costs-header,
   .places-header,
   .stays-header,

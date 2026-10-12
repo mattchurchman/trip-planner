@@ -1,58 +1,16 @@
-import { watchTrip, watchUsers, watchFlights, watchStays, watchCosts, watchPlaces, addCost, updateCost, deleteCost } from "../store.js";
-import { el, confirmDialog, friendlyError, field, dialogShell } from "../ui.js";
-import { parseMoney, formatMoney } from "../lib/money.js";
-import { computeTotals } from "../lib/totals.js";
-import { chosenFlightIds, chosenStayIds } from "../lib/selection.js";
+import { watchTrip, watchUsers, watchStays, watchPlaces } from "../store.js";
+import { el, friendlyError } from "../ui.js";
 import { createStaysSection } from "./stays.js";
 
-function costFormDialog(existing) {
-  return dialogShell("cost-dialog", (finish) => {
-    const labelInput = el("input", { type: "text", value: existing?.label || "" });
-    const amountInput = el("input", { type: "text", value: existing ? (existing.amountCents / 100).toFixed(2) : "" });
-    const noteInput = el("input", { type: "text", value: existing?.note || "" });
-    const errorHolder = el("div", { className: "field-error-holder" });
-    const cancelBtn = el("button", { type: "button", className: "btn btn-secondary", textContent: "Cancel" });
-    const okBtn = el("button", { type: "submit", className: "btn btn-primary", textContent: existing ? "Save" : "Add" });
-    const form = el("form", { method: "dialog" }, [
-      field("Label", labelInput),
-      field("Amount", amountInput),
-      field("Note", noteInput),
-      errorHolder,
-      el("div", { className: "dialog-actions" }, [cancelBtn, okBtn]),
-    ]);
-    cancelBtn.addEventListener("click", () => finish(null));
-    form.addEventListener("submit", (event) => {
-      event.preventDefault();
-      const label = labelInput.value.trim();
-      const cents = parseMoney(amountInput.value);
-      if (!label) {
-        errorHolder.replaceChildren(el("p", { className: "field-error", textContent: "Label is required." }));
-        return;
-      }
-      if (cents === null || cents < 0) {
-        errorHolder.replaceChildren(el("p", { className: "field-error", textContent: "That amount didn't look right — try something like 245 or 245.50." }));
-        return;
-      }
-      finish({ label, amountCents: cents, note: noteInput.value.trim() });
-    });
-    return { form, focusEl: labelInput };
-  });
-}
-
-/** Renders the Stays tab (§7.7; V4 §4.6 moved flights to Routes). Returns a
- * single unsubscribe function. Flights are still watched here only to feed
- * the totals card — Routes is where they're added and edited now. */
+/** Renders the Stays tab (§7.7; V4 §4.6 moved flights to Routes, T23 moved
+ * split costs and totals to Overview). Returns a single unsubscribe function. */
 export function renderTravelPage(container, tripId, myUid) {
   let trip = null;
   let usersById = {};
-  let flights = [];
   let stays = [];
-  let costs = [];
   let places = []; // for the stays map's "our top places" layer (§7.7.1); not used elsewhere here
 
   const loadErrorEl = el("div", { className: "field-error-holder" });
-  const costsSectionEl = el("div", { className: "costs-section card" });
-  const totalsCardEl = el("div", { className: "totals-card card" });
 
   function onError(message) {
     loadErrorEl.replaceChildren(el("p", { className: "field-error", textContent: message }));
@@ -60,94 +18,11 @@ export function renderTravelPage(container, tripId, myUid) {
 
   const staysSection = createStaysSection({ tripId, myUid, onError });
 
-  const addCostBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Add a split cost" });
-  addCostBtn.addEventListener("click", async () => {
-    const result = await costFormDialog(null);
-    if (!result) return;
-    try {
-      await addCost(tripId, result, myUid);
-    } catch (err) {
-      onError(friendlyError(err));
-    }
-  });
-
-  container.replaceChildren(
-    loadErrorEl,
-    staysSection.element,
-    el("div", { className: "costs-header" }, [el("h2", { textContent: "Split costs" }), addCostBtn]),
-    costsSectionEl,
-    el("h2", { textContent: "Totals" }),
-    totalsCardEl
-  );
-
-  function renderCostsSection() {
-    const rows = costs.map((cost) => {
-      const editBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Edit" });
-      editBtn.addEventListener("click", async () => {
-        const result = await costFormDialog(cost);
-        if (!result) return;
-        try {
-          await updateCost(tripId, cost.id, result);
-        } catch (err) {
-          onError(friendlyError(err));
-        }
-      });
-      const deleteBtn = el("button", { type: "button", className: "btn btn-small btn-danger", textContent: "Delete" });
-      deleteBtn.addEventListener("click", async () => {
-        const confirmed = await confirmDialog(`Delete "${cost.label}"?`, "Delete");
-        if (!confirmed) return;
-        try {
-          await deleteCost(tripId, cost.id);
-        } catch (err) {
-          onError(friendlyError(err));
-        }
-      });
-      return el(
-        "div",
-        { className: "cost-row" },
-        [
-          el("span", { textContent: cost.label }),
-          el("span", { textContent: formatMoney(cost.amountCents, trip.currency) }),
-          cost.note ? el("span", { className: "muted", textContent: cost.note }) : null,
-          editBtn,
-          deleteBtn,
-        ].filter(Boolean)
-      );
-    });
-
-    const body = rows.length > 0 ? rows : [el("p", { className: "empty-state", textContent: "No split costs yet. Add one for things like a rental car or groceries." })];
-    costsSectionEl.replaceChildren(...body);
-  }
-
-  function renderTotalsCard() {
-    const travelers = trip.travelers || [];
-    const flightsById = Object.fromEntries(flights.map((f) => [f.id, f]));
-    const selectedFlightIdsByTraveler = Object.fromEntries(travelers.map((t) => [t.id, chosenFlightIds(trip, t.id)]));
-    const chosenStays = chosenStayIds(trip)
-      .map((id) => stays.find((s) => s.id === id))
-      .filter(Boolean);
-    const result = computeTotals({ travelers, selectedFlightIdsByTraveler, flightsById, stays: chosenStays, sharedCosts: costs });
-
-    const rows = result.travelerTotals.map((t) =>
-      el("div", { className: "totals-row" }, [el("span", { textContent: t.name }), el("span", { textContent: formatMoney(t.totalCents, trip.currency) })])
-    );
-    const combinedRow = el("div", { className: "totals-row totals-combined" }, [
-      el("span", { textContent: "Everyone together" }),
-      el("span", { textContent: formatMoney(result.combinedCents, trip.currency) }),
-    ]);
-    const heading = el("h3", { textContent: result.complete ? "Total" : "Total so far (missing some prices)" });
-    const body = [heading, ...rows, combinedRow];
-    if (result.missing.length > 0) {
-      body.push(el("ul", { className: "totals-missing" }, result.missing.map((m) => el("li", { textContent: m }))));
-    }
-    totalsCardEl.replaceChildren(...body);
-  }
+  container.replaceChildren(loadErrorEl, staysSection.element);
 
   function rerenderAll() {
     if (!trip) return;
     staysSection.render(stays, trip, usersById, places);
-    renderCostsSection();
-    renderTotalsCard();
   }
 
   const unsubTrip = watchTrip(
@@ -165,22 +40,11 @@ export function renderTravelPage(container, tripId, myUid) {
     },
     () => {}
   );
-  const unsubFlights = watchFlights(
-    tripId,
-    (f) => {
-      flights = f;
-      if (trip) renderTotalsCard();
-    },
-    (err) => onError(friendlyError(err))
-  );
   const unsubStays = watchStays(
     tripId,
     (s) => {
       stays = s;
-      if (trip) {
-        staysSection.render(stays, trip, usersById, places);
-        renderTotalsCard();
-      }
+      if (trip) staysSection.render(stays, trip, usersById, places);
     },
     (err) => onError(friendlyError(err))
   );
@@ -192,25 +56,12 @@ export function renderTravelPage(container, tripId, myUid) {
     },
     () => {}
   );
-  const unsubCosts = watchCosts(
-    tripId,
-    (c) => {
-      costs = c;
-      if (trip) {
-        renderCostsSection();
-        renderTotalsCard();
-      }
-    },
-    (err) => onError(friendlyError(err))
-  );
 
   return () => {
     unsubTrip();
     unsubUsers();
-    unsubFlights();
     unsubStays();
     unsubPlaces();
-    unsubCosts();
     staysSection.unsubscribe();
   };
 }
