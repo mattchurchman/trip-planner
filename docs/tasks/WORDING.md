@@ -46,6 +46,17 @@ Tab names: **Overview · Routes · Places · Stays · Days** (T23 removes Recap)
 | No options yet. Add one above to start building stops. | Routes, idea with no options |
 | No flights yet for this option. Add one below. | Routes, open option with no hops yet |
 
+## Stays by stop (T24)
+
+| Wording | Where |
+|---|---|
+| Shortlisted / Out / Chosen | Stays, status select on each stay card |
+| No stop yet | Stays, the group for stays with no matching stop |
+| {N} of {N} nights covered | Stays, each stop's coverage bar |
+| No route chosen yet. Choose an option on Routes to group stays by city. | Stays, shown instead of grouping until an option is chosen |
+| Duplicate | Stays, copies a stay (no price) and opens it for editing — for splitting one stay into two |
+| Paste | Stays, Add/Edit stay dialog — fills the link box from the clipboard |
+
 ## Paste flight link (T20)
 
 | Wording | Where |

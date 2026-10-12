@@ -1,7 +1,6 @@
 // Pure: sort order, the "Cheapest" pick, and stable stay numbering for the
 // Flights & stays tab (§7.7). No DOM, no Firebase.
 import { latestEntry, perNightCents } from "./totals.js";
-import { voteScore } from "./votes.js";
 import { nightsBetween } from "./dates.js";
 
 function toMillis(value) {
@@ -54,17 +53,18 @@ function perNightOf(stay) {
   return perNightCents(latest.amountCents, nights);
 }
 
-/** Sort stay options (§7.7): chosen first, then rank score descending, then
- * lowest price per night (unpriced/nightless last). `chosenIds` from
- * `selection.js`'s `chosenStayIds`. */
+/** Sort stays (§7.7, T24): chosen first, then not-Out before Out (Out stays
+ * sort last), then lowest price per night (unpriced/nightless last).
+ * `chosenIds` from `selection.js`'s `chosenStayIds`. */
 export function sortStayOptions(stays, chosenIds = []) {
   return [...stays].sort((a, b) => {
     const aChosen = chosenIds.includes(a.id);
     const bChosen = chosenIds.includes(b.id);
     if (aChosen !== bChosen) return aChosen ? -1 : 1;
 
-    const scoreDiff = voteScore(b.votes) - voteScore(a.votes);
-    if (scoreDiff !== 0) return scoreDiff;
+    const aOut = !!a.out;
+    const bOut = !!b.out;
+    if (aOut !== bOut) return aOut ? 1 : -1;
 
     const priceDiff = comparePriceAsc(perNightOf(a), perNightOf(b));
     if (priceDiff !== 0) return priceDiff;

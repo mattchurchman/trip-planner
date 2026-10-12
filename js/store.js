@@ -447,6 +447,10 @@ export function addStay(tripId, fields, uid) {
       checkOut: fields.checkOut || null,
       guests: fields.guests || 1,
       note: fields.note || "",
+      // Which stop of the chosen route this stay belongs to (T24), or null
+      // for "No stop yet" — set when "Add stay" is pressed inside a stop.
+      stopKey: fields.stopKey ?? null,
+      out: false,
       // Optional "Price you saw" from the add form (§7.7), already a full PriceEntry
       // built by the caller (same shape as pricePanel.js's Log price).
       prices: fields.firstPriceEntry ? [fields.firstPriceEntry] : [],
@@ -462,6 +466,33 @@ export function updateStay(tripId, stayId, fields) {
 
 export function deleteStay(tripId, stayId) {
   return deleteSubDoc(tripId, "stays", stayId);
+}
+
+/** Duplicate copies `stay` with no prices, not chosen, kept Shortlisted even
+ * if the original was Out (§7.7 Do #4) — for splitting one stay into two
+ * when only dates and price differ. Resolves the new doc's reference. */
+export function duplicateStay(tripId, stay, uid) {
+  return addSubDoc(
+    tripId,
+    "stays",
+    {
+      name: stay.name,
+      provider: stay.provider || "other",
+      link: stay.link || null,
+      neighborhood: stay.neighborhood || "",
+      lat: stay.lat ?? null,
+      lng: stay.lng ?? null,
+      checkIn: stay.checkIn || null,
+      checkOut: stay.checkOut || null,
+      guests: stay.guests || 1,
+      note: stay.note || "",
+      stopKey: stay.stopKey ?? null,
+      out: false,
+      prices: [],
+      votes: {},
+    },
+    uid
+  );
 }
 
 export function voteOnStay(tripId, stayId, uid, choice) {

@@ -34,14 +34,15 @@ export const tests = [
     ];
     assert.equal(cheapestFlightId(flights), "b");
   }],
-  ["sortStayOptions: chosen first, then rank score, then lowest per-night price", () => {
+  ["sortStayOptions: chosen first, then not-Out before Out, then lowest per-night price", () => {
     const stays = [
-      { id: "a", votes: { u1: "must" }, prices: price(70000), checkIn: "2026-01-01", checkOut: "2026-01-08", createdAt: "2026-01-01T00:00:00.000Z" }, // score 2, $100/night
-      { id: "b", votes: { u1: "nice" }, prices: price(35000), checkIn: "2026-01-01", checkOut: "2026-01-08", createdAt: "2026-01-01T00:00:00.000Z" }, // score 1, $50/night
-      { id: "c", votes: { u1: "must" }, prices: price(1000000), checkIn: "2026-01-01", checkOut: "2026-01-08", createdAt: "2026-01-01T00:00:00.000Z" }, // chosen, score 2 but cheap-doesn't matter
+      { id: "a", prices: price(70000), checkIn: "2026-01-01", checkOut: "2026-01-08", createdAt: "2026-01-01T00:00:00.000Z" }, // $100/night
+      { id: "b", prices: price(35000), checkIn: "2026-01-01", checkOut: "2026-01-08", createdAt: "2026-01-01T00:00:00.000Z" }, // $50/night
+      { id: "c", prices: price(1000000), checkIn: "2026-01-01", checkOut: "2026-01-08", createdAt: "2026-01-01T00:00:00.000Z" }, // chosen, expensive-doesn't matter
+      { id: "d", out: true, prices: price(1), checkIn: "2026-01-01", checkOut: "2026-01-08", createdAt: "2026-01-01T00:00:00.000Z" }, // Out, cheapest but sorts last
     ];
     const sorted = sortStayOptions(stays, ["c"]);
-    assert.deepEqual(sorted.map((s) => s.id), ["c", "a", "b"]);
+    assert.deepEqual(sorted.map((s) => s.id), ["c", "b", "a", "d"]);
   }],
   ["stayNumbers: a stay's number doesn't change when it becomes chosen (chosen status plays no part in numbering)", () => {
     const stays = [

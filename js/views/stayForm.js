@@ -1,4 +1,4 @@
-import { el, field, dialogShell, setPending, friendlyError } from "../ui.js";
+import { el, field, dialogShell, setPending, friendlyError, readClipboardText } from "../ui.js";
 import { googleHotelsUrl, bookingUrl, airbnbUrl, googleMapsFindUrl } from "../lib/links.js";
 import { parseStayLink } from "../lib/staylink.js";
 import { parseGoogleMapsUrl } from "../lib/mapsurl.js";
@@ -185,10 +185,13 @@ function buildWhereIsIt({ nameInput, dest, initialLat, initialLng }) {
  * search links, the "✓ Read from the link" result line, then Name, Price you
  * saw (add mode only), Check-in/Check-out/Guests, Neighborhood, Where is it?,
  * Note. `focusLocation` (edit mode only) opens straight to "Where is it?",
- * for the card's **Set location** action. Resolves the stay's fields (plus
- * `priceAmountCents` in add mode), or `null` on cancel.
+ * for the card's **Set location** action. `stopDefaults` (add mode only,
+ * T24): `{ checkIn, checkOut, stopKey }` when "Add stay" was pressed inside
+ * a stop, so the new stay joins that stop with its dates pre-filled.
+ * Resolves the stay's fields (plus `priceAmountCents` in add mode), or
+ * `null` on cancel.
  */
-function buildStayDialog({ isEdit, stay, trip, focusLocation }) {
+function buildStayDialog({ isEdit, stay, trip, focusLocation, stopDefaults }) {
   return dialogShell("stay-dialog", (finish) => {
     const dest = trip.destination;
     const adults = (trip.travelers || []).length || 1;
@@ -201,10 +204,21 @@ function buildStayDialog({ isEdit, stay, trip, focusLocation }) {
     });
     const resultLine = el("p", { className: "link-parse-result", hidden: true });
 
+    // A tap-to-paste fallback beside the link box, for browsers that don't
+    // fire a "paste" event reliably (e.g. no clipboard permission yet).
+    const pasteBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Paste" });
+    pasteBtn.addEventListener("click", async () => {
+      const text = await readClipboardText();
+      if (!text) return;
+      linkInput.value = text;
+      tryParseLink();
+    });
+    const linkRow = el("div", { className: "input-row" }, [linkInput, pasteBtn]);
+
     const nameInput = el("input", { type: "text", value: stay?.name || "" });
     const priceInput = isEdit ? null : el("input", { type: "text", placeholder: "e.g. 480.50" });
-    const checkInInput = el("input", { type: "date", value: stay?.checkIn ?? trip.startDate ?? "" });
-    const checkOutInput = el("input", { type: "date", value: stay?.checkOut ?? trip.endDate ?? "" });
+    const checkInInput = el("input", { type: "date", value: stay?.checkIn ?? stopDefaults?.checkIn ?? trip.startDate ?? "" });
+    const checkOutInput = el("input", { type: "date", value: stay?.checkOut ?? stopDefaults?.checkOut ?? trip.endDate ?? "" });
     const guestsInput = el("input", { type: "number", min: "1", value: stay?.guests ?? adults });
     const neighborhoodInput = el("input", { type: "text", value: stay?.neighborhood || "" });
     const noteInput = el("textarea", { rows: 2, value: stay?.note || "" });
@@ -275,7 +289,7 @@ function buildStayDialog({ isEdit, stay, trip, focusLocation }) {
 
     const formChildren = [
       el("h3", { textContent: isEdit ? "Edit stay" : "Add stay" }),
-      field("Link to the stay", linkInput),
+      field("Link to the stay", linkRow),
       searchLinksLine,
       resultLine,
       field("Name", nameInput),
@@ -324,7 +338,10 @@ function buildStayDialog({ isEdit, stay, trip, focusLocation }) {
         lat: whereIsIt.getLat(),
         lng: whereIsIt.getLng(),
       };
-      if (!isEdit) fields.priceAmountCents = priceAmountCents;
+      if (!isEdit) {
+        fields.priceAmountCents = priceAmountCents;
+        fields.stopKey = stopDefaults?.stopKey ?? null;
+      }
       finish(fields);
     });
 
@@ -332,8 +349,8 @@ function buildStayDialog({ isEdit, stay, trip, focusLocation }) {
   });
 }
 
-export function addStayFormDialog(trip) {
-  return buildStayDialog({ isEdit: false, stay: null, trip });
+export function addStayFormDialog(trip, stopDefaults = null) {
+  return buildStayDialog({ isEdit: false, stay: null, trip, stopDefaults });
 }
 
 export function editStayFormDialog(stay, trip, focusLocation = false) {

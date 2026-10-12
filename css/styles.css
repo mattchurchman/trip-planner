@@ -728,6 +728,20 @@ textarea:focus {
   flex-wrap: wrap;
 }
 
+/* An input with a button beside it inside one field, e.g. the stay link box's
+   tap-to-paste fallback (T24). Overrides `.field input`'s width:100% so the
+   button keeps its own width instead of wrapping to a second line. */
+.input-row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.input-row input {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+}
+
 /* min-width:0 lets paired date inputs shrink; flex items default to their
    intrinsic width, which overflows a narrow phone and the dialogs. */
 .field-row .field {
@@ -1364,6 +1378,72 @@ textarea:focus {
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: var(--space-3);
   margin-top: var(--space-3);
+}
+
+/* One stop's section of the Stays tab (T24): heading + Add stay, the night
+   coverage bar, then that stop's stays in the same grid as the ungrouped
+   list above. */
+.stop-group {
+  margin-top: var(--space-6);
+}
+
+.stop-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.stop-group-header h3 {
+  margin: 0;
+}
+
+.coverage {
+  margin-top: var(--space-2);
+}
+
+/* One cell per night (T24): open (not covered), covered, or double-booked by
+   two chosen stays. Wraps instead of scrolling so a long stop still fits at
+   375px. */
+.coverage-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.coverage-cell {
+  width: 18px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--sunk);
+  border: 1px solid var(--border);
+}
+
+.coverage-covered {
+  background: var(--good);
+  border-color: var(--good);
+}
+
+.coverage-double {
+  background: var(--sun);
+  border-color: var(--sun);
+}
+
+.coverage-summary {
+  margin: var(--space-1) 0 0;
+  font-size: 0.9em;
+}
+
+.stop-total {
+  margin: 2px 0 0;
+  font-weight: 600;
+  font-size: 0.9em;
+}
+
+/* An Out stay (T24): dimmed, same as a Pass-only place, without hiding it. */
+.stay-card-out {
+  opacity: 0.55;
 }
 
 /* Stays price-pin map (§7.7.1), above the stay cards. */
