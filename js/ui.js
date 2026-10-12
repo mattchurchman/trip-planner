@@ -50,6 +50,19 @@ export function setPending(button, pending, pendingText = "Saving…") {
   }
 }
 
+/** Shows a short status message above the phone navigation bar. */
+export function toast(message) {
+  let notice = document.getElementById("app-toast");
+  if (!notice) {
+    notice = el("div", { className: "toast", attrs: { id: "app-toast", role: "status" } });
+    document.body.appendChild(notice);
+  }
+  notice.textContent = message;
+  notice.hidden = false;
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => { notice.hidden = true; }, 2600);
+}
+
 /** Translates a Firestore/auth error into a message the owner's friends can act on. */
 export function friendlyError(err) {
   if (err && err.code === "permission-denied") {

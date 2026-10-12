@@ -1,6 +1,6 @@
 import { auth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, signOut, onAuthStateChanged, isConfigured } from "./firebase.js";
 import { checkAllowlist, ensureUserDoc, watchTrip } from "./store.js";
-import { el, friendlyError } from "./ui.js";
+import { el, svgEl, friendlyError } from "./ui.js";
 import { tripStage } from "./lib/stage.js";
 import { renderTripsView } from "./views/trips.js";
 import { renderOverviewPage } from "./views/overview.js";
@@ -11,11 +11,11 @@ import { renderRecapPage } from "./views/recap.js";
 import { renderSignIn, renderEmailConfirmation } from "./views/signin.js";
 
 const TABS = [
-  { key: "overview", label: "Overview", render: renderOverviewPage },
-  { key: "places", label: "Places", render: renderPlacesPage },
-  { key: "travel", label: "Flights & stays", render: renderTravelPage },
-  { key: "days", label: "Days", render: renderDaysPage },
-  { key: "recap", label: "Recap", render: renderRecapPage },
+  { key: "overview", label: "Overview", icon: "M4 11l8-7 8 7v9h-5v-6H9v6H4z", render: renderOverviewPage },
+  { key: "places", label: "Places", icon: "M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z", render: renderPlacesPage },
+  { key: "travel", label: "Flights & stays", icon: "M3 17l6-2 4 3 8-12M3 17v.01M21 6v.01", render: renderTravelPage },
+  { key: "days", label: "Days", icon: "M5 5h14v15H5zM5 10h14M9 3v4M15 3v4", render: renderDaysPage },
+  { key: "recap", label: "Recap", icon: "M5 3v18M5 5h11l-2 4 2 4H5", render: renderRecapPage },
 ];
 
 const root = document.getElementById("app");
@@ -96,33 +96,41 @@ function renderTopBar(user) {
         className: "avatar avatar-initial",
         textContent: (user.displayName || user.email || "?")[0].toUpperCase(),
       });
+  const accountMenu = el("details", { className: "account-menu" }, [
+    el("summary", { attrs: { "aria-label": "Account menu" } }, [avatar]),
+    el("div", { className: "account-menu-panel" }, [
+      el("button", { className: "btn btn-quiet", textContent: "Sign out", onclick: () => signOut(auth) }),
+    ]),
+  ]);
   return el("header", { className: "top-bar" }, [
     el("a", { className: "app-brand", href: "#/" }, [
       el("img", { className: "app-logo", src: "./img/logo.svg", alt: "", width: 28, height: 28 }),
       el("span", { className: "app-name", textContent: "Trip Planner" }),
     ]),
+    el("span", { className: "top-trip-name", textContent: "" }),
+    el("nav", { className: "top-tabs", attrs: { "aria-label": "Trip sections" } }),
     el("div", { className: "top-bar-user" }, [
       el("a", { className: "btn btn-link", textContent: "Help", href: "./help.html", target: "_blank", rel: "noopener noreferrer" }),
-      avatar,
-      el("button", { className: "btn btn-link", textContent: "Sign out", onclick: () => signOut(auth) }),
+      accountMenu,
     ]),
   ]);
 }
 
+function tabLink(tab, tripId, tabKey) {
+  const icon = svgEl("svg", { class: "tab-icon", viewBox: "0 0 24 24", "aria-hidden": "true" }, [
+    svgEl("path", { d: tab.icon }),
+  ]);
+  return el("a", {
+    className: `tab${tab.key === tabKey ? " tab-active" : ""}`,
+    href: `#/trip/${tripId}/${tab.key}`,
+    attrs: tab.key === tabKey ? { "aria-current": "page" } : {},
+  }, [icon, el("span", { textContent: tab.label })]);
+}
+
 function renderTripShell(main, tripId, myUid, tabKey) {
   const header = el("div", { className: "trip-header" });
-  const tabBar = el(
-    "nav",
-    { className: "tab-bar" },
-    TABS.map((tab) =>
-      el("a", {
-        className: `tab${tab.key === tabKey ? " tab-active" : ""}`,
-        href: `#/trip/${tripId}/${tab.key}`,
-        textContent: tab.label,
-        attrs: tab.key === tabKey ? { "aria-current": "page" } : {},
-      })
-    )
-  );
+  const tabBar = el("nav", { className: "tab-bar", attrs: { "aria-label": "Trip sections" } }, TABS.map((tab) => tabLink(tab, tripId, tabKey)));
+  root.querySelector(".top-tabs").replaceChildren(...TABS.map((tab) => tabLink(tab, tripId, tabKey)));
   const content = el("div", { className: "trip-content" });
   main.replaceChildren(el("div", { className: "trip-shell" }, [header, tabBar, content]));
 
@@ -130,11 +138,13 @@ function renderTripShell(main, tripId, myUid, tabKey) {
     tripId,
     (trip) => {
       if (!trip) {
+        root.querySelector(".top-trip-name").textContent = "";
         header.replaceChildren(el("p", { textContent: "This trip couldn't be found." }));
         content.replaceChildren();
         return;
       }
       document.title = `${trip.name} · Trip Planner`;
+      root.querySelector(".top-trip-name").textContent = trip.name;
       const today = new Date().toISOString().slice(0, 10);
       const stage = tripStage(trip, today);
       const stageBadge = stage.key === "done"

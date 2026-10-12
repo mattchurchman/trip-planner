@@ -22,7 +22,7 @@ If a task fails twice, say "Revert the last commit" and rerun it in a fresh sess
 |---|---|---|---|---|---|
 | T14 | [Home-screen app and Firebase Hosting](T14-app-shell-hosting.md) | Sonnet | medium | — | Done (2026-10-11) |
 | T15 | [Sign-in that sticks on iPhone](T15-sign-in.md) | Sonnet | high | T14 | Done (2026-10-11) |
-| T16 | [New look and phone navigation](T16-design-refresh.md) | Sonnet | high | T15 | To do |
+| T16 | [New look and phone navigation](T16-design-refresh.md) | Sonnet | high | T15 | Done (2026-10-11) |
 | T17 | [Airport lookup](T17-airports.md) | Sonnet | low | — | To do |
 | T18 | [Route logic](T18-route-logic.md) | Opus | high | T17 | To do |
 | T19 | [Routes tab](T19-routes-screen.md) | Sonnet | high | T16, T18 | To do |
