@@ -2,11 +2,12 @@
 // routes.js because the rail — working out stops from flights, then drawing
 // them as a track of nodes with the hop flights hanging off it — is its own
 // chunk of layout, reused nowhere else.
-import { el } from "../ui.js";
+import { el, setPending } from "../ui.js";
 import { formatMoney } from "../lib/money.js";
 import { nightsLabel } from "../lib/dates.js";
 import { formatLegDate } from "../lib/itineraryFormat.js";
 import { stopsFor, movements, totalFor, ideaEndpoints } from "../lib/route.js";
+import { byLatestPriceAsc } from "../lib/optionSort.js";
 import { priceCheck, checkPricesButton } from "./pricePanel.js";
 import { renderItinerary } from "./itinerary.js";
 
@@ -205,4 +206,40 @@ export function renderOptionCard({
     ])
   );
   return card;
+}
+
+/**
+ * The home-flights card (V4 §4.6): every alternative the selected traveler has
+ * for this idea, cheapest first, each with Use this / Using. `onTogglePick`
+ * gets the flight and its siblings (the other alternatives), since picking one
+ * un-picks the ones it replaces. Returns the card's children, ready for
+ * `replaceChildren`.
+ */
+export function homeFlightsCardBody({ traveler, homeFlights, trip, tripId, myUid, usersById, onEdit, onDelete, onTogglePick }) {
+  function row(flight) {
+    const picked = flight.picked !== false;
+    const useBtn = el("button", { type: "button", className: "btn btn-small", textContent: picked ? "Using" : "Use this" });
+    useBtn.addEventListener("click", async () => {
+      setPending(useBtn, true, picked ? "Removing…" : "Using…");
+      await onTogglePick(flight, homeFlights);
+      setPending(useBtn, false);
+    });
+    const node = renderFlightRow(flight, {
+      tripId,
+      myUid,
+      currency: trip.currency,
+      usersById,
+      onEdit: () => onEdit(flight),
+      onDelete: () => onDelete(flight),
+      leadingActions: [useBtn],
+    });
+    if (picked) node.classList.add("flight-card-chosen");
+    return node;
+  }
+
+  const heading = el("h3", { textContent: `${traveler.name}'s flights to and from the region` });
+  if (homeFlights.length === 0) {
+    return [heading, el("p", { className: "empty-state", textContent: `No flights yet for ${traveler.name}. Paste a flight link above.` })];
+  }
+  return [heading, ...[...homeFlights].sort(byLatestPriceAsc).map(row)];
 }

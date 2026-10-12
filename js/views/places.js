@@ -1,7 +1,6 @@
 import { updatePlace, deletePlace, voteOnPlace } from "../store.js";
 import { el, confirmDialog, friendlyError, rankControl, renderWhenIdle } from "../ui.js";
 import { renderComments } from "./comments.js";
-import { renderExportSection } from "./exportSection.js";
 import { editPlaceDialog, buildSetLocationInline, buildAddPlacePanel } from "./placeForm.js";
 import { sortByRank, notRankedByMe, voteSummary, toMillis } from "../lib/votes.js";
 import { safeUrl, googleMapsOpenUrl } from "../lib/links.js";
@@ -36,9 +35,9 @@ function applyFiltersAndSort(places, { filters, sortMode, trip, myUid }) {
  * Builds the Places list of the Map tab (T25): the Add button, filters, and
  * places grouped by nothing in particular (the stop chips above do the
  * grouping, by filtering which places are passed to `render`). Call
- * `render(places, trip, usersById, days)` whenever trip/places/users/days or
- * the chosen stop chip change — `places` is already narrowed to the current
- * chip by the caller. `onFocusOnMap(place)` pans the shared map (owned by
+ * `render(places, trip, usersById)` whenever trip/places/users or the chosen
+ * stop chip change — `places` is already narrowed to the current chip by the
+ * caller. `onFocusOnMap(place)` pans the shared map (owned by
  * the caller, T25) to that place's pin; `cities` is the live list the
  * caller keeps updated, used to work out a new pin's `stopKey` (V4 §6).
  */
@@ -46,7 +45,6 @@ export function createPlacesSection({ tripId, myUid, onError, mapClickState, onF
   let trip = null;
   let usersById = {};
   let places = [];
-  let days = [];
   let placeCommentUnsubscribes = [];
   let addPanelBuilt = false;
   const filters = { categories: new Set(), neighborhood: "", search: "", notRankedOnly: false, eventsOnly: false };
@@ -58,7 +56,6 @@ export function createPlacesSection({ tripId, myUid, onError, mapClickState, onF
   const filtersEl = el("div", { className: "places-filters card" });
   const rankCountEl = el("p", { className: "muted rank-count" });
   const listEl = el("div", { className: "places-list" });
-  const exportSectionHolder = el("div", { className: "export-section-holder" });
 
   addPanelToggle.addEventListener("click", () => {
     addPanelHolder.hidden = !addPanelHolder.hidden;
@@ -280,7 +277,6 @@ export function createPlacesSection({ tripId, myUid, onError, mapClickState, onF
     if (!trip) return;
     updateNeighborhoodOptions();
 
-    exportSectionHolder.replaceChildren(renderExportSection({ trip, places, days }));
     const notRankedCount = notRankedByMe(places, myUid).length;
     rankCountEl.textContent =
       notRankedCount > 0
@@ -300,16 +296,14 @@ export function createPlacesSection({ tripId, myUid, onError, mapClickState, onF
     filtersEl,
     rankCountEl,
     listEl,
-    exportSectionHolder,
   ]);
 
   return {
     element,
-    render(newPlaces, newTrip, newUsersById, newDays = []) {
+    render(newPlaces, newTrip, newUsersById) {
       trip = newTrip;
       usersById = newUsersById;
       places = newPlaces;
-      days = newDays;
       if (trip && !addPanelBuilt) {
         addPanelBuilt = true;
         buildAddPlacePanel({

@@ -1,9 +1,9 @@
 import { el, downloadFile } from "../ui.js";
-import { buildPlacesCsv, buildPlacesKml, buildTripKml, placesCsvFilename, placesKmlFilename, locatedCount } from "../lib/exporters.js";
+import { buildPlacesCsv, buildPlacesKml, buildTripKml, placesCsvFilename, placesKmlFilename, tripKmlFilename, locatedCount } from "../lib/exporters.js";
 
 /**
- * The Export section shared by the Places and Days tabs (§7.10): CSV/KML
- * downloads, the left-out-pins count, and the Google My Maps help box.
+ * The Export section on the Days tab (V4 §8): the day-by-day map file for
+ * Google My Maps, the plain places CSV/KML, and the left-out-pins count.
  * Stateless -- call again whenever trip/places/days change.
  */
 export function renderExportSection({ trip, places, days, chosenStays = [] }) {
@@ -19,9 +19,9 @@ export function renderExportSection({ trip, places, days, chosenStays = [] }) {
     downloadFile(placesKmlFilename(trip.name), buildPlacesKml(trip.name, places, days), "application/vnd.google-earth.kml+xml");
   });
 
-  const tripKmlBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Download map for Google Maps" });
+  const tripKmlBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Take it to Google Maps" });
   tripKmlBtn.addEventListener("click", () => {
-    downloadFile(placesKmlFilename(trip.name), buildTripKml(trip.name, places, days, chosenStays), "application/vnd.google-earth.kml+xml");
+    downloadFile(tripKmlFilename(trip.name), buildTripKml(trip.name, places, days, chosenStays), "application/vnd.google-earth.kml+xml");
   });
 
   return el(

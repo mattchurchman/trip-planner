@@ -1,7 +1,7 @@
 import { logPriceEntry, deletePriceEntry } from "../store.js";
 import { el, svgEl, setPending, confirmDialog, friendlyError } from "../ui.js";
 import { parseMoney, formatMoney } from "../lib/money.js";
-import { latestEntry, priceDelta, isNewLow, sortByTimeAsc, priceAgeDays, stalePriceQueue } from "../lib/totals.js";
+import { latestEntry, priceDelta, isNewLow, sortByTimeAsc, priceAgeDays, isStale, stalePriceQueue } from "../lib/totals.js";
 import { relativeTime } from "../lib/dates.js";
 import { safeUrl } from "../lib/links.js";
 
@@ -61,7 +61,7 @@ function priceSummary({ prices, currency, perNightCents = null, usersById = {}, 
   }
 
   const age = priceAgeDays(prices, now);
-  const stale = age === null || age > 3;
+  const stale = isStale(prices, now);
   const when = latest.checkedAt ? relativeTime(new Date(latest.checkedAt), now) : "";
   const byName = (usersById[latest.byUid] && usersById[latest.byUid].displayName) || "someone";
   const exactTime = latest.checkedAt ? new Date(latest.checkedAt).toLocaleString() : "";

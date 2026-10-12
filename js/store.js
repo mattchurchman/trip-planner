@@ -1,4 +1,4 @@
-// All Firestore reads, writes and listeners live here (CLAUDE.md code rules).
+// All Firestore reads, writes and listeners live here (AGENTS.md code rules).
 import {
   db,
   doc,
@@ -21,6 +21,8 @@ import {
 } from "./firebase.js";
 import { chosenStayIds } from "./lib/selection.js";
 
+// Everything a trip delete has to clear out. "candidates" is no longer written
+// (SPEC §1 dropped destination ideas) but older trips still have the docs.
 const TRIP_SUBCOLLECTIONS = ["candidates", "places", "flights", "stays", "costs", "days", "comments", "ideas", "options"];
 
 export function checkAllowlist(email) {
@@ -62,8 +64,6 @@ export function createTrip(name, user) {
     name,
     currency: "USD",
     notes: "",
-    destination: null,
-    destinationId: null,
     startDate: null,
     endDate: null,
     travelers: [
@@ -75,10 +75,9 @@ export function createTrip(name, user) {
         homeAirport: "",
       },
     ],
-    selectedFlights: {},
+    chosenOptionId: null,
     selectedStayIds: [],
     albumUrl: null,
-    actualSpendCents: {},
     createdBy: user.uid,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -132,16 +131,7 @@ export async function getTravelerFlights(tripId, travelerId) {
   return snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
 }
 
-/** Removes a traveler, dropping only their own selectedFlights entry in the same
- * write so a teammate's concurrent Choose elsewhere in the map isn't clobbered (§7.5). */
-export function removeTraveler(tripId, travelers, travelerId) {
-  return updateTripFields(tripId, {
-    travelers,
-    [`selectedFlights.${travelerId}`]: deleteField(),
-  });
-}
-
-// Generic helpers shared by the ranked, commentable subcollections (candidates, places, ...).
+// Generic helpers shared by the ranked, commentable subcollections (places, stays, ...).
 function watchSubcollection(tripId, name, onChange, onError) {
   return onSnapshot(
     collection(db, "trips", tripId, name),
@@ -181,7 +171,6 @@ export function watchPlaces(tripId, onChange, onError) {
 function placeDocFields(fields) {
   return {
     name: fields.name,
-    destinationId: fields.destinationId ?? null,
     category: fields.category,
     neighborhood: fields.neighborhood || "",
     note: fields.note || "",
@@ -305,10 +294,6 @@ function flightDocFields(fields) {
   };
 }
 
-export function addFlight(tripId, fields, uid) {
-  return addSubDoc(tripId, "flights", flightDocFields(fields), uid);
-}
-
 /**
  * Saves a pasted flight (V4 §4.5) in one batch, creating its idea and/or
  * option alongside it when either is new — so a dropped connection never
@@ -417,34 +402,9 @@ export async function deleteOption(tripId, optionId) {
 }
 
 /** Sets or clears the trip's chosen route option (V4 §4.6's Choose this option /
- * Unchoose). Unlike chooseFlight, there is only ever one at a time. */
+ * Unchoose). There is only ever one at a time. */
 export function setChosenOption(tripId, optionId) {
   return updateTripFields(tripId, { chosenOptionId: optionId });
-}
-
-/**
- * Choose/unchoose a flight option for one traveler (§5.3, §7.7). A traveler may
- * choose any number of options. `trip` is the current trip doc, needed to detect
- * the pre-2.0 shape (a single flight id string): the first time a legacy value
- * changes, the whole list is written instead of arrayUnion/arrayRemove, because
- * arrayUnion on a string would silently discard the old choice.
- */
-export function chooseFlight(tripId, trip, travelerId, flightId) {
-  const current = trip.selectedFlights && trip.selectedFlights[travelerId];
-  if (typeof current === "string") {
-    const merged = current === flightId ? [current] : [current, flightId];
-    return updateTripFields(tripId, { [`selectedFlights.${travelerId}`]: merged });
-  }
-  return updateTripFields(tripId, { [`selectedFlights.${travelerId}`]: arrayUnion(flightId) });
-}
-
-export function unchooseFlight(tripId, trip, travelerId, flightId) {
-  const current = trip.selectedFlights && trip.selectedFlights[travelerId];
-  if (typeof current === "string") {
-    const remaining = current === flightId ? [] : [current];
-    return updateTripFields(tripId, { [`selectedFlights.${travelerId}`]: remaining });
-  }
-  return updateTripFields(tripId, { [`selectedFlights.${travelerId}`]: arrayRemove(flightId) });
 }
 
 export function watchStays(tripId, onChange, onError) {
@@ -473,7 +433,6 @@ export function addStay(tripId, fields, uid) {
       // Optional "Price you saw" from the add form (§7.7), already a full PriceEntry
       // built by the caller (same shape as pricePanel.js's Log price).
       prices: fields.firstPriceEntry ? [fields.firstPriceEntry] : [],
-      votes: {},
     },
     uid
   );
@@ -508,14 +467,9 @@ export function duplicateStay(tripId, stay, uid) {
       stopKey: stay.stopKey ?? null,
       out: false,
       prices: [],
-      votes: {},
     },
     uid
   );
-}
-
-export function voteOnStay(tripId, stayId, uid, choice) {
-  return voteOnSubDoc(tripId, "stays", stayId, uid, choice);
 }
 
 /**

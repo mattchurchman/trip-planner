@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { stayPinLabel, topPlaces } from "../js/lib/staypins.js";
+import { stayPinLabel } from "../js/lib/staypins.js";
 
 export const tests = [
   ["stayPinLabel shows the per-night price when nights are known: $1,260 over 7 nights", () => {
@@ -16,21 +16,5 @@ export const tests = [
   }],
   ["stayPinLabel formats in the trip's currency", () => {
     assert.match(stayPinLabel({ number: 5, latestCents: 10000, nights: null, currency: "EUR" }), /€/);
-  }],
-  ["topPlaces excludes places from a different destination", () => {
-    const places = [{ destinationId: "a", lat: 1, lng: 1, votes: { u: "must" } }];
-    assert.deepEqual(topPlaces(places, "b"), []);
-  }],
-  ["topPlaces excludes places with no location", () => {
-    const places = [{ destinationId: "a", lat: null, lng: null, votes: { u: "must" } }];
-    assert.deepEqual(topPlaces(places, "a"), []);
-  }],
-  ["topPlaces excludes places scoring below 2", () => {
-    const places = [{ destinationId: "a", lat: 1, lng: 1, votes: { u: "nice" } }];
-    assert.deepEqual(topPlaces(places, "a"), []);
-  }],
-  ["topPlaces includes a place with one Must (score 2)", () => {
-    const places = [{ id: "p1", destinationId: "a", lat: 1, lng: 1, votes: { u: "must" } }];
-    assert.deepEqual(topPlaces(places, "a").map((p) => p.id), ["p1"]);
   }],
 ];

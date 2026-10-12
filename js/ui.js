@@ -241,30 +241,6 @@ export function rankControl({ votes = {}, myUid, usersById = {}, onVote }) {
   return el("div", { className: "rank-control" }, summary ? [buttons, summary] : [buttons]);
 }
 
-/** A "Copy link" button using the Clipboard API, falling back to a selectable text field (§8). */
-export function copyLinkButton(url) {
-  const btn = el("button", { type: "button", className: "btn btn-small", textContent: "Copy link" });
-  const fallback = el("input", {
-    type: "text",
-    value: url,
-    className: "copy-fallback",
-    readOnly: true,
-    hidden: true,
-  });
-  btn.addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText(url);
-      setPending(btn, true, "Copied!");
-      setTimeout(() => setPending(btn, false), 1500);
-    } catch {
-      fallback.hidden = false;
-      fallback.focus();
-      fallback.select();
-    }
-  });
-  return el("span", { className: "copy-link" }, [btn, fallback]);
-}
-
 /** Triggers a browser download of in-memory content, e.g. an export file (§7.10). */
 export function downloadFile(filename, content, mimeType = "text/plain") {
   const blob = new Blob([content], { type: mimeType });

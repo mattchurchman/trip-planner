@@ -3,7 +3,7 @@
 const POINTS = { love: 2, like: 1, pass: -1 };
 
 /** Convert old vote values (must/nice/skip) to new ones (love/like/pass) for backwards compatibility. */
-export function normalizeVote(value) {
+function normalizeVote(value) {
   const map = { must: "love", nice: "like", skip: "pass" };
   return map[value] || value;
 }

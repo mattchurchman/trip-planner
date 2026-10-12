@@ -3,13 +3,8 @@ import {
   watchUsers,
   watchFlights,
   watchIdeas,
-  addIdea,
-  updateIdea,
-  deleteIdea,
   watchOptions,
-  addOption,
   updateOption,
-  deleteOption,
   setChosenOption,
   setFlightPicked,
   addPastedFlight,
@@ -17,32 +12,22 @@ import {
   deleteFlight,
   updateTravelers,
 } from "../store.js";
-import { el, confirmDialog, promptDialog, friendlyError, setPending, renderWhenIdle, readClipboardText } from "../ui.js";
+import { el, confirmDialog, friendlyError, renderWhenIdle, readClipboardText } from "../ui.js";
 import { loadAirports } from "../lookup.js";
-import { latestEntry } from "../lib/totals.js";
-import { totalFor } from "../lib/route.js";
+import { totalFor, optionAutoName, directionsToClear } from "../lib/route.js";
 import { editFlightFormDialog } from "./flightForm.js";
 import { pasteFlightDialog, moveFlightDialog, renderEarlierFlights } from "./pasteFlight.js";
-import { renderFlightRow, renderOptionCard } from "./routeRail.js";
-
-/** Direction groups that conflict with picking `direction` (V4 §4.4): picking
- * a "both" flight replaces any separate out/back picks and vice versa, since
- * they can't both be the way you get there. A flight with no resolved
- * direction (null) stands alone — nothing to clear. */
-function directionsToClear(direction) {
-  if (direction === "both") return ["out", "back", "both"];
-  if (direction === "out" || direction === "back") return [direction, "both"];
-  return [direction];
-}
-
-function cheapestFirst(a, b) {
-  const pa = latestEntry(a.prices)?.amountCents ?? null;
-  const pb = latestEntry(b.prices)?.amountCents ?? null;
-  if (pa == null && pb == null) return 0;
-  if (pa == null) return 1;
-  if (pb == null) return -1;
-  return pa - pb;
-}
+import { renderOptionCard, homeFlightsCardBody } from "./routeRail.js";
+import {
+  addIdeaDialog,
+  renameIdeaDialog,
+  deleteIdeaDialog,
+  addOptionDialog,
+  renameOptionDialog,
+  deleteOptionDialog,
+  renderTravelerSwitch,
+  renderIdeaSwitch,
+} from "./routeIdeas.js";
 
 /** Renders the Routes tab (V4 §4). Returns a single unsubscribe function. */
 export function renderRoutesPage(container, tripId, myUid) {
@@ -121,24 +106,6 @@ export function renderRoutesPage(container, tripId, myUid) {
     return flights.filter((f) => f.role === "hop" && f.optionId === optionId);
   }
 
-  /** Prompts for a name (defaulting to `defaultName`), falling back to it if
-   * the owner clears the field, then hands it to `create`. Null on cancel. */
-  async function promptAndCreate(label, defaultName, create) {
-    const typed = await promptDialog(label, defaultName);
-    if (typed === null) return null;
-    return create(typed.trim() || defaultName);
-  }
-
-  /** Prompts to rename `entity`, then writes `name`/`nameEdited` via `update`.
-   * No-ops on cancel or an empty name. */
-  async function promptAndRename(entity, label, update) {
-    const typed = await promptDialog(label, entity.name);
-    if (typed === null) return;
-    const name = typed.trim();
-    if (!name) return;
-    await update({ name, nameEdited: true });
-  }
-
   function toggleUseThisFlight(flight, siblings) {
     if (flight.picked !== false) return run(() => setFlightPicked(tripId, flight.id, false));
     const clearSet = new Set(directionsToClear(flight.direction));
@@ -162,7 +129,7 @@ export function renderRoutesPage(container, tripId, myUid) {
   /** Opens the Paste flight link sheet (V4 §4.5) for the traveler currently
    * selected. `defaultOptionId` pins the hop target when this was pressed
    * inside an already-open option; null means "work it out" (the idea's
-   * first option, or a new Option 1). */
+   * first option, or a new one named after the hop). */
   function onPasteFlight(defaultOptionId) {
     return run(async () => {
       const traveler = travelers().find((t) => t.id === selectedTravelerId);
@@ -199,14 +166,29 @@ export function renderRoutesPage(container, tripId, myUid) {
       await updateTravelers(tripId, travelers().map((t) => (t.id === traveler.id ? { ...t, homeAirport: result.homeAirport } : t)));
     }
 
-    const saved = await addPastedFlight(
-      tripId,
-      { flight: { ...result.flight, travelerId: result.travelerId, picked: result.picked }, idea: result.idea, option: result.option },
-      myUid
-    );
+    const newFlight = { ...result.flight, travelerId: result.travelerId, picked: result.picked };
+    const saved = await addPastedFlight(tripId, { flight: newFlight, idea: result.idea, option: result.option }, myUid);
 
     selectedIdeaId = saved.ideaId;
-    if (saved.optionId) openOptionIds.add(saved.optionId);
+    if (saved.optionId) {
+      openOptionIds.add(saved.optionId);
+      await renameOptionForItsHops(saved, newFlight);
+    }
+  }
+
+  /** A hop joining an option it didn't name yet widens that name (V4 §4.4):
+   * "Florence" becomes "Florence + Barcelona". Options someone has renamed by
+   * hand, and ones this paste just created, are left as they are. */
+  async function renameOptionForItsHops(saved, newFlight) {
+    const option = options.find((o) => o.id === saved.optionId);
+    if (!option || !airports) return;
+    const name = optionAutoName({
+      option,
+      hopFlights: [...hopFlightsFor(option.id), newFlight],
+      homeFlights: homeFlightsFor(saved.ideaId, selectedTravelerId),
+      airports,
+    });
+    if (name) await updateOption(tripId, option.id, { name, nameEdited: false });
   }
 
   function onMoveFlight(flight) {
@@ -218,109 +200,26 @@ export function renderRoutesPage(container, tripId, myUid) {
 
   function onAddIdea() {
     return run(async () => {
-      const ref = await promptAndCreate("Name this idea", `Idea ${ideas.length + 1}`, (name) =>
-        addIdea(tripId, { name, nameEdited: true, order: ideas.length }, myUid)
-      );
+      const ref = await addIdeaDialog(tripId, ideas, myUid);
       if (ref) selectedIdeaId = ref.id;
-    });
-  }
-
-  function onRenameIdea(idea) {
-    return run(() => promptAndRename(idea, "Rename this idea", (fields) => updateIdea(tripId, idea.id, fields)));
-  }
-
-  function onDeleteIdea(idea) {
-    return run(async () => {
-      if (await confirmDialog(`Delete "${idea.name}" and all its flights?`, "Delete")) await deleteIdea(tripId, idea.id);
     });
   }
 
   function onAddOption(idea) {
     return run(async () => {
-      const ideaOptions = options.filter((o) => o.ideaId === idea.id);
-      const ref = await promptAndCreate("Name this option", `Option ${ideaOptions.length + 1}`, (name) =>
-        addOption(tripId, { ideaId: idea.id, name, nameEdited: true, order: ideaOptions.length }, myUid)
-      );
+      const ref = await addOptionDialog(tripId, idea, options.filter((o) => o.ideaId === idea.id), myUid);
       if (ref) openOptionIds.add(ref.id);
     });
   }
 
-  function onRenameOption(option) {
-    return run(() => promptAndRename(option, "Rename this option", (fields) => updateOption(tripId, option.id, fields)));
-  }
-
   function onDeleteOption(option) {
     return run(async () => {
-      if (await confirmDialog(`Delete "${option.name}" and its flights?`, "Delete")) {
-        await deleteOption(tripId, option.id);
-        openOptionIds.delete(option.id);
-      }
+      if (await deleteOptionDialog(tripId, option)) openOptionIds.delete(option.id);
     });
   }
 
   function onChooseOption(option) {
     return run(() => setChosenOption(tripId, trip.chosenOptionId === option.id ? null : option.id));
-  }
-
-  function homeFlightRow(flight, traveler, siblings) {
-    const picked = flight.picked !== false;
-    const useBtn = el("button", { type: "button", className: "btn btn-small", textContent: picked ? "Using" : "Use this" });
-    useBtn.addEventListener("click", async () => {
-      setPending(useBtn, true, picked ? "Removing…" : "Using…");
-      await toggleUseThisFlight(flight, siblings);
-      setPending(useBtn, false);
-    });
-    const row = renderFlightRow(flight, {
-      tripId,
-      myUid,
-      currency: trip.currency,
-      usersById,
-      onEdit: () => onEditFlight(flight, traveler),
-      onDelete: () => onDeleteFlight(flight),
-      leadingActions: [useBtn],
-    });
-    if (picked) row.classList.add("flight-card-chosen");
-    return row;
-  }
-
-  function renderTravelerSwitch() {
-    travelerSwitchEl.replaceChildren(
-      ...travelers().map((t) => {
-        const btn = el("button", {
-          type: "button",
-          textContent: t.homeCity ? `${t.name} · ${t.homeCity}` : t.name,
-          attrs: { "aria-pressed": String(t.id === selectedTravelerId) },
-        });
-        btn.addEventListener("click", () => {
-          selectedTravelerId = t.id;
-          renderDynamicSections();
-        });
-        return btn;
-      })
-    );
-  }
-
-  function renderIdeaSwitch() {
-    ideaSwitchEl.replaceChildren(
-      ...ideas.map((idea) => {
-        const btn = el("button", { type: "button", textContent: idea.name, attrs: { "aria-pressed": String(idea.id === selectedIdeaId) } });
-        btn.addEventListener("click", () => {
-          selectedIdeaId = idea.id;
-          renderDynamicSections();
-        });
-        return btn;
-      })
-    );
-    const currentIdea = ideas.find((i) => i.id === selectedIdeaId);
-    if (!currentIdea) {
-      ideaActionsEl.replaceChildren();
-      return;
-    }
-    const renameBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Rename idea" });
-    renameBtn.addEventListener("click", () => onRenameIdea(currentIdea));
-    const deleteBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Delete idea" });
-    deleteBtn.addEventListener("click", () => onDeleteIdea(currentIdea));
-    ideaActionsEl.replaceChildren(renameBtn, deleteBtn);
   }
 
   function renderHomeFlightsCard() {
@@ -330,15 +229,19 @@ export function renderRoutesPage(container, tripId, myUid) {
       homeFlightsSectionEl.replaceChildren(el("p", { className: "muted", textContent: !airports ? "Loading…" : "Add a traveler on Overview first." }));
       return;
     }
-    const travelerHomeFlights = homeFlightsFor(idea.id, traveler.id);
-    const sorted = [...travelerHomeFlights].sort(cheapestFirst);
-
-    const body =
-      sorted.length === 0
-        ? [el("p", { className: "empty-state", textContent: `No flights yet for ${traveler.name}. Paste a flight link above.` })]
-        : sorted.map((f) => homeFlightRow(f, traveler, travelerHomeFlights));
-
-    homeFlightsSectionEl.replaceChildren(el("h3", { textContent: `${traveler.name}'s flights to and from the region` }), ...body);
+    homeFlightsSectionEl.replaceChildren(
+      ...homeFlightsCardBody({
+        traveler,
+        homeFlights: homeFlightsFor(idea.id, traveler.id),
+        trip,
+        tripId,
+        myUid,
+        usersById,
+        onEdit: (flight) => onEditFlight(flight, traveler),
+        onDelete: onDeleteFlight,
+        onTogglePick: toggleUseThisFlight,
+      })
+    );
   }
 
   function renderOptionsList() {
@@ -382,7 +285,7 @@ export function renderRoutesPage(container, tripId, myUid) {
             renderDynamicSections();
           },
           onChoose: () => onChooseOption(option),
-          onRename: () => onRenameOption(option),
+          onRename: () => run(() => renameOptionDialog(tripId, option)),
           onDelete: () => onDeleteOption(option),
           onPasteFlight: () => onPasteFlight(option.id),
           onEditFlight: (flight) => onEditFlight(flight, null),
@@ -429,8 +332,24 @@ export function renderRoutesPage(container, tripId, myUid) {
       selectedIdeaId = ideas[0]?.id ?? null;
     }
 
-    renderTravelerSwitch();
-    renderIdeaSwitch();
+    renderTravelerSwitch(travelerSwitchEl, {
+      travelers: travelers(),
+      selectedTravelerId,
+      onSelect: (id) => {
+        selectedTravelerId = id;
+        renderDynamicSections();
+      },
+    });
+    renderIdeaSwitch(ideaSwitchEl, ideaActionsEl, {
+      ideas,
+      selectedIdeaId,
+      onSelect: (id) => {
+        selectedIdeaId = id;
+        renderDynamicSections();
+      },
+      onRename: (idea) => run(() => renameIdeaDialog(tripId, idea)),
+      onDelete: (idea) => run(() => deleteIdeaDialog(tripId, idea)),
+    });
     renderHomeFlightsCard();
     renderOptionsList();
   }
@@ -446,51 +365,31 @@ export function renderRoutesPage(container, tripId, myUid) {
     })
     .catch((err) => onError(friendlyError(err)));
 
-  const unsubTrip = watchTrip(
-    tripId,
-    (t) => {
-      trip = t;
+  /** Every live feed does the same thing: store its slice, redraw. */
+  function feed(watch, store) {
+    return watch(
+      tripId,
+      (value) => {
+        store(value);
+        renderAll();
+      },
+      (err) => onError(friendlyError(err))
+    );
+  }
+
+  const unsubscribes = [
+    feed(watchTrip, (v) => (trip = v)),
+    feed(watchFlights, (v) => (flights = v)),
+    feed(watchIdeas, (v) => (ideas = v)),
+    feed(watchOptions, (v) => (options = v)),
+    // Names and avatars only, so a failure here isn't worth a banner.
+    watchUsers((v) => {
+      usersById = v;
       renderAll();
-    },
-    (err) => onError(friendlyError(err))
-  );
-  const unsubUsers = watchUsers(
-    (u) => {
-      usersById = u;
-      renderAll();
-    },
-    () => {}
-  );
-  const unsubFlights = watchFlights(
-    tripId,
-    (f) => {
-      flights = f;
-      renderAll();
-    },
-    (err) => onError(friendlyError(err))
-  );
-  const unsubIdeas = watchIdeas(
-    tripId,
-    (i) => {
-      ideas = i;
-      renderAll();
-    },
-    (err) => onError(friendlyError(err))
-  );
-  const unsubOptions = watchOptions(
-    tripId,
-    (o) => {
-      options = o;
-      renderAll();
-    },
-    (err) => onError(friendlyError(err))
-  );
+    }, () => {}),
+  ];
 
   return () => {
-    unsubTrip();
-    unsubUsers();
-    unsubFlights();
-    unsubIdeas();
-    unsubOptions();
+    for (const unsubscribe of unsubscribes) unsubscribe();
   };
 }

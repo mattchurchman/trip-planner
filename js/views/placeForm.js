@@ -350,7 +350,6 @@ export function buildAddPlacePanel({ trip, tripId, myUid, mapClickState, addPane
         tripId,
         {
           name,
-          destinationId: trip.destinationId,
           category,
           neighborhood: neighborhoodInput.value.trim(),
           note: noteInput.value.trim(),

@@ -42,8 +42,8 @@ Before you continue:
 
 ## 2. Where the truth lives
 
-- `docs/V4.md` is the agreed design for round 3 (tasks T14 onward). Where it differs from `SPEC.md`, **V4 wins**.
-- `SPEC.md` describes everything V4 doesn't mention. T30 folds V4 into it.
+- `SPEC.md` (version 4.0) is the design. It is the only source of truth: T30 folded `docs/V4.md` into it.
+- `docs/V4.md` is history now. Don't build from it; where it differs from `SPEC.md`, **SPEC wins**.
 - `docs/mock/routes-mock.html` is the owner-approved look and Routes layout. Match it.
 - `docs/tasks/WORDING.md` governs words on screen.
 - `PHASES.md` is history. Don't build from it.

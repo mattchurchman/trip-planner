@@ -1,5 +1,5 @@
-// Pure: sort order, the "Cheapest" pick, and stable stay numbering for the
-// Flights & stays tab (§7.7). No DOM, no Firebase.
+// Pure: sort order and stable stay numbering for the Map tab's stays list
+// (V4 §7) and the Routes tab's home flights (V4 §4.6). No DOM, no Firebase.
 import { latestEntry, perNightCents } from "./totals.js";
 import { nightsBetween } from "./dates.js";
 
@@ -21,29 +21,10 @@ function comparePriceAsc(a, b) {
   return a - b;
 }
 
-/** Sort flight options (§7.7): chosen first, then lowest latest price
- * (unpriced last), then newest first. `chosenIds` are that traveler's chosen
- * flight ids (from `selection.js`'s `chosenFlightIds`). */
-export function sortFlightOptions(flights, chosenIds = []) {
-  return [...flights].sort((a, b) => {
-    const aChosen = chosenIds.includes(a.id);
-    const bChosen = chosenIds.includes(b.id);
-    if (aChosen !== bChosen) return aChosen ? -1 : 1;
-
-    const priceDiff = comparePriceAsc(latestPriceOf(a), latestPriceOf(b));
-    if (priceDiff !== 0) return priceDiff;
-
-    return toMillis(b.createdAt) - toMillis(a.createdAt);
-  });
-}
-
-/** The id of the cheapest-priced flight among `flights`, or `null` when
- * fewer than two have a logged price — a single priced option isn't worth
- * badging as "cheapest". */
-export function cheapestFlightId(flights) {
-  const priced = flights.filter((f) => latestPriceOf(f) != null);
-  if (priced.length < 2) return null;
-  return priced.reduce((min, f) => (latestPriceOf(f) < latestPriceOf(min) ? f : min)).id;
+/** Comparator: cheapest latest price first, unpriced last — the order the
+ * Routes tab lists a traveler's home flights in (V4 §4.6). */
+export function byLatestPriceAsc(a, b) {
+  return comparePriceAsc(latestPriceOf(a), latestPriceOf(b));
 }
 
 function perNightOf(stay) {

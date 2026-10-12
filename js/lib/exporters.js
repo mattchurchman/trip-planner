@@ -18,6 +18,12 @@ export function placesKmlFilename(tripName) {
   return `${slugify(tripName)}-places.kml`;
 }
 
+/** The day-by-day map file (V4 §8) — its own name, so it never overwrites or
+ * gets mistaken for the plain places KML in the phone's Downloads. */
+export function tripKmlFilename(tripName) {
+  return `${slugify(tripName)}-day-by-day.kml`;
+}
+
 function round6(n) {
   return Math.round(n * 1e6) / 1e6;
 }

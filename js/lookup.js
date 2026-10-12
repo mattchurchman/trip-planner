@@ -17,9 +17,8 @@ export function loadAirports() {
   return airportsPromise;
 }
 
-/** Place search shared by the Overview destination lookup and the Places location
- * picker (§9.4). Limit is fixed at 5 per the spec's URL; a destination lookup only
- * ever reads the first result. */
+/** Place search shared by the Places location picker and the stay dialog's
+ * "Where is it?" (§9.4). Limit is fixed at 5 per the spec's URL. */
 export async function nominatimSearch(query) {
   // Nominatim's usage policy allows at most one request per second, so queue
   // rather than fire on every press.

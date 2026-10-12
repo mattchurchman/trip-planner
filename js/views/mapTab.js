@@ -1,4 +1,4 @@
-import { watchTrip, watchUsers, watchPlaces, watchStays, watchDays, watchFlights, watchOptions, addPlacesBatch } from "../store.js";
+import { watchTrip, watchUsers, watchPlaces, watchStays, watchFlights, watchOptions, addPlacesBatch } from "../store.js";
 import { el, friendlyError, toast } from "../ui.js";
 import { importFromMyMapsDialog } from "./importPlaces.js";
 import { loadAirports } from "../lookup.js";
@@ -81,7 +81,6 @@ export function renderMapPage(container, tripId, myUid) {
   let usersById = {};
   let places = [];
   let stays = [];
-  let days = [];
   let flights = [];
   let options = [];
   let airports = null;
@@ -297,7 +296,7 @@ export function renderMapPage(container, tripId, myUid) {
     const visiblePlaces = places.filter((p) => matchesChip(effectiveStopKey(p)));
     const visibleStays = stays.filter((s) => matchesChip(effectiveStopKey(s)));
 
-    placesSection.render(visiblePlaces, trip, usersById, days);
+    placesSection.render(visiblePlaces, trip, usersById);
     staysSection.render(visibleStays, trip, usersById, chosen.length > 0 ? chosen : null);
     renderPins(visiblePlaces, visibleStays);
     if (forceFit || !everFitted) {
@@ -310,7 +309,6 @@ export function renderMapPage(container, tripId, myUid) {
   const unsubUsers = watchUsers((u) => { usersById = u; rerenderAll(); }, () => {});
   const unsubPlaces = watchPlaces(tripId, (p) => { places = p; rerenderAll(); }, (err) => onError(friendlyError(err)));
   const unsubStays = watchStays(tripId, (s) => { stays = s; rerenderAll(); }, (err) => onError(friendlyError(err)));
-  const unsubDays = watchDays(tripId, (d) => { days = d; rerenderAll(); }, () => {});
   const unsubFlights = watchFlights(tripId, (f) => { flights = f; rerenderAll(); }, (err) => onError(friendlyError(err)));
   const unsubOptions = watchOptions(tripId, (o) => { options = o; rerenderAll(); }, (err) => onError(friendlyError(err)));
 
@@ -326,7 +324,6 @@ export function renderMapPage(container, tripId, myUid) {
     unsubUsers();
     unsubPlaces();
     unsubStays();
-    unsubDays();
     unsubFlights();
     unsubOptions();
     placesSection.unsubscribe();

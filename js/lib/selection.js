@@ -1,21 +1,6 @@
-// Pure: reads chosen flights/stays off a trip doc, including the pre-2.0 shapes
+// Pure: reads the chosen stays off a trip doc, including the pre-2.0 shape
 // (§5.3). No DOM, no Firebase — store.js does the actual choose/unchoose writes.
-
-/**
- * Flight ids chosen for one traveler. Handles a missing entry, the pre-2.0
- * shape (a single flight id string), and the current shape (an array).
- */
-export function chosenFlightIds(trip, travelerId) {
-  const value = trip && trip.selectedFlights && trip.selectedFlights[travelerId];
-  if (value == null) return [];
-  if (typeof value === "string") return [value];
-  if (Array.isArray(value)) return value.filter(Boolean);
-  return [];
-}
-
-export function isFlightChosen(trip, travelerId, flightId) {
-  return chosenFlightIds(trip, travelerId).includes(flightId);
-}
+// Chosen flights are a `picked` flag on each flight now (V4 §4.2), not a trip field.
 
 /**
  * Chosen stay ids: the current `selectedStayIds` array merged with the pre-2.0

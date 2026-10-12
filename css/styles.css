@@ -24,13 +24,6 @@
   --shadow-md: 0 4px 10px rgba(18, 33, 31, 0.10);
   --shadow-lift: 0 10px 24px rgba(18, 33, 31, 0.16);
   --ease: 160ms ease;
-
-  /* Old names stay until T30, so existing screens inherit the new system. */
-  --text: var(--ink); --surface-muted: var(--sunk); --border: var(--line);
-  --primary: var(--teal); --primary-hover: var(--teal); --primary-soft: var(--teal-soft);
-  --secondary: var(--teal); --secondary-soft: var(--teal-soft);
-  --danger: var(--bad); --success: var(--good);
-  --hero-gradient: linear-gradient(135deg, var(--teal), var(--sun));
 }
 
 @media (prefers-color-scheme: dark) {
@@ -122,14 +115,14 @@ h4 {
 }
 
 a {
-  color: var(--primary);
+  color: var(--teal);
   text-decoration: none;
   font-weight: 500;
   transition: color var(--ease);
 }
 
 a:not(.btn):not(.app-brand):not(.trip-card-link):hover {
-  color: var(--primary-hover);
+  color: var(--teal);
   text-decoration: underline;
 }
 
@@ -148,9 +141,9 @@ input {
 
 .btn {
   border-radius: var(--radius);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   background: var(--surface);
-  color: var(--text);
+  color: var(--ink);
   font-weight: 500;
   padding: var(--space-2) var(--space-4);
   min-height: 40px;
@@ -159,8 +152,8 @@ input {
 }
 
 .btn:hover:not(:disabled) {
-  border-color: var(--primary);
-  color: var(--primary);
+  border-color: var(--teal);
+  color: var(--teal);
   box-shadow: var(--shadow-sm);
 }
 
@@ -174,9 +167,9 @@ input {
 }
 
 .btn-primary {
-  background: var(--primary);
+  background: var(--teal);
   color: var(--on-teal);
-  border-color: var(--primary);
+  border-color: var(--teal);
   box-shadow: var(--shadow-sm);
 }
 
@@ -189,35 +182,35 @@ input {
 
 .btn-secondary {
   background: var(--surface);
-  color: var(--secondary);
-  border-color: var(--secondary);
+  color: var(--teal);
+  border-color: var(--teal);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: var(--secondary-soft);
-  color: var(--secondary);
-  border-color: var(--secondary);
+  background: var(--teal-soft);
+  color: var(--teal);
+  border-color: var(--teal);
   box-shadow: var(--shadow-sm);
 }
 
 .btn-danger {
   background: var(--surface);
-  color: var(--danger);
-  border-color: var(--danger);
+  color: var(--bad);
+  border-color: var(--bad);
 }
 
 .btn-danger:hover:not(:disabled) {
-  background: var(--danger);
+  background: var(--bad);
   color: var(--on-color);
-  border-color: var(--danger);
+  border-color: var(--bad);
 }
 
 /* Inside a confirmation dialog, danger is the one affirmative action and reads
    solid rather than outlined (§4: "solid only inside a confirmation dialog"). */
 .app-dialog .btn-danger {
-  background: var(--danger);
+  background: var(--bad);
   color: var(--on-color);
-  border-color: var(--danger);
+  border-color: var(--bad);
 }
 
 .app-dialog .btn-danger:hover:not(:disabled) {
@@ -232,7 +225,7 @@ input {
 .btn-link {
   background: none;
   border: none;
-  color: var(--primary);
+  color: var(--teal);
   text-decoration: none;
   padding: var(--space-1);
   box-shadow: none;
@@ -241,12 +234,12 @@ input {
 .btn-link:hover:not(:disabled) {
   border-color: transparent;
   box-shadow: none;
-  color: var(--primary-hover);
+  color: var(--teal);
 }
 
 .btn:focus-visible,
 a:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--teal);
   outline-offset: 2px;
 }
 
@@ -258,7 +251,6 @@ a:focus-visible {
 
 .btn-quiet:hover:not(:disabled) { background: var(--teal-soft); }
 
-.segmented-control,
 .seg {
   display: flex;
   flex-wrap: wrap;
@@ -268,7 +260,6 @@ a:focus-visible {
   border-radius: 12px;
 }
 
-.segmented-control button,
 .seg button {
   min-height: 40px;
   flex: 1 1 auto;
@@ -280,7 +271,6 @@ a:focus-visible {
   font-weight: 500;
 }
 
-.segmented-control button[aria-pressed="true"],
 .seg button[aria-pressed="true"] {
   background: var(--surface);
   box-shadow: var(--shadow-sm);
@@ -314,14 +304,14 @@ textarea {
 input:focus,
 select:focus,
 textarea:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-soft);
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px var(--teal-soft);
   outline: none;
 }
 
 .card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--radius-card);
   padding: var(--space-4);
   box-shadow: var(--shadow-sm);
@@ -342,7 +332,7 @@ textarea:focus {
   max-width: 420px;
   margin: 15vh auto;
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--radius-card);
   padding: var(--space-6);
   text-align: center;
@@ -384,7 +374,7 @@ textarea:focus {
 .sign-in-divider::after {
   content: "";
   flex: 1;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--line);
 }
 
 .sign-in-heading {
@@ -422,7 +412,7 @@ textarea:focus {
   align-items: center;
   gap: var(--space-2);
   text-decoration: none;
-  color: var(--text);
+  color: var(--ink);
 }
 
 .app-logo {
@@ -471,14 +461,14 @@ textarea:focus {
   height: 32px;
   border-radius: 50%;
   border: 2px solid var(--surface);
-  box-shadow: 0 0 0 1px var(--border);
+  box-shadow: 0 0 0 1px var(--line);
 }
 
 .avatar-initial {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--primary);
+  background: var(--teal);
   color: var(--on-teal);
   font-weight: 600;
 }
@@ -521,13 +511,13 @@ textarea:focus {
 
 .trip-card-link {
   text-decoration: none;
-  color: var(--text);
+  color: var(--ink);
   font-weight: 600;
   font-size: 1.05em;
 }
 
 .trip-card-link:hover {
-  color: var(--primary);
+  color: var(--teal);
 }
 
 .trip-card-meta {
@@ -547,7 +537,7 @@ textarea:focus {
 }
 
 .field-error {
-  color: var(--danger);
+  color: var(--bad);
   font-size: 0.9em;
   margin: 4px 0;
 }
@@ -588,8 +578,8 @@ textarea:focus {
 }
 
 .tab:hover {
-  color: var(--primary);
-  background: var(--primary-soft);
+  color: var(--teal);
+  background: var(--teal-soft);
   text-decoration: none;
 }
 
@@ -621,10 +611,6 @@ textarea:focus {
   .tab-bar { display: none; }
   .app-main { padding-bottom: var(--space-7); }
   .toast { bottom: var(--space-5); }
-}
-
-.coming-soon {
-  color: var(--muted);
 }
 
 .app-dialog {
@@ -662,7 +648,7 @@ textarea:focus {
 
 .prompt-input {
   padding: var(--space-2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
 }
 
@@ -673,8 +659,8 @@ textarea:focus {
 .stage-badge {
   display: inline-block;
   margin: 0 0 var(--space-2);
-  color: var(--secondary);
-  background: var(--secondary-soft);
+  color: var(--teal);
+  background: var(--teal-soft);
   font-weight: 600;
   font-size: 0.8em;
   padding: 3px var(--space-3);
@@ -717,7 +703,7 @@ textarea:focus {
 .field select,
 .field textarea {
   padding: var(--space-2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
   width: 100%;
 }
@@ -778,7 +764,7 @@ textarea:focus {
 
 .traveler-row input {
   padding: 6px var(--space-2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
 }
 
@@ -795,46 +781,24 @@ textarea:focus {
 }
 
 .rank-btn-pressed {
-  background: var(--primary-soft);
-  color: var(--primary);
-  border-color: var(--primary);
+  background: var(--teal-soft);
+  color: var(--teal);
+  border-color: var(--teal);
 }
 
 .rank-summary {
   position: relative;
 }
 
-.rank-summary-toggle {
-  background: none;
-  border: none;
-  color: var(--muted);
-  cursor: pointer;
-  padding: 0;
-  text-decoration: underline dotted;
-}
-
-.rank-summary-details {
-  list-style: none;
-  margin: 4px 0 0;
-  padding: var(--space-2);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-md);
-  position: absolute;
-  z-index: 1;
-  min-width: 160px;
-}
-
 .comments {
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--line);
   padding-top: var(--space-2);
 }
 
 .comments-toggle {
   background: none;
   border: none;
-  color: var(--primary);
+  color: var(--teal);
   cursor: pointer;
   padding: 0;
 }
@@ -874,25 +838,8 @@ textarea:focus {
 .comment-input {
   flex: 1;
   padding: var(--space-2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-}
-
-.destination-pin-hint {
-  margin: 0 0 var(--space-3);
-}
-
-.copy-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.copy-fallback {
-  padding: 4px var(--space-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  max-width: 220px;
 }
 
 .traveler-dialog {
@@ -910,7 +857,7 @@ textarea:focus {
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3);
-  background: var(--surface-muted);
+  background: var(--sunk);
   border-radius: var(--radius);
 }
 
@@ -923,7 +870,7 @@ textarea:focus {
 
 .location-pin-found {
   margin: 0;
-  color: var(--success);
+  color: var(--good);
   font-weight: 500;
 }
 
@@ -935,7 +882,7 @@ textarea:focus {
 .location-method input {
   flex: 1;
   padding: var(--space-2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
 }
 
@@ -958,7 +905,7 @@ textarea:focus {
   flex-direction: column;
   gap: var(--space-2);
   padding-top: var(--space-2);
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--line);
 }
 
 .search-results {
@@ -995,7 +942,7 @@ textarea:focus {
 }
 
 .chip {
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   background: var(--surface);
   border-radius: var(--radius-pill);
   padding: 4px var(--space-3);
@@ -1012,9 +959,9 @@ textarea:focus {
 /* The stop chips (T25) set only this class for their active state; category
    chips set their active color inline instead, since it varies per category. */
 .stop-chips .chip-active {
-  background: var(--primary);
+  background: var(--teal);
   color: var(--on-teal);
-  border-color: var(--primary);
+  border-color: var(--teal);
 }
 
 .filters-row {
@@ -1027,7 +974,7 @@ textarea:focus {
 .filters-row select,
 .filters-row input[type="text"] {
   padding: 6px var(--space-2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
 }
 
@@ -1072,7 +1019,7 @@ textarea:focus {
   min-width: 0;
   height: 500px;
   border-radius: var(--radius-card);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   position: sticky;
   top: var(--space-4);
 }
@@ -1093,7 +1040,7 @@ textarea:focus {
   justify-content: space-between;
   gap: var(--space-3);
   padding: var(--space-2) 0;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
 }
 
 .places-list {
@@ -1110,7 +1057,7 @@ textarea:focus {
 }
 
 .place-row-highlight {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--teal);
 }
 
 .place-row-title {
@@ -1131,11 +1078,11 @@ textarea:focus {
 }
 
 .place-name-btn:hover {
-  color: var(--primary);
+  color: var(--teal);
 }
 
 .place-name-btn:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--teal);
   outline-offset: 2px;
   border-radius: var(--radius);
 }
@@ -1169,20 +1116,6 @@ textarea:focus {
   }
 }
 
-.traveler-flights {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin-bottom: var(--space-4);
-}
-
-.traveler-flights-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-
 /* Step labels in the Add flight option / Add stay dialogs (§7.7) read as a
    small heading — the form's own field spacing already separates them. */
 .flight-form h4,
@@ -1197,7 +1130,7 @@ textarea:focus {
 }
 
 .link-parse-result.link-parse-success {
-  color: var(--success);
+  color: var(--good);
 }
 
 /* Add/Edit flight dialog (§7.7): the "✓ Read from the link" itinerary preview,
@@ -1216,7 +1149,7 @@ textarea:focus {
 .flight-form summary,
 .stay-form summary {
   cursor: pointer;
-  color: var(--primary);
+  color: var(--teal);
   font-weight: 500;
 }
 
@@ -1238,7 +1171,7 @@ textarea:focus {
 
 .flight-link-preview {
   padding: var(--space-3);
-  background: var(--surface-muted);
+  background: var(--sunk);
   border-radius: var(--radius);
   display: flex;
   flex-direction: column;
@@ -1302,9 +1235,9 @@ textarea:focus {
 
 .flight-card-chosen,
 .stay-card-chosen {
-  border-color: var(--secondary);
+  border-color: var(--teal);
   border-width: 2px;
-  box-shadow: 0 0 0 3px var(--secondary-soft), var(--shadow-sm);
+  box-shadow: 0 0 0 3px var(--teal-soft), var(--shadow-sm);
 }
 
 /* Card header (§7.7): label/name + pills on the left, the price summary on
@@ -1331,13 +1264,13 @@ textarea:focus {
 }
 
 .stay-number {
-  color: var(--secondary);
+  color: var(--teal);
   font-weight: 700;
   margin-right: 2px;
 }
 
 .provider-pill {
-  background: var(--surface-muted);
+  background: var(--sunk);
   color: var(--muted);
   font-weight: 600;
   font-size: 0.8em;
@@ -1364,20 +1297,10 @@ textarea:focus {
   flex-wrap: wrap;
 }
 
-/* Flight option grid (§7.7): compact cards side by side for comparing, one
-   column once they no longer fit at 340px (phones included, no media query
-   needed). One grid per traveler section. */
-.flight-options-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: var(--space-3);
-  margin-top: var(--space-3);
-}
-
 .badge-chosen {
-  background: var(--secondary-soft);
-  color: var(--secondary);
-  border-color: var(--secondary);
+  background: var(--teal-soft);
+  color: var(--teal);
+  border-color: var(--teal);
 }
 
 /* The standalone "Chosen ✓" pill next to a flight/stay's title — unlike
@@ -1385,8 +1308,8 @@ textarea:focus {
    padding and shape (§4 tokens). */
 .chosen-badge {
   align-self: flex-start;
-  color: var(--secondary);
-  background: var(--secondary-soft);
+  color: var(--teal);
+  background: var(--teal-soft);
   font-weight: 600;
   font-size: 0.8em;
   padding: 2px var(--space-3);
@@ -1394,7 +1317,8 @@ textarea:focus {
   white-space: nowrap;
 }
 
-/* Same grid recipe as .flight-options-grid (§7.7). */
+/* Stay cards side by side for comparing, one column once they no longer fit
+   at 340px — phones included, no media query needed (V4 §7). */
 .stays-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
@@ -1439,7 +1363,7 @@ textarea:focus {
   height: 10px;
   border-radius: 3px;
   background: var(--sunk);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
 }
 
 .coverage-covered {
@@ -1468,29 +1392,6 @@ textarea:focus {
   opacity: 0.55;
 }
 
-/* Stays price-pin map (§7.7.1), above the stay cards. */
-.stays-map-wrap {
-  margin: var(--space-3) 0;
-}
-
-.stays-map-controls {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: var(--space-2);
-}
-
-.stays-map {
-  width: 100%;
-  height: 320px;
-  border-radius: var(--radius-card);
-  border: 1px solid var(--border);
-}
-
-.stays-map-caption {
-  margin: 6px 0 0;
-  font-size: 0.85em;
-}
-
 /* The Leaflet divIcon wrapper: strip its default white box so only our pill shows. */
 .stay-pin-icon {
   background: transparent;
@@ -1507,8 +1408,8 @@ textarea:focus {
   align-items: center;
   white-space: nowrap;
   background: var(--surface);
-  color: var(--primary);
-  border: 1px solid var(--primary);
+  color: var(--teal);
+  border: 1px solid var(--teal);
   border-radius: var(--radius-pill);
   padding: 2px var(--space-3);
   font-size: 0.75rem;
@@ -1517,32 +1418,13 @@ textarea:focus {
 }
 
 .stay-pin-chosen {
-  background: var(--secondary);
+  background: var(--teal);
   color: var(--on-teal);
-  border-color: var(--secondary);
-}
-
-.stay-pin-pulse {
-  animation: stay-pin-pulse-anim 1.5s ease;
-}
-
-@keyframes stay-pin-pulse-anim {
-  0%, 100% {
-    transform: scale(1);
-  }
-  30% {
-    transform: scale(1.35);
-  }
+  border-color: var(--teal);
 }
 
 .stay-card-highlight {
-  outline: 2px solid var(--primary);
-}
-
-@media (max-width: 760px) {
-  .stays-map {
-    height: 240px;
-  }
+  outline: 2px solid var(--teal);
 }
 
 /* Price summary (§5, §7.8): the card header's right side. Right-aligned so it
@@ -1577,7 +1459,7 @@ textarea:focus {
   align-items: center;
   color: inherit;
   text-decoration: underline;
-  text-decoration-color: var(--border);
+  text-decoration-color: var(--line);
   cursor: pointer;
 }
 
@@ -1619,7 +1501,7 @@ textarea:focus {
 .badge-new-low {
   align-self: flex-end;
   background: var(--sun);
-  color: var(--text);
+  color: var(--ink);
   border-radius: var(--radius-pill);
   padding: 2px var(--space-3);
   font-size: 0.8em;
@@ -1636,7 +1518,7 @@ textarea:focus {
    own block so it doesn't reflow the itinerary below it. */
 .price-check-row {
   padding: var(--space-3);
-  background: var(--surface-muted);
+  background: var(--sunk);
   border-radius: var(--radius);
   display: flex;
   flex-direction: column;
@@ -1663,7 +1545,7 @@ textarea:focus {
 
 .price-update-fields input {
   padding: 6px var(--space-2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
   min-height: 44px;
 }
@@ -1737,7 +1619,7 @@ textarea:focus {
 }
 
 .totals-combined {
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--line);
   margin-top: 4px;
   padding-top: var(--space-2);
   font-weight: 600;
@@ -1746,7 +1628,7 @@ textarea:focus {
 .totals-missing {
   margin: var(--space-2) 0 0;
   padding-left: 20px;
-  color: var(--danger);
+  color: var(--bad);
 }
 
 .days-header h2 {
@@ -1762,7 +1644,7 @@ textarea:focus {
   width: 100%;
   height: 320px;
   border-radius: var(--radius-card);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
 }
 
 .day-map-caption {
@@ -1771,7 +1653,7 @@ textarea:focus {
 }
 
 .day-marker {
-  background: var(--primary);
+  background: var(--teal);
   color: var(--on-teal);
   border-radius: 50%;
   width: 24px;
@@ -2023,7 +1905,7 @@ textarea:focus {
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3);
-  background: var(--surface-muted);
+  background: var(--sunk);
   border-radius: var(--radius);
 }
 
@@ -2034,15 +1916,15 @@ textarea:focus {
 }
 
 .route-option {
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--radius-card);
   background: var(--surface);
   overflow: hidden;
 }
 
 .route-option-chosen {
-  border-color: var(--secondary);
-  box-shadow: 0 0 0 1px var(--secondary);
+  border-color: var(--teal);
+  box-shadow: 0 0 0 1px var(--teal);
 }
 
 .route-option-head {
@@ -2109,7 +1991,7 @@ textarea:focus {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: var(--secondary);
+  background: var(--teal);
   margin-top: 5px;
   flex: none;
 }
@@ -2122,7 +2004,7 @@ textarea:focus {
 .route-rail-stem {
   flex: 1;
   width: 2px;
-  background: var(--border);
+  background: var(--line);
   min-height: 10px;
 }
 
@@ -2139,7 +2021,7 @@ textarea:focus {
 }
 
 .route-hop {
-  background: var(--surface-muted);
+  background: var(--sunk);
   border-radius: var(--radius);
   padding: var(--space-3);
   margin-bottom: var(--space-2);
@@ -2161,7 +2043,7 @@ textarea:focus {
 
 .route-earlier summary {
   cursor: pointer;
-  color: var(--primary);
+  color: var(--teal);
   font-weight: 500;
   margin-bottom: var(--space-3);
 }
@@ -2173,7 +2055,7 @@ textarea:focus {
 /* Paste flight link's "Adding to" block (T20), inside the confirmation sheet. */
 .paste-flight-target {
   padding: var(--space-3);
-  background: var(--surface-muted);
+  background: var(--sunk);
   border-radius: var(--radius);
   display: flex;
   flex-direction: column;

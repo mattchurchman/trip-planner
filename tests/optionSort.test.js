@@ -1,38 +1,21 @@
 import assert from "node:assert/strict";
-import { sortFlightOptions, cheapestFlightId, sortStayOptions, stayNumbers, circledNumber } from "../js/lib/optionSort.js";
+import { byLatestPriceAsc, sortStayOptions, stayNumbers, circledNumber } from "../js/lib/optionSort.js";
 
 const price = (cents) => (cents == null ? [] : [{ id: "p1", amountCents: cents, checkedAt: "2026-01-01T00:00:00.000Z", byUid: "u1", note: "" }]);
 
 export const tests = [
-  ["sortFlightOptions: chosen first, then lowest price, unpriced last", () => {
-    const flights = [
-      { id: "a", prices: price(300), createdAt: "2026-01-01T00:00:00.000Z" },
-      { id: "b", prices: price(100), createdAt: "2026-01-02T00:00:00.000Z" },
-      { id: "c", prices: [], createdAt: "2026-01-03T00:00:00.000Z" },
-      { id: "d", prices: price(500), createdAt: "2026-01-04T00:00:00.000Z" }, // chosen
-    ];
-    const sorted = sortFlightOptions(flights, ["d"]);
-    assert.deepEqual(sorted.map((f) => f.id), ["d", "b", "a", "c"]);
-  }],
-  ["sortFlightOptions: ties on price/chosen break by newest first", () => {
-    const flights = [
-      { id: "old", prices: price(100), createdAt: "2026-01-01T00:00:00.000Z" },
-      { id: "new", prices: price(100), createdAt: "2026-01-05T00:00:00.000Z" },
-    ];
-    const sorted = sortFlightOptions(flights, []);
-    assert.deepEqual(sorted.map((f) => f.id), ["new", "old"]);
-  }],
-  ["cheapestFlightId: null with fewer than two priced options", () => {
-    assert.equal(cheapestFlightId([{ id: "a", prices: price(100) }]), null);
-    assert.equal(cheapestFlightId([{ id: "a", prices: [] }, { id: "b", prices: [] }]), null);
-  }],
-  ["cheapestFlightId: the lowest-priced id among two or more priced options", () => {
+  ["byLatestPriceAsc: cheapest latest price first, unpriced last", () => {
     const flights = [
       { id: "a", prices: price(300) },
       { id: "b", prices: price(100) },
       { id: "c", prices: [] },
+      { id: "d", prices: price(200) },
     ];
-    assert.equal(cheapestFlightId(flights), "b");
+    assert.deepEqual([...flights].sort(byLatestPriceAsc).map((f) => f.id), ["b", "d", "a", "c"]);
+  }],
+  ["byLatestPriceAsc: two unpriced flights tie, so the input order holds", () => {
+    const flights = [{ id: "a", prices: [] }, { id: "b", prices: [] }];
+    assert.deepEqual([...flights].sort(byLatestPriceAsc).map((f) => f.id), ["a", "b"]);
   }],
   ["sortStayOptions: chosen first, then not-Out before Out, then lowest per-night price", () => {
     const stays = [

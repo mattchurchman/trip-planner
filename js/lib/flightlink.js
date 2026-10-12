@@ -12,10 +12,10 @@
 import { safeUrl } from "./links.js";
 import { base64UrlToBytes, bytesToText, decodeMessage, all, textOf, numberOf, messageOf } from "./protobuf.js";
 
-export const NOT_A_LINK_ERROR = "That doesn't look like a Google Flights link.";
-export const SHORT_LINK_ERROR =
+const NOT_A_LINK_ERROR = "That doesn't look like a Google Flights link.";
+const SHORT_LINK_ERROR =
   "Short share links can't be read. Open it, then copy the full address from your browser's address bar and paste that.";
-export const COULDNT_READ_ERROR = "Couldn't read this link — fill in the details below.";
+const COULDNT_READ_ERROR = "Couldn't read this link — fill in the details below.";
 
 // tfs field numbers.
 const TFS_LEG = 3; //            repeated: one per direction (outbound, return)

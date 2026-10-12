@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { buildPlacesCsv, buildPlacesKml, buildTripKml, slugify, placesCsvFilename, placesKmlFilename } from "../js/lib/exporters.js";
+import { buildPlacesCsv, buildPlacesKml, buildTripKml, slugify, placesCsvFilename, placesKmlFilename, tripKmlFilename } from "../js/lib/exporters.js";
 
 // A minimal RFC 4180 parser, used only to round-trip our own generated CSV in tests.
 function parseCsv(text) {
@@ -96,6 +96,10 @@ export const tests = [
     assert.equal(slugify("Lisbon Trip!!"), "lisbon-trip");
     assert.equal(placesCsvFilename("Lisbon Trip!!"), "lisbon-trip-places.csv");
     assert.equal(placesKmlFilename("Lisbon Trip!!"), "lisbon-trip-places.kml");
+  }],
+  ["tripKmlFilename is distinct from the places KML, so the two exports never collide", () => {
+    assert.equal(tripKmlFilename("Lisbon Trip!!"), "lisbon-trip-day-by-day.kml");
+    assert.notEqual(tripKmlFilename("Lisbon Trip"), placesKmlFilename("Lisbon Trip"));
   }],
   ["buildPlacesCsv: exact header, no bare rows", () => {
     const csv = buildPlacesCsv([], []);

@@ -1,0 +1,95 @@
+// The top of the Routes tab (V4 §4.6): the traveler and idea switches, and
+// the add / rename / delete dialogs for ideas and options. Split out of
+// routes.js, which keeps the flights, the option cards and the watchers.
+import { addIdea, updateIdea, deleteIdea, addOption, updateOption, deleteOption } from "../store.js";
+import { el, confirmDialog, promptDialog } from "../ui.js";
+
+/** Prompts for a name (defaulting to `defaultName`), falling back to it if
+ * the owner clears the field, then hands it to `create`. Null on cancel. */
+async function promptAndCreate(label, defaultName, create) {
+  const typed = await promptDialog(label, defaultName);
+  if (typed === null) return null;
+  return create(typed.trim() || defaultName);
+}
+
+/** Prompts to rename `entity`, then writes `name`/`nameEdited` via `update`.
+ * No-ops on cancel or an empty name. A name typed here is `nameEdited`, so
+ * the auto names in V4 §4.4 stop overwriting it. */
+async function promptAndRename(entity, label, update) {
+  const typed = await promptDialog(label, entity.name);
+  if (typed === null) return;
+  const name = typed.trim();
+  if (!name) return;
+  await update({ name, nameEdited: true });
+}
+
+/** Resolves the new idea's doc reference, or null on cancel. */
+export function addIdeaDialog(tripId, ideas, myUid) {
+  return promptAndCreate("Name this idea", `Idea ${ideas.length + 1}`, (name) =>
+    addIdea(tripId, { name, nameEdited: true, order: ideas.length }, myUid)
+  );
+}
+
+export function renameIdeaDialog(tripId, idea) {
+  return promptAndRename(idea, "Rename this idea", (fields) => updateIdea(tripId, idea.id, fields));
+}
+
+export async function deleteIdeaDialog(tripId, idea) {
+  if (await confirmDialog(`Delete "${idea.name}" and all its flights?`, "Delete")) await deleteIdea(tripId, idea.id);
+}
+
+/** Resolves the new option's doc reference, or null on cancel. `ideaOptions`
+ * are the options already under this idea. */
+export function addOptionDialog(tripId, idea, ideaOptions, myUid) {
+  return promptAndCreate("Name this option", `Option ${ideaOptions.length + 1}`, (name) =>
+    addOption(tripId, { ideaId: idea.id, name, nameEdited: true, order: ideaOptions.length }, myUid)
+  );
+}
+
+export function renameOptionDialog(tripId, option) {
+  return promptAndRename(option, "Rename this option", (fields) => updateOption(tripId, option.id, fields));
+}
+
+/** True once the option is gone, so the caller can forget it was open. */
+export async function deleteOptionDialog(tripId, option) {
+  if (!(await confirmDialog(`Delete "${option.name}" and its flights?`, "Delete"))) return false;
+  await deleteOption(tripId, option.id);
+  return true;
+}
+
+/** The traveler segmented control. Stops and totals always show for whoever
+ * is selected here (V4 §4.6). */
+export function renderTravelerSwitch(switchEl, { travelers, selectedTravelerId, onSelect }) {
+  switchEl.replaceChildren(
+    ...travelers.map((t) => {
+      const btn = el("button", {
+        type: "button",
+        textContent: t.homeCity ? `${t.name} · ${t.homeCity}` : t.name,
+        attrs: { "aria-pressed": String(t.id === selectedTravelerId) },
+      });
+      btn.addEventListener("click", () => onSelect(t.id));
+      return btn;
+    })
+  );
+}
+
+/** The idea segmented control plus its Rename / Delete links. */
+export function renderIdeaSwitch(switchEl, actionsEl, { ideas, selectedIdeaId, onSelect, onRename, onDelete }) {
+  switchEl.replaceChildren(
+    ...ideas.map((idea) => {
+      const btn = el("button", { type: "button", textContent: idea.name, attrs: { "aria-pressed": String(idea.id === selectedIdeaId) } });
+      btn.addEventListener("click", () => onSelect(idea.id));
+      return btn;
+    })
+  );
+  const currentIdea = ideas.find((i) => i.id === selectedIdeaId);
+  if (!currentIdea) {
+    actionsEl.replaceChildren();
+    return;
+  }
+  const renameBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Rename idea" });
+  renameBtn.addEventListener("click", () => onRename(currentIdea));
+  const deleteBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Delete idea" });
+  deleteBtn.addEventListener("click", () => onDelete(currentIdea));
+  actionsEl.replaceChildren(renameBtn, deleteBtn);
+}

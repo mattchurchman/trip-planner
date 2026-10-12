@@ -7,6 +7,8 @@ import {
   ideaName,
   ideaEndpoints,
   optionName,
+  optionAutoName,
+  directionsToClear,
   guessLandsDate,
   homeDirection,
   placePastedFlight,
@@ -231,6 +233,39 @@ export const tests = [
   ["optionName: no hops means staying put", () => {
     assert.equal(optionName({ hopFlights: [], arrivalCode: "FCO", airports }), "Stay in Rome");
     assert.equal(optionName({ hopFlights: [], arrivalCode: "", airports }), "Stay in one place");
+  }],
+
+  ["optionAutoName: an unedited option takes the name its hops spell out", () => {
+    const option = { id: "o1", name: "Option 1", nameEdited: false };
+    assert.equal(optionAutoName({ option, hopFlights: romeHops, homeFlights: [romeHome], airports }), "Florence + Barcelona");
+  }],
+
+  ["optionAutoName: null for an option someone has renamed by hand", () => {
+    const option = { id: "o1", name: "The cheap one", nameEdited: true };
+    assert.equal(optionAutoName({ option, hopFlights: romeHops, homeFlights: [romeHome], airports }), null);
+  }],
+
+  ["optionAutoName: null when the name already reads that way, so nothing is rewritten", () => {
+    const option = { id: "o1", name: "Florence + Barcelona", nameEdited: false };
+    assert.equal(optionAutoName({ option, hopFlights: romeHops, homeFlights: [romeHome], airports }), null);
+  }],
+
+  ["optionAutoName: an option about to be created always gets a name", () => {
+    assert.equal(optionAutoName({ option: null, hopFlights: [], homeFlights: [romeHome], airports }), "Stay in Rome");
+    assert.equal(optionAutoName({ option: null, hopFlights: romeHops, homeFlights: [], airports }), "Florence + Barcelona + Rome");
+  }],
+
+  ["directionsToClear: a both-ways pick replaces every other pick", () => {
+    assert.deepEqual(directionsToClear("both"), ["out", "back", "both"]);
+  }],
+
+  ["directionsToClear: a one-way pick replaces its own direction and any both-ways pick", () => {
+    assert.deepEqual(directionsToClear("out"), ["out", "both"]);
+    assert.deepEqual(directionsToClear("back"), ["back", "both"]);
+  }],
+
+  ["directionsToClear: a flight with no direction stands alone", () => {
+    assert.deepEqual(directionsToClear(null), [null]);
   }],
 
   ["guessLandsDate: far enough east lands the next day, otherwise the same day", () => {

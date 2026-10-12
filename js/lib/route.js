@@ -242,6 +242,30 @@ export function optionName({ hopFlights, arrivalCode, airports }) {
 }
 
 /**
+ * The auto name an option should be carrying now (V4 §4.4), or `null` to leave
+ * it alone — someone has renamed it by hand, or it already reads that way.
+ * Pass `option: null` for one about to be created: it always takes the auto name.
+ * `homeFlights` are the idea's home flights, which say which city you land in.
+ */
+export function optionAutoName({ option, hopFlights, homeFlights, airports }) {
+  if (option && option.nameEdited) return null;
+  const name = optionName({ hopFlights, arrivalCode: ideaEndpoints(homeFlights).inCode, airports });
+  return option && option.name === name ? null : name;
+}
+
+/**
+ * The direction groups a newly picked home flight has to clear (V4 §4.4):
+ * picking a "both" flight replaces any separate out/back picks and vice versa,
+ * since they can't both be the way you get there. A flight with no resolved
+ * direction (null) stands alone — nothing to clear.
+ */
+export function directionsToClear(direction) {
+  if (direction === "both") return ["out", "back", "both"];
+  if (direction === "out" || direction === "back") return [direction, "both"];
+  return [direction];
+}
+
+/**
  * The day you land, guessed: more than 60° of longitude east of where you took
  * off means the day after departure, otherwise the same day. Always editable.
  */

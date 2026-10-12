@@ -106,35 +106,3 @@ export function walkingRouteLinks(places) {
   }
   return links;
 }
-
-function monthYearLabel(dateStr) {
-  if (!dateStr) return null;
-  const parsed = new Date(`${dateStr}T00:00:00Z`);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return parsed.toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
-}
-
-/**
- * The 11 Overview "Discover" idea search queries (§9.1), for use with googleSearchUrl.
- * Deliberately destination-agnostic (no named sport/activity) so they read sensibly for
- * any city -- Google's own results surface whatever's regionally relevant (kayaking for
- * a coastal destination, skiing for a mountain one) without this app guessing or
- * hardcoding it, which would need a lookup or AI feature the spec rules out (§12).
- */
-export function ideaQueries(city, startDate) {
-  const monthYear = monthYearLabel(startDate);
-  const withMonth = (base) => (monthYear ? `${base} ${monthYear}` : base);
-  return [
-    `${city} best food neighborhoods`,
-    `${city} food tour`,
-    `${city} walking tour`,
-    `${city} history museum`,
-    withMonth(`${city} events`),
-    withMonth(`${city} concerts`),
-    withMonth(`${city} seasonal festivals`),
-    `outdoor activities near ${city}`,
-    `adventure tours near ${city}`,
-    `nature excursions near ${city}`,
-    `day trips from ${city}`,
-  ];
-}

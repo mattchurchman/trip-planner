@@ -4,7 +4,7 @@ import { el, field, dialogShell } from "../ui.js";
 import { parseFlightLink } from "../lib/flightlink.js";
 import { parseMoney, formatMoney } from "../lib/money.js";
 import { flightLabel } from "../lib/itineraryFormat.js";
-import { placePastedFlight, homeDirection, guessLandsDate } from "../lib/route.js";
+import { placePastedFlight, homeDirection, guessLandsDate, optionAutoName } from "../lib/route.js";
 import { renderItinerary } from "./itinerary.js";
 import { renderFlightRow } from "./routeRail.js";
 
@@ -40,7 +40,7 @@ function labelFor(legs, optionCount) {
  * is every flight in the trip, used only to count an option's existing hops
  * for the new flight's label. `defaultOptionId` is the option already open
  * on screen, when the button was pressed inside one — null elsewhere,
- * meaning "the idea's first option, or a new Option 1".
+ * meaning "the idea's first option, or a new one named after this hop".
  */
 export function pasteFlightDialog({ clipboardText, traveler, trip, airports, ideas, options, flights, homeFlightsByIdea, currentIdeaId, defaultOptionId, myUid }) {
   return dialogShell("paste-flight-dialog", (finish) => {
@@ -79,12 +79,20 @@ export function pasteFlightDialog({ clipboardText, traveler, trip, airports, ide
     let parsed = null;
     let placement = null;
 
+    /** The name a brand-new option would take: what its one hop spells out
+     * (V4 §4.4), e.g. "Florence" — not "Option 2". */
+    function newOptionName() {
+      const forNewIdea = ideaSelect.value === "__new__";
+      const homeFlights = forNewIdea ? [] : homeFlightsByIdea[ideaSelect.value] || [];
+      return optionAutoName({ option: null, hopFlights: [parsed], homeFlights, airports });
+    }
+
     function populateOptionSelect() {
       const forNewIdea = ideaSelect.value === "__new__";
       const existing = forNewIdea ? [] : sortedOptionsFor(options, ideaSelect.value);
       optionSelect.replaceChildren(
         ...existing.map((o) => el("option", { value: o.id, textContent: o.name })),
-        el("option", { value: "__new__", textContent: `New option: Option ${existing.length + 1}` })
+        el("option", { value: "__new__", textContent: `New option: ${newOptionName()}` })
       );
       const preferred = !forNewIdea && defaultOptionId && existing.some((o) => o.id === defaultOptionId) ? defaultOptionId : existing[0]?.id;
       optionSelect.value = preferred || "__new__";
@@ -216,7 +224,7 @@ export function pasteFlightDialog({ clipboardText, traveler, trip, airports, ide
       if (placement.role === "hop") {
         const existingOptions = newIdea ? [] : sortedOptionsFor(options, ideaSelect.value);
         const newOption = optionSelect.value === "__new__";
-        option = newOption ? { name: `Option ${existingOptions.length + 1}`, order: existingOptions.length } : { id: optionSelect.value };
+        option = newOption ? { name: newOptionName(), order: existingOptions.length } : { id: optionSelect.value };
         optionCountForLabel = newOption ? existingOptions.length : (flights || []).filter((f) => f.role === "hop" && f.optionId === option.id).length;
       }
 

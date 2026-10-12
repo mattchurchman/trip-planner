@@ -1,8 +1,6 @@
-// Pure: stay map pin labels and the "our top places" filter for the stays
-// price-pin map (§7.7.1). No DOM, no Firebase.
+// Pure: stay map pin labels for the Map tab (V4 §8). No DOM, no Firebase.
 import { circledNumber } from "./optionSort.js";
 import { perNightCents } from "./totals.js";
-import { voteScore } from "./votes.js";
 
 function formatWholeUnits(amountCents, currency) {
   return new Intl.NumberFormat(undefined, {
@@ -24,14 +22,4 @@ export function stayPinLabel({ number, latestCents, nights, currency = "USD" }) 
   const perNight = nights ? perNightCents(latestCents, nights) : null;
   if (perNight != null) return `${badge} ${formatWholeUnits(perNight, currency)}`;
   return `${badge} ${formatWholeUnits(latestCents, currency)} total`;
-}
-
-/**
- * Located places for `destinationId` with a rank score of 2 or more (§7.3),
- * for the stays map's "Show our top places" layer.
- */
-export function topPlaces(places, destinationId) {
-  return places.filter(
-    (p) => p.destinationId === destinationId && p.lat != null && p.lng != null && voteScore(p.votes) >= 2
-  );
 }

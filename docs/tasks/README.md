@@ -16,7 +16,7 @@ Each task is one session. The rules every agent follows are in `AGENTS.md`; mode
 
 If a task fails twice, say "Revert the last commit" and rerun it in a fresh session on the model named in its **If it fails twice** line.
 
-## Round 3 — the V4 overhaul (design in `docs/V4.md`)
+## Round 3 — the V4 overhaul (now folded into `SPEC.md` 4.0)
 
 | # | Task | Model | Effort | Depends on | Status |
 |---|---|---|---|---|---|
@@ -36,7 +36,17 @@ If a task fails twice, say "Revert the last commit" and rerun it in a fresh sess
 | T27 | [Plan days on the map](T27-days-map.md) | Sonnet | high | T25 | Done (2026-10-12) |
 | T28 | [Take the plan to Google Maps](T28-export-google.md) | Haiku | medium | T27 | Done (2026-10-12) |
 | T29 | [Help page for the new flow](T29-help.md) | Haiku | medium | T28 | Done (2026-10-12) |
-| T30 | [Final review and SPEC 4.0](T30-review-spec.md) | Opus | high | T29 | To do |
+| T30 | [Final review and SPEC 4.0](T30-review-spec.md) | Opus | high | T29 | Done (2026-10-12) |
+
+**Round 3 is finished.** `docs/V4.md` is folded into `SPEC.md` 4.0, which is the single source of truth again — read `SPEC.md`, not V4, for anything new.
+
+## Round 4 — found during the T30 review
+
+| # | Task | Model | Effort | Depends on | Status |
+|---|---|---|---|---|---|
+| T31 | [Give the search links a city again](T31-search-link-cities.md) | Sonnet | medium | T30 | Needs review |
+
+T31 starts with a question only you can answer — open the task file and read **Decide first**, then send your answer with the kickoff line.
 
 **Order.** Top to bottom is the safe path. Two tasks can be done early or alongside others because they touch nothing else: **T17** (any time before T18) and **T22** (any time after T16). Everything else changes shared screens, so run those one at a time.
 
@@ -70,4 +80,4 @@ The first "T08" (link parsing and card changes, 2026-09-28) was reverted. These 
 
 ## Writing a new task
 
-Copy `docs/tasks/_TEMPLATE.md`. Keep one task to one screen or one idea. If the task changes behavior, the design doc (`docs/V4.md`, or `SPEC.md` after T30) changes first. Add it to the board as **Needs review** and build it only after the owner says go.
+Copy `docs/tasks/_TEMPLATE.md`. Keep one task to one screen or one idea. If the task changes behavior, `SPEC.md` changes first. Add it to the board as **Needs review** and build it only after the owner says go.
