@@ -32,8 +32,10 @@
         <p><strong>Jump to:</strong></p>
         <ul>
           <li><a href="#home-screen">Add to home screen and sign in</a></li>
-          <li><a href="#routes">Routes: copy and paste flights</a></li>
-          <li><a href="#prices">Check prices</a></li>
+          <li><a href="#routes">Routes: paste flights where they go</a></li>
+          <li><a href="#choosing">Choose your idea and your option</a></li>
+          <li><a href="#totals">Who's this for, and how totals add up</a></li>
+          <li><a href="#prices">Check a price</a></li>
           <li><a href="#map">Map: places and stays by stop</a></li>
           <li><a href="#days">Days: plan day by day</a></li>
           <li><a href="#google-maps">Take the plan to Google Maps</a></li>
@@ -44,54 +46,93 @@
         <h2>Add to home screen and sign in</h2>
         <p>Make Trip Planner easy to find on your phone.</p>
         <ol>
-          <li>On iPhone, tap Share → Add to Home Screen. On Android, tap the menu → Install app. This adds a shortcut that works like a real app.</li>
+          <li>On iPhone, open the site in Safari and tap Share → Add to Home Screen. On Android, tap the menu → Install app. This adds a shortcut that works like a real app.</li>
           <li>Open the app and sign in with your Google account, or create one with email and password.</li>
-          <li>If you see "this account isn't on the trip list yet," ask the owner to add your email (lowercase, exactly as it appears in your Google account).</li>
+          <li><strong>On iPhone, email and password is the safer choice.</strong> Google sign-in sometimes can't come back to a home-screen app, and the app will tell you so and ask for a password instead. If you'd rather use Google, sign in once in Safari first — then the home-screen app opens already signed in.</li>
+          <li>A brand-new password account gets one confirmation email. Open it on the same phone, then tap <strong>Continue</strong>.</li>
+          <li>If you see "this account isn't on the trip list yet," ask the owner to add your email — lowercase, exactly as you typed it.</li>
         </ol>
         <details>
           <summary><strong>If it doesn't work</strong></summary>
           <ul>
-            <li><strong>The sign-in popup never appears.</strong> Your browser is probably blocking popups — allow them for this site and try again.</li>
             <li><strong>Google sign-in from the home-screen app doesn't come back.</strong> Sign in with email and password instead, or open the app in Safari once and sign in with Google there.</li>
+            <li><strong>You tapped Google and nothing seems to have happened.</strong> Pull down to reload the page. If you're back on the sign-in screen with no message, use email and password.</li>
+            <li><strong>The sign-in popup never appears on a computer.</strong> Your browser is probably blocking popups — allow them for this site and try again.</li>
             <li><strong>Everything says "You don't have access."</strong> Tell the owner — the site's permission rules need updating on their end.</li>
           </ul>
         </details>
       </section>
 
       <section class="card help-section" id="routes">
-        <h2>Routes: copy and paste flights</h2>
-        <p>Start by pasting a Google Flights link. It fills in your home airport, dates, and which cities are in your trip.</p>
+        <h2>Routes: paste flights where they go</h2>
+        <p>Everything on Routes starts with a pasted Google Flights link. You never type stops or nights — the app works them out from the flights.</p>
+        <p><strong>The button you press decides where the flight goes.</strong> There's one <strong>Paste flight link</strong> button in the flights-from-home card, and another inside each open option. Press the one that belongs to the flight you're adding.</p>
         <ol>
-          <li>Go to <strong>Routes</strong> tab and tap <strong>Paste flight link</strong>.</li>
-          <li>Open Google Flights and find a flight. The price must be visible on the link — paste the full address from your browser's bar, not a short share link.</li>
-          <li>The app reads where you're from (your home airport), the date you leave, and where you arrive. Each traveler can paste their own flights from their home city on different dates.</li>
-          <li>You'll see it as a home flight, which sets your trip window. Other travelers paste their flights too — they might leave on different days.</li>
-          <li>Once everyone has a home flight into the region, paste flights between cities (hops). These create options: "Rome + Florence," "Madrid + Barcelona," etc.</li>
-          <li>The app shows your route, how many nights, and the total cost per person.</li>
+          <li>On Google Flights, find the flight you'd actually book. Copy the <strong>whole address out of your browser's address bar</strong> — not a short share link, which carries no price.</li>
+          <li>Open the <strong>Routes</strong> tab. At the top, pick your own name, then tap <strong>Paste flight link</strong> in the "{your name}'s flights from home" card. Paste, check what the app read, and tap <strong>Add</strong>.</li>
+          <li>The first flight you paste creates the <strong>idea</strong> — the overall shape of the trip, named from the flight, like "Rome round trip" or "London in, Madrid out". Your flight home goes in the same way, as a second paste.</li>
+          <li>Each traveler picks their own name first and pastes their own flights. You can leave on different days from different cities.</li>
+          <li>Paste as many alternatives as you like. The card lists them cheapest first; <strong>Use this</strong> says which one you're counting, and it reads <strong>Using</strong> once it's the one.</li>
+          <li>Now the flights <em>inside</em> the region. Under "Options once you land", open an option and tap the <strong>Paste flight link</strong> button inside it. That flight becomes a hop in that option, shared by everyone who chooses it.</li>
+          <li>Open an option to see the route it makes: each city as a dot with the nights you'd sleep there, the hop flights in between, and a warning on any stop where the flights don't line up.</li>
         </ol>
         <details>
           <summary><strong>If it doesn't work</strong></summary>
           <ul>
-            <li><strong>Short share links don't work.</strong> Open the link in Google Flights, copy the full address from your browser's address bar, and paste that.</li>
-            <li><strong>The price didn't read correctly.</strong> The link must have the price visible. Go back to Google Flights and make sure you copied the whole URL.</li>
+            <li><strong>Short share links don't work.</strong> Open the link in Google Flights, then copy the full address out of the address bar and paste that.</li>
+            <li><strong>No price was read.</strong> The price has to be showing on Google Flights when you copy the address. Go back, open the flight, and copy again.</li>
+            <li><strong>The flight landed in the wrong place.</strong> Delete it and paste it again with the right button — the one in the flights-from-home card for a flight from home, the one inside an option for a hop.</li>
+            <li><strong>A stop has a warning.</strong> It's telling you something doesn't line up: the next flight leaves from a city you're not in, the dates run backwards, or a flight has no date. Fix the flight, or leave it if you know why.</li>
           </ul>
         </details>
         <!-- IMAGE: traveler switch, paste button, home flights card, option with stops -->
       </section>
 
-      <section class="card help-section" id="prices">
-        <h2>Check prices</h2>
-        <p>Prices are a snapshot from when the link was copied. Check them later to see if they've changed.</p>
+      <section class="card help-section" id="choosing">
+        <h2>Choose your idea and your option</h2>
+        <p>Choosing is personal: <strong>you choose for yourself, and it never moves anyone else's choice.</strong> There are two separate choices, and you make both.</p>
         <ol>
-          <li>On a flight or stay, the price is a button. Tap it to see what Google showed when the link was pasted.</li>
-          <li>If the price is the same, tap <strong>Same</strong>. If it changed, enter the new price and tap <strong>Save price</strong>.</li>
-          <li>The app shows whether prices went up or down and keeps a running total per person.</li>
-          <li>On the Routes or Map tabs, tap <strong>Check prices</strong> to walk through every price older than 3 days, one at a time.</li>
+          <li><strong>Choose idea.</strong> Beside the idea name, tap <strong>Choose idea</strong>. It reads <strong>Chosen</strong> afterwards, and a check appears on that idea. This says which flights from home are yours.</li>
+          <li><strong>Choose this option.</strong> Open the option you want and tap <strong>Choose this option</strong>. Its card shows <strong>Chosen by {your name} ✓</strong>, and the initials of anyone else who chose the same one.</li>
+          <li>Tap either button again to unchoose. Unchoosing an idea also lets go of the option underneath it.</li>
+        </ol>
+        <p>Friends can choose different options — one person does Florence, another does Barcelona — and everyone's costs still add up correctly. The <strong>Map</strong>, <strong>Stays</strong> and <strong>Days</strong> screens show one shared route built from everyone's choices together, so a city someone is visiting shows up for the whole group.</p>
+        <p>Until somebody chooses an option, the app has no route yet: the Map's city chips list every city across every option, and Days offers <strong>Create days from trip dates</strong> instead of <strong>Create days from route</strong>.</p>
+        <!-- IMAGE: idea switch with Chosen, option card with Chosen by badge and initials -->
+      </section>
+
+      <section class="card help-section" id="totals">
+        <h2>Who's this for, and how totals add up</h2>
+        <p>Every price in the app belongs to somebody. Flights, stays and split costs each have a <strong>Who's this for?</strong> line, so nobody is charged for a night or a flight they weren't on.</p>
+        <ul>
+          <li><strong>Automatic</strong> is the normal setting and usually right. A flight from home is for the traveler whose card it sits in. A hop is for everyone who chose that option. A stay is for whoever is sleeping in that city on those nights. A split cost is for everyone, unless you say otherwise.</li>
+          <li>To change it, tap <strong>Who's this for?</strong> and tap the names it's for. The line then reads <strong>Set by hand</strong>, with <strong>Reset</strong> to go back to automatic.</li>
+          <li>Prices behave the way the site quotes them: flight prices are per person, and a stay's price is the whole booking, split equally between the people it's for.</li>
+        </ul>
+        <p><strong>Where to read the numbers:</strong></p>
+        <ul>
+          <li>An <strong>option card</strong> shows only its own flights, <strong>per person</strong> — the flights from home are the same whichever option you pick, so they aren't repeated there.</li>
+          <li>The bar <strong>pinned to the bottom of Routes</strong> adds your flights from home and your option flights into your own total.</li>
+          <li><strong>Overview → Budget</strong> is the full picture: one row per traveler, which opens to show flights from home, option flights, stays and split costs adding up to their total, then an "Everyone together" row.</li>
+          <li>If a price is still missing, a total reads <strong>at least $X</strong> and the card is headed <strong>Total so far (missing some prices)</strong> with a list of what's missing. A missing price is never counted as $0.</li>
+        </ul>
+        <!-- IMAGE: who's this for control, Overview budget row opened -->
+      </section>
+
+      <section class="card help-section" id="prices">
+        <h2>Check a price</h2>
+        <p>Prices are a snapshot from when the link was copied. The app never looks a price up itself, so it's worth re-checking the ones you care about.</p>
+        <ol>
+          <li>On a flight or stay, <strong>the price is a button</strong>. Tapping it opens the saved link in a new tab, so you can see today's price on the site.</li>
+          <li>Back in the app, answer <strong>Still $64?</strong> — tap <strong>Same</strong>, or tap <strong>Changed</strong>, type what you saw and tap <strong>Save price</strong>.</li>
+          <li>The app shows the move in words ("▲ $38 higher", "▼ $12 lower"), a <strong>New low</strong> pill when it's the cheapest you've seen, and a little chart once there are two checks.</li>
+          <li>The small label beside a price is how old it is. A sun-colored dot means nobody has checked it in more than 3 days.</li>
         </ol>
         <details>
           <summary><strong>If it doesn't work</strong></summary>
           <ul>
-            <li><strong>No link was saved.</strong> The app still asks for a price, but can't open the site — check it yourself and enter what you see.</li>
+            <li><strong>No link was saved.</strong> Nothing opens, but the app still asks for a price — check the site yourself and type what you see.</li>
+            <li><strong>The price wouldn't save.</strong> Type just the number, like 245 or 245.50.</li>
           </ul>
         </details>
         <!-- IMAGE: price button, price check sheet -->
@@ -99,18 +140,32 @@
 
       <section class="card help-section" id="map">
         <h2>Map: places and stays by stop</h2>
-        <p>Pin the restaurants, museums and hotels you want to check out. The map groups them by the cities in your route.</p>
+        <p>Pin the restaurants, museums and hotels you want to see. The chips across the top are the cities of your route, built from everyone's chosen options — tap one to see just that city, or <strong>All</strong> for everything. <strong>Elsewhere</strong> holds anything that isn't near a city you're sleeping in.</p>
+        <p><strong>Places</strong></p>
         <ol>
-          <li>Go to <strong>Map</strong> and tap <strong>Add place</strong>. Search or paste a Google Maps link — the name and location fill in automatically.</li>
-          <li>You can also tap <strong>Import from My Maps</strong> to upload a Google My Maps layer (export it as KML from My Maps, not KMZ).</li>
-          <li>To add where you're staying, tap <strong>Add stay</strong> and paste a Booking.com, Airbnb or Google Hotels link. The app fills in dates from your stops and you enter the price.</li>
-          <li>The app shows night coverage for each stop — how many nights each stay covers and the total cost.</li>
+          <li>Tap <strong>Add place</strong>. Start with <strong>Find on Google Maps ↗</strong>, then paste the link back in — the pin and the name fill themselves in. Pick a category, and add a note if you like.</li>
+          <li>The city chip you have selected is the city those searches use, so select the city before you search.</li>
+          <li>Give places <strong>Love</strong>, <strong>Like</strong> or <strong>Pass</strong>. The group's favorites sort to the top, and <strong>I haven't ranked yet</strong> shows you what you haven't looked at.</li>
+          <li><strong>Import from My Maps</strong> brings in a whole Google My Maps layer at once. Export it from My Maps as KML (not KMZ) and pick the file; you give each layer a category, and pins you already have are skipped.</li>
+          <li>Got a pin in the wrong spot? <strong>Edit location</strong> on the place fixes it without deleting anything.</li>
+        </ol>
+        <p><strong>Stays</strong></p>
+        <ol>
+          <li>Switch the list under the map to <strong>Stays</strong>. Stays are grouped under the cities of the route, and each group has its own <strong>Search Google Hotels</strong>, <strong>Search Booking.com</strong> and <strong>Search Airbnb</strong> links, already pointed at that city, and at those nights where the site takes dates.</li>
+          <li>Tap <strong>Add stay</strong> inside a city's group and the check-in, check-out and number of guests are filled in from that stop. Paste a Booking.com, Airbnb or Google Hotels link and type the price.</li>
+          <li><strong>Stays find their own city.</strong> You never pick it: the app matches the stay to the stop whose dates cover your check-in, or to the nearest city to its pin. If it can't tell yet, the stay waits under <strong>No stop yet</strong> — give it dates or a pin and it moves itself.</li>
+          <li>Those booking sites don't carry an address, so set the pin yourself with <strong>Where is it?</strong> — either <strong>Find "{name}" on the map</strong> or a Google Maps link. Without a pin the stay still works, it's just left off the map.</li>
+          <li>Two buttons say where a stay stands: <strong>Choose</strong> (it reads <strong>Chosen</strong>, and the pin turns teal) and <strong>Out</strong>, which dims it and sorts it to the bottom. A stay is never both.</li>
+          <li>Under each city, the night bar shows every night, how many of you are sleeping there that night, and whether your chosen stays leave it open, cover it (✓) or double-book it (×2). It reads <strong>All 4 nights covered ✓</strong> once you're sorted, with the total and what it is each.</li>
+          <li><strong>Duplicate</strong> copies a stay without its price — handy for splitting a long stay into two bookings.</li>
         </ol>
         <details>
           <summary><strong>If it doesn't work</strong></summary>
           <ul>
             <li><strong>Short share links don't work.</strong> Open the link, copy the full address from your browser's address bar, and paste that.</li>
             <li><strong>KMZ files don't import.</strong> In My Maps, use ⋮ → Export to KML/KMZ and tick "Export as KML instead of KMZ", then try again.</li>
+            <li><strong>The chips say to choose an option on Routes.</strong> Nobody has chosen one yet, so there's no route to group by. Choose an option on Routes and the cities appear.</li>
+            <li><strong>A stay is stuck under "No stop yet".</strong> Its check-in is outside every city's dates and it has no pin near one. Fix the dates, or set its location.</li>
           </ul>
         </details>
         <!-- IMAGE: map with stop chips, places and stays together -->
@@ -118,13 +173,17 @@
 
       <section class="card help-section" id="days">
         <h2>Days: plan day by day</h2>
-        <p>Organize your favorite places into a day-by-day plan.</p>
+        <p>Turn your pins into a day-by-day plan.</p>
         <ol>
-          <li>Go to <strong>Days</strong> and tap <strong>Create days from route</strong>. The app makes one day per city in your chosen route.</li>
-          <li>Tap a place pin to add it to a day. The map shows which places are on which day.</li>
-          <li>The app numbers each place, so you can sketch a walking route.</li>
+          <li>Go to <strong>Days</strong> and tap <strong>Create days from route</strong> — one day per date, each already titled with the city you're in that day. Before anyone has chosen an option the same button reads <strong>Create days from trip dates</strong>. <strong>Add day</strong> makes an extra day with no date.</li>
+          <li>Pick a day. The map shows that city's places, and <strong>Not planned</strong> below it lists the ones not on a day yet, with your group's favorites first.</li>
+          <li>Tap a pin and choose the day to put it on, or <strong>Remove from day</strong> to take it back off. Pins are numbered and colored by day.</li>
+          <li><strong>Your stay shows up as a house.</strong> If a chosen stay covers that night, the day's map shows it with a house mark — that's where you start and end.</li>
+          <li>On a day card, <strong>▲</strong> and <strong>▼</strong> reorder the places, and <strong>Remove</strong> sends one back to Not planned.</li>
+          <li><strong>Open walking route</strong> sends the day to Google Maps for walking directions, in your order. With a house on the map, the route starts and finishes at your stay.</li>
+          <li>Anything you saved with dates shows "Happening this day" on the days it falls on.</li>
         </ol>
-        <!-- IMAGE: day list, place pins numbered by day -->
+        <!-- IMAGE: day list, place pins numbered by day, house pin for the stay -->
       </section>
 
       <section class="card help-section" id="google-maps">
@@ -141,6 +200,9 @@
       <section class="card help-section">
         <h2>Quick fixes</h2>
         <ul>
+          <li><strong>Your name shows "Not chosen yet" on Overview.</strong> Choosing is per person: open Routes, pick your own name at the top, then <strong>Choose idea</strong> and <strong>Choose this option</strong>.</li>
+          <li><strong>A total says "at least".</strong> Something counted in it has no price yet. The budget card lists exactly what's missing.</li>
+          <li><strong>A cost looks like it's charging the wrong people.</strong> Tap <strong>Who's this for?</strong> on the flight, stay or split cost and set the names by hand.</li>
           <li><strong>You just heard about an update but don't see it.</strong> Wait a minute or two, then hard-refresh the page (Mac: ⌘⇧R, Windows: Ctrl+Shift+R).</li>
           <li><strong>The map is blank, or something looks broken.</strong> A reload usually fixes it. If not, open your browser's console (Chrome: Option+⌘+J on Mac, Ctrl+Shift+J on Windows) and send the red error text to the owner.</li>
         </ul>

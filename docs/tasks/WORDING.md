@@ -109,6 +109,23 @@ Tab names: **Overview · Routes · Map · Days** (T23 removes Recap; T25 merges 
 | Adding to {idea} · {traveler} / Adding to {option} | Paste sheet, the fixed line naming where this flight will land |
 | Earlier flights ({N}) | Routes, collapsed list of flights saved before Routes existed |
 
+## Round 5 gaps, found in the T40 review
+
+| Wording | Where |
+|---|---|
+| For: no one yet | Routes and Stays, "Who's this for?" line when the set is empty (a hop nobody has chosen, say) |
+| Done | Routes and Stays, the "Who's this for?" button while its name pills are open |
+| {name}: home $A + option flights $B (no idea chosen) = $C | Routes, the bottom summary for a traveler who has chosen an option but no idea |
+| {total} total · {share} each | Stays, under a stop's coverage bar — "so far" after the total while a chosen stay has no price |
+| Straight lines show the order, not the walking path. Tap a pin to add it to a day. | Days, caption under the map |
+| Route part 1 / Route part 2 | Days, instead of **Open walking route** when a day needs more than one Google Maps link |
+
+## Stays on the Days map (T39)
+
+| Wording | Where |
+|---|---|
+| 🏠 {stay name} | Days, the house pin of the day's chosen stay — the stay's name alone in its popup ("Stay" when it has no name) |
+
 ## Phone sign-in (T32)
 
 | Wording | Where |

@@ -121,8 +121,8 @@ A few habits that keep this working:
 **Your trip workflow in the app:**
 
 1. **Overview:** name the trip, set the rough dates, add everyone and their home airport.
-2. **Routes:** on Google Flights, pick the actual flights you'd book, copy the whole address from the browser bar, then tap **Paste flight link**. The app files it under an idea ("Rome round trip") and works out the stops and nights by itself. Add hop flights the same way to build options like "Florence + Barcelona", then **Choose this option** — everything else follows from it.
-3. **Prices:** tap any price to open the link you saved and answer "Still $64?" — **Same** or **Changed**. A sun-colored dot means it hasn't been checked in over 3 days, and **Check prices** walks you through all of them.
+2. **Routes:** on Google Flights, pick the actual flights you'd book, copy the whole address from the browser bar, then tap **Paste flight link**. The app files it under an idea ("Rome round trip") and works out the stops and nights by itself. Add hop flights the same way to build options like "Florence + Barcelona", then **Choose idea** and **Choose this option** — each traveler chooses for themselves, and everything else follows from everyone's choices together.
+3. **Prices:** tap any price to open the link you saved and answer "Still $64?" — **Same** or **Changed**. A sun-colored dot means nobody has checked it in over 3 days.
 4. **Map:** pin places (paste a full Google Maps link from the address bar, or import a Google My Maps layer as KML) and add stays per stop. Give places **Love / Like / Pass**. The night bar under each stop shows which nights your chosen stays cover.
 5. **Days:** **Create days from route** makes one day per date, then tap pins on the map to put places on days. **Open walking route** sends a day to Google Maps.
 6. **Take it with you:** on Days, tap **Take it to Google Maps** to download the plan, import it into Google My Maps, and open that map in the Google Maps app during the trip. `help.html` (the **Help** link in the top bar) has the step-by-step for friends.
@@ -154,6 +154,10 @@ A few habits that keep this working:
 | Your latest changes don't show | Wait 1–2 minutes for the GitHub Actions deployment, then reload |
 | A pasted flight link says it can't be read | You copied the **Share** link. Open it, then copy the whole address out of the browser's address bar instead |
 | "This looks like a KMZ file" when importing places | In My Maps, use ⋮ → Export to KML/KMZ and tick "Export as KML instead of KMZ" |
+| Overview says "Not chosen yet" for someone who did choose | Choosing is per traveler. On Routes, pick that person's name at the top first — the Choose buttons only ever set the traveler on screen |
+| The Map's city chips say to choose an option on Routes | Nobody has chosen an option yet, so there's no route to group by. Until then the chips list every city across every option |
+| A stay sits under "No stop yet" | Its check-in falls outside every city's dates and its pin isn't near one. Fix the dates or set its location and it moves itself |
+| A total says "at least" | Something counted in it has no price. The budget card on Overview lists exactly what's missing — a missing price is never counted as $0 |
 | Routes shows a warning on a stop | It's telling you the flights don't line up — for example the next one leaves from a different city. Fix the flight, or ignore it if you know why |
 | The map is blank | Open the browser console, copy the red error, and give it to the model |
 
