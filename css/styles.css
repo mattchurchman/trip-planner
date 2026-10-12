@@ -1840,6 +1840,22 @@ textarea:focus {
   flex-wrap: wrap;
 }
 
+.day-pin-sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.day-pin-sheet-body h3 {
+  margin: 0;
+}
+
+.day-pin-sheet-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
 .unplanned-pool {
   display: flex;
   flex-direction: column;

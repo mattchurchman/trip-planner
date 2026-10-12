@@ -66,6 +66,16 @@ Tab names: **Overview · Routes · Map · Days** (T23 removes Recap; T25 merges 
 | Places / Stays | Map, the switch under the chips that picks which list shows below the map |
 | Paste | Map, "Add place" and the inline location editor — fills the Google Maps link box from the clipboard |
 
+## Days on the map (T27)
+
+| Wording | Where |
+|---|---|
+| Not planned | Days, the pool of places not yet on a day (replaces "Not in a day yet" now the list is scoped to the selected day's city, with Loved places shown first) |
+| Create days from route | Days, the create button once an option is chosen on Routes |
+| Create days from trip dates | Days, the same button before an option is chosen |
+| Remove from day | Days, pin-tap sheet, shown only when the place is already on a day |
+| No days yet for this city. | Days, pin-tap sheet, when the selected day's city has no days yet |
+
 ## Import from My Maps (T26)
 
 | Wording | Where |
