@@ -126,7 +126,7 @@ a:not(.btn):not(.app-brand):not(.trip-card-link):hover {
   text-decoration: underline;
 }
 
-a[target="_blank"]::after {
+a[target="_blank"]:not(.icon-btn)::after {
   content: "↗";
   display: inline-block;
   margin-left: 3px;
@@ -298,6 +298,8 @@ a:focus-visible {
 input,
 select,
 textarea {
+  /* iPhone Safari zooms the page on focus of any field under 16px. */
+  font-size: max(16px, 1rem);
   transition: border-color var(--ease), box-shadow var(--ease);
 }
 
@@ -471,6 +473,30 @@ textarea:focus {
   background: var(--teal);
   color: var(--on-teal);
   font-weight: 600;
+}
+
+/* Round icon button, sized and bordered to match .avatar (the Help "?"). */
+.icon-btn {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  box-shadow: 0 0 0 1px var(--line);
+  background: var(--surface);
+  color: var(--teal);
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1rem;
+  text-decoration: none;
+}
+
+.icon-btn:hover {
+  background: var(--teal-soft);
+  text-decoration: none;
 }
 
 .app-main {
@@ -706,12 +732,39 @@ textarea:focus {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   width: 100%;
+  min-height: 44px;
+}
+
+/* iOS draws its own chrome on date inputs unless appearance is reset; without
+   this they don't match the height, border or padding of other fields. */
+.field input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  text-align: left;
+  min-width: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+  }
+}
+
+:root[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
 }
 
 .field-row {
   display: flex;
   gap: var(--space-3);
   flex-wrap: wrap;
+}
+
+/* Trip dates (Overview): side by side with a clear gap from 480px up, stacked below. */
+@media (min-width: 480px) {
+  .trip-dates-row {
+    flex-wrap: nowrap;
+  }
 }
 
 /* An input with a button beside it inside one field, e.g. the stay link box's
@@ -2202,11 +2255,17 @@ textarea:focus {
     align-items: flex-start;
   }
 
-  .app-name { display: none; }
-  .top-bar { gap: var(--space-2); }
-  .top-trip-name { flex: 1; }
-  .top-bar-user { gap: var(--space-2); }
-  .top-bar-user .btn-link { min-height: 32px; padding: var(--space-1); }
+  .top-bar { gap: var(--space-2); flex-wrap: wrap; }
+  .app-brand { order: 1; }
+  .top-bar-user { order: 2; gap: var(--space-2); margin-left: auto; }
+  /* Forced to its own full-width line (after the brand/user row) so the trip
+     name never squeezes "Trip Planner" out of the bar. */
+  .top-trip-name {
+    order: 3;
+    flex: 1 1 100%;
+    font-size: 0.8125rem;
+    font-weight: 500;
+  }
 
   .travelers-header,
   .costs-header,

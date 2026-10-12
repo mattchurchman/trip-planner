@@ -133,7 +133,14 @@ function renderTopBar(user) {
     el("span", { className: "top-trip-name", textContent: "" }),
     el("nav", { className: "top-tabs", attrs: { "aria-label": "Trip sections" } }),
     el("div", { className: "top-bar-user" }, [
-      el("a", { className: "btn btn-link", textContent: "Help", href: "./help.html", target: "_blank", rel: "noopener noreferrer" }),
+      el("a", {
+        className: "icon-btn",
+        textContent: "?",
+        href: "./help.html",
+        target: "_blank",
+        rel: "noopener noreferrer",
+        attrs: { "aria-label": "Help" },
+      }),
       accountMenu,
     ]),
   ]);

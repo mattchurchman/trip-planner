@@ -84,7 +84,7 @@ export function renderOverviewPage(container, tripId, myUid) {
     });
     tripDetailsEl.replaceChildren(
       field("Trip name", nameInput),
-      el("div", { className: "field-row" }, [field("Start date", startInput), field("End date", endInput)]),
+      el("div", { className: "field-row trip-dates-row" }, [field("Start date", startInput), field("End date", endInput)]),
       fieldError
     );
   }

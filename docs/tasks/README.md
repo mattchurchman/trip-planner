@@ -66,7 +66,7 @@ If a task fails twice, say "Revert the last commit" and rerun it in a fresh sess
 
 | # | Task | Model | Effort | Depends on | Status |
 |---|---|---|---|---|---|
-| T41 | [Phone foundation: no zoom, clean header, matching fields](T41-mobile-foundation.md) | Sonnet | medium | T40 | To do |
+| T41 | [Phone foundation: no zoom, clean header, matching fields](T41-mobile-foundation.md) | Sonnet | medium | T40 | Done (2026-10-12) |
 | T42 | [Paste once and it fills in](T42-paste-fills-itself.md) | Sonnet | medium | T41 | To do |
 | T43 | [Travelers as cards with a Save sheet](T43-traveler-cards.md) | Sonnet | medium | T41 | To do |
 | T44 | [Routes: + Idea works; slim total bar](T44-routes-idea-button-and-total.md) | Sonnet | low | T41 | To do |

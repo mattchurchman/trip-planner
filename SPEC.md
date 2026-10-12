@@ -173,9 +173,9 @@ Also: spacing `--space-1`…`--space-7` (4, 8, 12, 16, 24, 32, 48 px), `--r: 16p
 
 **Navigation.** Under 760 px, a fixed bottom tab bar with an icon and label per tab, plus a slim top bar holding the logo, trip name, **Help** and the account menu. From 760 px, the tabs move into the top bar and the bottom bar is hidden.
 
-**Components.** Reuse what exists: `dialogShell()`, `field()`, the `.btn` classes (plain, primary, quiet, small, danger), the segmented control (`.seg`), chips, kind pills, badges, the option card, the rail (stops as dots with hop flights inset), and the toast. Don't invent a second way to do something the app already does.
+**Components.** Reuse what exists: `dialogShell()`, `field()`, the `.btn` classes (plain, primary, quiet, small, danger), `.icon-btn` (a round 32px button sized and bordered like `.avatar`, for the top bar's Help "?"), the segmented control (`.seg`), chips, kind pills, badges, the option card, the rail (stops as dots with hop flights inset), and the toast. Don't invent a second way to do something the app already does.
 
-**Rules.** Teal is the only action color. Sun is for small highlights. `--good`/`--bad` are only for price movement and errors. Tap targets are at least 44 px, every control has a visible label and focus ring, and `prefers-reduced-motion` turns transitions off. Price movement is shown in words and arrows ("▼ $42 lower") as well as color. Every screen works at 375 px and at 1280 px, with no horizontal scrolling.
+**Rules.** Teal is the only action color. Sun is for small highlights. `--good`/`--bad` are only for price movement and errors. Tap targets are at least 44 px, every control has a visible label and focus ring, and `prefers-reduced-motion` turns transitions off. Price movement is shown in words and arrows ("▼ $42 lower") as well as color. Every screen works at 375 px and at 1280 px, with no horizontal scrolling. `input`, `select` and `textarea` are at least `16px` font size everywhere (iOS zooms on focus below that); pinch zoom is never disabled.
 
 **Category colors** live in `js/lib/categories.js`; every other file imports them from there. Menus and filters use this order:
 
