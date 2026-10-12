@@ -44,9 +44,7 @@ If a task fails twice, say "Revert the last commit" and rerun it in a fresh sess
 
 | # | Task | Model | Effort | Depends on | Status |
 |---|---|---|---|---|---|
-| T31 | [Give the search links a city again](T31-search-link-cities.md) | Sonnet | medium | T30 | Needs review |
-
-T31 starts with a question only you can answer — open the task file and read **Decide first**, then send your answer with the kickoff line.
+| T31 | [Give the search links a city again](T31-search-link-cities.md) | Sonnet | medium | T30 | Done (2026-10-12) |
 
 **Order.** Top to bottom is the safe path. Two tasks can be done early or alongside others because they touch nothing else: **T17** (any time before T18) and **T22** (any time after T16). Everything else changes shared screens, so run those one at a time.
 

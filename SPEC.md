@@ -532,6 +532,7 @@ One Leaflet map with place pins and stay price pins together, and one list below
 - `stopKey` is set on save to the nearest route city within 150 km (`stops.js`), or `null` for "Elsewhere".
 - Every place has **Set location** / **Edit location** using the same three methods — a pasted link's coordinates aren't always the real pin, so there must always be a way to correct one without deleting the place. A place may be saved with no location; it shows "No map pin" and is left out of the map and exports.
 - Each row and popup has **Open in Google Maps ↗** (§9.2), plus Edit and Delete (with confirmation).
+- **Which city a place-search link uses (T31):** there's no trip-wide destination any more, so **Find on Google Maps**, its Nominatim search, and **Open in Google Maps ↗** all use the stop chip currently selected above the map — the one city the traveler is looking at. With **All**, **Elsewhere**, or no chip selected yet (no route chosen), they search with no city at all rather than guessing one.
 - **Import from My Maps**: the user exports KML from My Maps (with "Export as KML instead of KMZ" ticked) and picks the file. The dialog shows a per-layer summary, gives each layer a category, skips pins matching an existing place (same name, within 50 m), and adds the rest in one batch, storing the layer name on each place. A KMZ file gets a message explaining the tick box (§9.7).
 
 **Stays**
@@ -540,9 +541,9 @@ One Leaflet map with place pins and stay price pins together, and one list below
 - Status per stay: shortlisted (default), **Out** (dimmed, sorted last) or **Chosen** (in `selectedStayIds`). Sort: chosen first, then not-Out before Out, then lowest price per night.
 - **Night coverage** per stop: one cell per night showing covered, not covered, or double-booked by the chosen stays, with "{N} of {N} nights covered", the chosen total and the per-person share (`coverage.js`).
 - **Add stay** from a stop pre-fills check-in and check-out with that stop's dates, and guests with the number of travelers. **Duplicate** copies a stay without its price and opens it for editing, for splitting one stay into two.
-- The add/edit dialog reads a pasted link for provider, dates, guests and sometimes the name (§9.6), with **Paste** beside the link box. The price is typed. **Where is it?** is always visible because the map depends on it: **Find "<name>" on the map** (Nominatim), or a Google Maps link (§9.3). Booking, Airbnb and Google Hotels links carry no address and the app must not download the page (§2), so the pin always comes from one of those two actions.
+- The add/edit dialog reads a pasted link for provider, dates, guests and sometimes the name (§9.6), with **Paste** beside the link box. The price is typed. **Where is it?** is always visible because the map depends on it: **Find "<name>" on the map** (Nominatim), or a Google Maps link (§9.3). Booking, Airbnb and Google Hotels links carry no address and the app must not download the page (§2), so the pin always comes from one of those two actions. The dialog's search links (Nominatim and Find on Google Maps) use the stay's own stop's city (adding from a stop, or editing a stay that already has one) — `null`, searching with no city, when it doesn't have one yet (T31).
 - **Price pins:** each located stay is an `L.marker` with an `L.divIcon` pill showing its number and price — per night rounded to whole units when nights are known ("③ $180"), otherwise the total ("③ $1,260 total"), or just "③" with no price. Build the pill with an element and `textContent`, never an HTML string. Chosen stays get a teal fill. Clicking a pin scrolls to its card and highlights it.
-- Hotel search links (Google Hotels, Booking.com, Airbnb) sit above the list (§9.1).
+- **Hotel search links** (Google Hotels, Booking.com, Airbnb) sit inside each stop's group, using that stop's own city and dates (§9.1) — there's no trip-wide destination any more, and a stop's own city is more accurate than one city for the whole trip (T31). Hidden for stays with **No stop yet** and before a route is chosen, where no city is known.
 
 ### 7.8 Days tab
 
@@ -580,6 +581,8 @@ All builders live in `js/lib/links.js` (and `mapsurl.js`) and are unit tested. A
 
 ### 9.1 Search links
 
+`<city>` for Google Hotels, Booking.com and Airbnb is the one stop's city they're grouped under on the Stays list (§7.7), never a trip-wide destination (T31) — there is none.
+
 | Link | URL |
 |---|---|
 | Google Flights search | `https://www.google.com/travel/flights?q=` + encode(`Flights from <FROM> to <TO> on <YYYY-MM-DD> returning <YYYY-MM-DD>`). FROM and TO use the airport code if present, otherwise the city. Omit the " on …" and " returning …" parts when dates are missing |
@@ -589,8 +592,8 @@ All builders live in `js/lib/links.js` (and `mapsurl.js`) and are unit tested. A
 
 ### 9.2 Google Maps links
 
-- Open a place: `https://www.google.com/maps/search/?api=1&query=` + encode(`<name>, <city>`). When the place has a saved `googleMapsUrl` accepted by `safeUrl`, open that instead.
-- Find a place (`googleMapsFindUrl(text, city, country)`): `https://www.google.com/maps/search/?api=1&query=` + encode of the non-empty parts of `<text>, <city>, <country>` joined with ", ".
+- Open a place: `https://www.google.com/maps/search/?api=1&query=` + encode(`<name>, <city>`). When the place has a saved `googleMapsUrl` accepted by `safeUrl`, open that instead. `<city>` is the Map tab's selected stop chip (§7.7), or empty with none selected.
+- Find a place (`googleMapsFindUrl(text, city, country)`): `https://www.google.com/maps/search/?api=1&query=` + encode of the non-empty parts of `<text>, <city>, <country>` joined with ", ". `country` is unused since T31 — callers pass the Map tab's selected stop chip's city alone, or a stay's own stop's city.
 - Walking route for a day: `https://www.google.com/maps/dir/?api=1&travelmode=walking&origin=<lat,lng>&destination=<lat,lng>&waypoints=<lat,lng>|<lat,lng>…` using the first located place as origin and the last as destination. At most 8 waypoints per link; a day with more than 10 located places splits into consecutive links ("Route part 1", "Route part 2"…), each starting where the previous ended. Encode `|` as `%7C`.
 
 ### 9.3 Reading Google Maps URLs (`mapsurl.js`)

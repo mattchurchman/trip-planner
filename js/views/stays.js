@@ -42,9 +42,10 @@ function groupByStop(stays, stops) {
 
 /**
  * Builds the Stays section of the Map tab (V4 §7, §8): the header with its
- * Add button, discover links, and stays grouped by the stop of the chosen
- * route, each with a night-coverage bar and total — or, with no route
- * chosen, every stay ungrouped and a hint to choose one. Call `render(stays,
+ * Add button, and stays grouped by the stop of the chosen route, each with
+ * its own hotel search links (T31, §9.1), a night-coverage bar and total —
+ * or, with no route chosen, every stay ungrouped and a hint to choose one.
+ * Call `render(stays,
  * trip, usersById, stops)` whenever trip/stays/users/the chosen route's
  * stops (or the stop chip filtering `stays`, T25) change — it defers
  * rebuilding the list on its own while someone is editing inside it (§8).
@@ -57,9 +58,9 @@ export function createStaysSection({ tripId, myUid, onError, onFocusOnMap }) {
   let stayCommentUnsubs = [];
   let currentTrip = null;
   let currentStays = [];
+  let currentStops = null;
 
   const addStayBtn = el("button", { type: "button", className: "btn btn-primary", textContent: "Add stay" });
-  const staysDiscoverEl = el("div", { className: "discover-section" });
   const checkPricesEl = el("div", { className: "stays-check-prices" });
   const routeHintEl = el("p", { className: "empty-state" }, [
     "No route chosen yet. ",
@@ -84,8 +85,16 @@ export function createStaysSection({ tripId, myUid, onError, onFocusOnMap }) {
   }
   addStayBtn.addEventListener("click", () => handleAddStay(null));
 
+  /** The city of the stop a stay belongs to (T31, §7.7), for its edit
+   * dialog's search links — `null` when the stay has no stop yet or no
+   * route is chosen, same as everywhere else here. */
+  function cityForStay(stay) {
+    const stop = (currentStops || []).find((s) => s.cityKey === stay.stopKey);
+    return stop ? stop.city : null;
+  }
+
   async function openEditStayDialog(stay, trip, focusLocation = false) {
-    const result = await editStayFormDialog(stay, trip, focusLocation);
+    const result = await editStayFormDialog(stay, trip, focusLocation, cityForStay(stay));
     if (!result) return;
     try {
       await updateStay(tripId, stay.id, result);
@@ -239,21 +248,34 @@ export function createStaysSection({ tripId, myUid, onError, onFocusOnMap }) {
     return el("div", { className: "coverage" }, children);
   }
 
-  function renderStopGroup(stop, sortedStays, trip, usersById, numbers, chosenIds) {
+  function renderStopGroup(stop, sortedStays, trip, usersById, numbers, chosenIds, adults) {
     const chosenHere = sortedStays.filter((s) => chosenIds.includes(s.id));
     const dateRange = [formatLegDate(stop.from), formatLegDate(stop.to)].filter(Boolean).join(" – ") || null;
 
     const addBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Add stay" });
     addBtn.disabled = currentStays.length >= 10;
-    addBtn.addEventListener("click", () => handleAddStay({ checkIn: stop.from, checkOut: stop.to, stopKey: stop.cityKey }));
+    addBtn.addEventListener("click", () => handleAddStay({ checkIn: stop.from, checkOut: stop.to, stopKey: stop.cityKey, city: stop.city }));
 
     const header = el("div", { className: "stop-group-header" }, [
       el("h3", {}, [stop.city || stop.code || "Unknown", dateRange ? el("span", { className: "muted", textContent: ` · ${dateRange}` }) : null].filter(Boolean)),
       addBtn,
     ]);
 
+    // Hotel search links use this stop's own city and dates (T31, §9.1) —
+    // most accurate, and there's no trip-wide destination any more. Hidden
+    // with no city to search (shouldn't happen for a real stop, but a bad
+    // airport code could leave one blank).
+    const discover = stop.city
+      ? el("div", { className: "discover-section" }, [
+          externalLinkRow(googleHotelsUrl(stop.city), "Search Google Hotels"),
+          externalLinkRow(bookingUrl({ city: stop.city, checkIn: stop.from, checkOut: stop.to, adults }), "Search Booking.com"),
+          externalLinkRow(airbnbUrl({ city: stop.city, checkIn: stop.from, checkOut: stop.to, adults }), "Search Airbnb"),
+        ])
+      : null;
+
     return el("section", { className: "stop-group" }, [
       header,
+      discover,
       renderCoverage(stop, chosenHere, trip),
       el("div", { className: "stays-list" }, sortedStays.map((s) => renderStayCard(s, trip, usersById, numbers[s.id]))),
     ].filter(Boolean));
@@ -270,13 +292,7 @@ export function createStaysSection({ tripId, myUid, onError, onFocusOnMap }) {
     for (const unsub of stayCommentUnsubs) unsub();
     stayCommentUnsubs = [];
 
-    const dest = trip.destination;
     const adults = (trip.travelers || []).length || 1;
-    staysDiscoverEl.replaceChildren(
-      externalLinkRow(googleHotelsUrl(dest ? dest.city : ""), "Search Google Hotels"),
-      externalLinkRow(bookingUrl({ city: dest ? dest.city : "", checkIn: trip.startDate, checkOut: trip.endDate, adults }), "Search Booking.com"),
-      externalLinkRow(airbnbUrl({ city: dest ? dest.city : "", checkIn: trip.startDate, checkOut: trip.endDate, adults }), "Search Airbnb")
-    );
 
     addStayBtn.disabled = stays.length >= 10;
     routeHintEl.hidden = stops !== null;
@@ -302,7 +318,7 @@ export function createStaysSection({ tripId, myUid, onError, onFocusOnMap }) {
       sections = groups.map(({ stop, stays: groupStays }) => {
         const sorted = sortStayOptions(groupStays, chosenIds);
         screenOrder.push(...sorted);
-        return renderStopGroup(stop, sorted, trip, usersById, numbers, chosenIds);
+        return renderStopGroup(stop, sorted, trip, usersById, numbers, chosenIds, adults);
       });
       if (noStop.length > 0) {
         const sorted = sortStayOptions(noStop, chosenIds);
@@ -324,7 +340,6 @@ export function createStaysSection({ tripId, myUid, onError, onFocusOnMap }) {
 
   const element = el("div", {}, [
     el("div", { className: "stays-header" }, [addStayBtn]),
-    staysDiscoverEl,
     checkPricesEl,
     routeHintEl,
     staysListEl,
@@ -335,6 +350,7 @@ export function createStaysSection({ tripId, myUid, onError, onFocusOnMap }) {
     render(stays, trip, usersById, stops = null) {
       currentTrip = trip;
       currentStays = stays;
+      currentStops = stops;
       renderWhenIdle(staysListEl, () => renderSection(stays, trip, usersById, stops));
     },
     focusCard(stayId) {

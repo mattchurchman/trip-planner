@@ -8,26 +8,31 @@ import { nearestStop } from "../lib/stops.js";
 
 /**
  * The three location-entry methods from §7.6: find it on Google Maps then
- * paste the link (Steps 1–2), search (Nominatim, scoped to the destination),
- * or place on map — the latter two live under "Other ways to add a location".
+ * paste the link (Steps 1–2), search (Nominatim, scoped to the selected
+ * stop's city), or place on map — the latter two live under "Other ways to
+ * add a location".
  * `mapClickState` is a shared mutable flag/callback the page's Leaflet map
  * click handler reads. `onChange({lat, lng, googleMapsUrl, suggestedName?})`
  * fires whenever a location is picked or cleared.
  *
- * Returns `{ primaryElement, otherWaysElement, getLocation, reset }` rather
- * than one element so a caller with its own Step 3 in between (the Add place
- * form) can put it there, per §7.6's order: Step 1, Step 2, Step 3, then
+ * Returns `{ primaryElement, otherWaysElement, getLocation, reset, refreshCity }`
+ * rather than one element so a caller with its own Step 3 in between (the Add
+ * place form) can put it there, per §7.6's order: Step 1, Step 2, Step 3, then
  * "Other ways to add a location". Pass `stepLabels: true` for that add-form
  * context to show the numbered step headings; the inline Set/Edit location
  * panel (no Step 3 of its own) omits them but reuses the same Find button,
  * seeded with `findText` — the place's current name (§7.6).
+ *
+ * `getCity()` (T31, §7.7) reads the stop chip currently selected on the Map
+ * tab, or `null` with none selected — there's no trip-wide destination any
+ * more. Call the returned `refreshCity()` whenever the selected chip changes
+ * so the Find link picks it up without rebuilding the whole picker.
  */
-export function buildLocationPicker({ trip, mapClickState, onChange, findText = "", onFindTextChange, stepLabels = false }) {
+export function buildLocationPicker({ getCity = () => null, mapClickState, onChange, findText = "", onFindTextChange, stepLabels = false }) {
   let lat = null;
   let lng = null;
   let googleMapsUrl = null;
   let placingArmed = false;
-  const dest = trip && trip.destination;
 
   const statusEl = el("p", { className: "muted location-status" });
   const errorEl = el("div", { className: "field-error-holder" });
@@ -55,13 +60,13 @@ export function buildLocationPicker({ trip, mapClickState, onChange, findText = 
   });
   const findLink = el("a", {
     className: "btn btn-small",
-    href: googleMapsFindUrl(findText, dest && dest.city, dest && dest.country),
+    href: googleMapsFindUrl(findText, getCity()),
     target: "_blank",
     rel: "noopener noreferrer",
     textContent: "Find on Google Maps",
   });
   findQueryInput.addEventListener("input", () => {
-    findLink.href = googleMapsFindUrl(findQueryInput.value, dest && dest.city, dest && dest.country);
+    findLink.href = googleMapsFindUrl(findQueryInput.value, getCity());
     if (onFindTextChange) onFindTextChange(findQueryInput.value);
   });
 
@@ -103,7 +108,8 @@ export function buildLocationPicker({ trip, mapClickState, onChange, findText = 
     resultsEl.replaceChildren();
     const query = searchInput.value.trim();
     if (!query) return;
-    const fullQuery = dest ? `${query}, ${dest.city}, ${dest.country}` : query;
+    const city = getCity();
+    const fullQuery = city ? `${query}, ${city}` : query;
     setPending(searchBtn, true, "Searching…");
     try {
       const results = await nominatimSearch(fullQuery);
@@ -197,9 +203,12 @@ export function buildLocationPicker({ trip, mapClickState, onChange, findText = 
     reset: () => {
       setLocation(null, null, null, null);
       findQueryInput.value = "";
-      findLink.href = googleMapsFindUrl("", dest && dest.city, dest && dest.country);
+      findLink.href = googleMapsFindUrl("", getCity());
       pinFoundEl.hidden = true;
       errorEl.replaceChildren();
+    },
+    refreshCity: () => {
+      findLink.href = googleMapsFindUrl(findQueryInput.value, getCity());
     },
   };
 }
@@ -255,8 +264,10 @@ export function editPlaceDialog(place) {
 
 /** The inline location editor on a place row (§7.6): a toggle button that reveals
  * a location picker pre-armed to update that place, its Find button prefilled
- * with the place's own name. */
-export function buildSetLocationInline({ place, trip, tripId, mapClickState, onError, cities = [] }) {
+ * with the place's own name. `city` (T31, §7.7) is the stop chip currently
+ * selected on the Map tab — this row is rebuilt fresh on every render, so the
+ * picker it builds always sees the latest value. */
+export function buildSetLocationInline({ place, city, tripId, mapClickState, onError, cities = [] }) {
   const hasLocation = place.lat != null && place.lng != null;
   const toggleBtn = el("button", { type: "button", className: "btn btn-small", textContent: hasLocation ? "Edit location" : "Set location" });
   const holder = el("div", { className: "set-location-holder", hidden: true });
@@ -264,7 +275,7 @@ export function buildSetLocationInline({ place, trip, tripId, mapClickState, onE
     holder.hidden = !holder.hidden;
     if (!holder.hidden && holder.children.length === 0) {
       const picker = buildLocationPicker({
-        trip,
+        getCity: () => city,
         mapClickState,
         findText: place.name,
         onChange: async (payload) => {
@@ -294,8 +305,11 @@ export function buildSetLocationInline({ place, trip, tripId, mapClickState, onE
 /** The "Add place" form (§7.6): Step 1 (find it on Google Maps), Step 2 (paste
  * the link), Step 3 (details), then "Other ways to add a location". Renders
  * into `addPanelHolder` and calls `onAdded()` after a successful add so the
- * caller can collapse the panel. */
-export function buildAddPlacePanel({ trip, tripId, myUid, mapClickState, addPanelHolder, onAdded, cities = [] }) {
+ * caller can collapse the panel. Built once and kept across renders (§8: a
+ * form in progress must not be wiped), so `getCity()` (T31, §7.7) is a live
+ * read of the Map tab's currently selected stop chip; call the returned
+ * `refreshCity()` whenever it changes so the Find link stays in sync. */
+export function buildAddPlacePanel({ tripId, myUid, mapClickState, addPanelHolder, onAdded, cities = [], getCity = () => null }) {
   const nameInput = el("input", { type: "text" });
   const categorySelect = el("select", {}, [
     el("option", { value: "", textContent: "Choose a category", disabled: true, selected: true }),
@@ -320,7 +334,7 @@ export function buildAddPlacePanel({ trip, tripId, myUid, mapClickState, addPane
   });
 
   const locationPicker = buildLocationPicker({
-    trip,
+    getCity,
     mapClickState,
     stepLabels: true,
     onChange: (payload) => {
@@ -396,4 +410,6 @@ export function buildAddPlacePanel({ trip, tripId, myUid, mapClickState, addPane
       submitBtn,
     ])
   );
+
+  return { refreshCity: locationPicker.refreshCity };
 }

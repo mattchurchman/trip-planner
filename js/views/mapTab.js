@@ -212,6 +212,15 @@ export function renderMapPage(container, tripId, myUid) {
     return stopKey === selectedChip;
   }
 
+  /** The city name place-search links should use (T31, §7.7, §9.2): the stop
+   * chip currently selected, or `null` for "All"/"Elsewhere"/no chip — there's
+   * no trip-wide destination any more. */
+  function selectedCityName() {
+    if (selectedChip == null || selectedChip === ELSEWHERE) return null;
+    const city = cities.find((c) => c.stopKey === selectedChip);
+    return city ? city.city : null;
+  }
+
   function chipButton(label, key) {
     const btn = el("button", { type: "button", className: "chip", textContent: label });
     if (selectedChip === key) btn.classList.add("chip-active");
@@ -296,7 +305,7 @@ export function renderMapPage(container, tripId, myUid) {
     const visiblePlaces = places.filter((p) => matchesChip(effectiveStopKey(p)));
     const visibleStays = stays.filter((s) => matchesChip(effectiveStopKey(s)));
 
-    placesSection.render(visiblePlaces, trip, usersById);
+    placesSection.render(visiblePlaces, trip, usersById, selectedCityName());
     staysSection.render(visibleStays, trip, usersById, chosen.length > 0 ? chosen : null);
     renderPins(visiblePlaces, visibleStays);
     if (forceFit || !everFitted) {

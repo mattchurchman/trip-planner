@@ -7,9 +7,9 @@ import { safeUrl, googleMapsOpenUrl } from "../lib/links.js";
 import { rangesOverlap } from "../lib/dates.js";
 import { CATEGORIES, categoryColor } from "../lib/categories.js";
 
-function openMapsUrlFor(place, destinationCity) {
+function openMapsUrlFor(place, selectedCity) {
   const saved = place.googleMapsUrl ? safeUrl(place.googleMapsUrl) : null;
-  return saved || googleMapsOpenUrl(place.name, destinationCity || "");
+  return saved || googleMapsOpenUrl(place.name, selectedCity || "");
 }
 
 function applyFiltersAndSort(places, { filters, sortMode, trip, myUid }) {
@@ -35,18 +35,24 @@ function applyFiltersAndSort(places, { filters, sortMode, trip, myUid }) {
  * Builds the Places list of the Map tab (T25): the Add button, filters, and
  * places grouped by nothing in particular (the stop chips above do the
  * grouping, by filtering which places are passed to `render`). Call
- * `render(places, trip, usersById)` whenever trip/places/users or the chosen
- * stop chip change — `places` is already narrowed to the current chip by the
- * caller. `onFocusOnMap(place)` pans the shared map (owned by
- * the caller, T25) to that place's pin; `cities` is the live list the
- * caller keeps updated, used to work out a new pin's `stopKey` (V4 §6).
+ * `render(places, trip, usersById, selectedCity)` whenever trip/places/users
+ * or the chosen stop chip change — `places` is already narrowed to the
+ * current chip by the caller. `onFocusOnMap(place)` pans the shared map
+ * (owned by the caller, T25) to that place's pin; `cities` is the live list
+ * the caller keeps updated, used to work out a new pin's `stopKey` (V4 §6).
+ * `selectedCity` (T31, §7.7) is the city name of the stop chip currently
+ * selected on the Map tab, or `null` with "All"/"Elsewhere"/no chip — there's
+ * no trip-wide destination any more, so every Google Maps search link uses
+ * this instead.
  */
 export function createPlacesSection({ tripId, myUid, onError, mapClickState, onFocusOnMap, cities = [] }) {
   let trip = null;
   let usersById = {};
   let places = [];
+  let selectedCity = null;
   let placeCommentUnsubscribes = [];
   let addPanelBuilt = false;
+  let addPanel = null;
   const filters = { categories: new Set(), neighborhood: "", search: "", notRankedOnly: false, eventsOnly: false };
   let sortMode = "rank";
   let lastNeighborhoodsKey = "";
@@ -190,7 +196,7 @@ export function createPlacesSection({ tripId, myUid, onError, mapClickState, onF
 
     const openBtn = el("a", {
       className: "btn btn-small",
-      href: openMapsUrlFor(place, trip.destination && trip.destination.city),
+      href: openMapsUrlFor(place, selectedCity),
       target: "_blank",
       rel: "noopener noreferrer",
       textContent: "Open in Google Maps",
@@ -240,7 +246,7 @@ export function createPlacesSection({ tripId, myUid, onError, mapClickState, onF
         el("p", { className: "muted", textContent: place.neighborhood || "" }),
         ...details,
         hasLocation ? null : el("p", { className: "field-error", textContent: "No map pin" }),
-        buildSetLocationInline({ place, trip, tripId, mapClickState, onError, cities }),
+        buildSetLocationInline({ place, city: selectedCity, tripId, mapClickState, onError, cities }),
         rank,
         el("div", { className: "place-actions" }, [openBtn, editBtn, deleteBtn]),
         errorHolder,
@@ -300,25 +306,27 @@ export function createPlacesSection({ tripId, myUid, onError, mapClickState, onF
 
   return {
     element,
-    render(newPlaces, newTrip, newUsersById) {
+    render(newPlaces, newTrip, newUsersById, newSelectedCity = null) {
       trip = newTrip;
       usersById = newUsersById;
       places = newPlaces;
+      selectedCity = newSelectedCity;
       if (trip && !addPanelBuilt) {
         addPanelBuilt = true;
-        buildAddPlacePanel({
-          trip,
+        addPanel = buildAddPlacePanel({
           tripId,
           myUid,
           mapClickState,
           addPanelHolder,
           cities,
+          getCity: () => selectedCity,
           onAdded: () => {
             addPanelHolder.hidden = true;
             addPanelToggle.setAttribute("aria-expanded", "false");
           },
         });
       }
+      if (addPanel) addPanel.refreshCity();
       renderList();
     },
     focusCard(placeId) {

@@ -35,7 +35,6 @@ export function renderTripsView(container, user) {
   });
 
   function renderCard(trip) {
-    const destinationLabel = trip.destination ? trip.destination.city : "Still exploring";
     const dateLabel = trip.startDate && trip.endDate ? `${trip.startDate} – ${trip.endDate}` : "Dates not set";
     const travelerNames = (trip.travelers || []).map((t) => t.name).filter(Boolean).join(", ");
     const updatedLabel = trip.updatedAt && trip.updatedAt.toDate ? `Updated ${relativeTime(trip.updatedAt.toDate())}` : "";
@@ -47,7 +46,7 @@ export function renderTripsView(container, user) {
       el("h2", { className: "trip-card-title" }, [
         el("a", { className: "trip-card-link", href: `#/trip/${trip.id}`, textContent: trip.name }),
       ]),
-      el("p", { className: "trip-card-meta" }, [stageBadge, el("span", { textContent: ` · ${destinationLabel}` })]),
+      el("p", { className: "trip-card-meta" }, [stageBadge]),
       el("p", { className: "trip-card-meta", textContent: dateLabel }),
       el("p", { className: "trip-card-meta", textContent: travelerNames }),
       el("p", { className: "trip-card-updated", textContent: updatedLabel }),

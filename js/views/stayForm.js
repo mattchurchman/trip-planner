@@ -61,7 +61,7 @@ function resultLineFor(parsed) {
  * getLng, setProviderHint }`; `findBtn` is also the edit-mode focus target
  * for "Set location" (§7.7's "scrolled to Where is it?").
  */
-function buildWhereIsIt({ nameInput, dest, initialLat, initialLng }) {
+function buildWhereIsIt({ nameInput, city, initialLat, initialLng }) {
   let lat = initialLat;
   let lng = initialLng;
 
@@ -91,7 +91,7 @@ function buildWhereIsIt({ nameInput, dest, initialLat, initialLng }) {
     const name = nameInput.value.trim();
     if (!name) return;
     findErrorHolder.replaceChildren();
-    const query = [name, dest && dest.city, dest && dest.country].filter(Boolean).join(", ");
+    const query = [name, city].filter(Boolean).join(", ");
     setPending(findBtn, true, "Searching…");
     try {
       const results = await nominatimSearch(query);
@@ -124,13 +124,13 @@ function buildWhereIsIt({ nameInput, dest, initialLat, initialLng }) {
   const mapsLinkInput = el("input", { type: "text", placeholder: "Paste a Google Maps link", attrs: { "aria-label": "Google Maps link for this stay" } });
   const mapsLinkError = el("div", { className: "field-error-holder" });
   const findOnGoogleMapsLink = el("a", {
-    href: googleMapsFindUrl(nameInput.value, dest && dest.city, dest && dest.country),
+    href: googleMapsFindUrl(nameInput.value, city),
     target: "_blank",
     rel: "noopener noreferrer",
     textContent: "Find on Google Maps",
   });
   nameInput.addEventListener("input", () => {
-    findOnGoogleMapsLink.href = googleMapsFindUrl(nameInput.value, dest && dest.city, dest && dest.country);
+    findOnGoogleMapsLink.href = googleMapsFindUrl(nameInput.value, city);
   });
   function tryParseMapsLink() {
     if (!mapsLinkInput.value.trim()) return;
@@ -188,12 +188,15 @@ function buildWhereIsIt({ nameInput, dest, initialLat, initialLng }) {
  * for the card's **Set location** action. `stopDefaults` (add mode only,
  * T24): `{ checkIn, checkOut, stopKey }` when "Add stay" was pressed inside
  * a stop, so the new stay joins that stop with its dates pre-filled.
- * Resolves the stay's fields (plus `priceAmountCents` in add mode), or
- * `null` on cancel.
+ * `city` (T31, §7.7): the stop this stay belongs to — `stopDefaults.city`
+ * when adding from a stop group, or the stop matching the stay's own
+ * `stopKey` when editing; `null` with no stop (there's no trip-wide
+ * destination any more). Used for the search links and "Where is it?"'s
+ * Nominatim search. Resolves the stay's fields (plus `priceAmountCents` in
+ * add mode), or `null` on cancel.
  */
-function buildStayDialog({ isEdit, stay, trip, focusLocation, stopDefaults }) {
+function buildStayDialog({ isEdit, stay, trip, focusLocation, stopDefaults, city }) {
   return dialogShell("stay-dialog", (finish) => {
-    const dest = trip.destination;
     const adults = (trip.travelers || []).length || 1;
 
     const linkInput = el("input", {
@@ -224,7 +227,7 @@ function buildStayDialog({ isEdit, stay, trip, focusLocation, stopDefaults }) {
     const noteInput = el("textarea", { rows: 2, value: stay?.note || "" });
 
     let currentProvider = stay?.provider || "other";
-    const whereIsIt = buildWhereIsIt({ nameInput, dest, initialLat: stay?.lat ?? null, initialLng: stay?.lng ?? null });
+    const whereIsIt = buildWhereIsIt({ nameInput, city, initialLat: stay?.lat ?? null, initialLng: stay?.lng ?? null });
     whereIsIt.setProviderHint(currentProvider);
 
     // What Check-in/Check-out/Guests were pre-filled with, so a pasted link
@@ -266,17 +269,17 @@ function buildStayDialog({ isEdit, stay, trip, focusLocation, stopDefaults }) {
 
     const searchLinksLine = el("p", { className: "muted" }, [
       "Don't have one yet? ",
-      el("a", { href: googleHotelsUrl(dest ? dest.city : ""), target: "_blank", rel: "noopener noreferrer", textContent: "Google Hotels" }),
+      el("a", { href: googleHotelsUrl(city || ""), target: "_blank", rel: "noopener noreferrer", textContent: "Google Hotels" }),
       " ",
       el("a", {
-        href: bookingUrl({ city: dest ? dest.city : "", checkIn: trip.startDate, checkOut: trip.endDate, adults }),
+        href: bookingUrl({ city: city || "", checkIn: trip.startDate, checkOut: trip.endDate, adults }),
         target: "_blank",
         rel: "noopener noreferrer",
         textContent: "Booking.com",
       }),
       " ",
       el("a", {
-        href: airbnbUrl({ city: dest ? dest.city : "", checkIn: trip.startDate, checkOut: trip.endDate, adults }),
+        href: airbnbUrl({ city: city || "", checkIn: trip.startDate, checkOut: trip.endDate, adults }),
         target: "_blank",
         rel: "noopener noreferrer",
         textContent: "Airbnb",
@@ -350,9 +353,9 @@ function buildStayDialog({ isEdit, stay, trip, focusLocation, stopDefaults }) {
 }
 
 export function addStayFormDialog(trip, stopDefaults = null) {
-  return buildStayDialog({ isEdit: false, stay: null, trip, stopDefaults });
+  return buildStayDialog({ isEdit: false, stay: null, trip, stopDefaults, city: stopDefaults?.city ?? null });
 }
 
-export function editStayFormDialog(stay, trip, focusLocation = false) {
-  return buildStayDialog({ isEdit: true, stay, trip, focusLocation });
+export function editStayFormDialog(stay, trip, focusLocation = false, city = null) {
+  return buildStayDialog({ isEdit: true, stay, trip, focusLocation, city });
 }
