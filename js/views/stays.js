@@ -9,7 +9,7 @@ import { safeUrl, googleHotelsUrl, bookingUrl, airbnbUrl } from "../lib/links.js
 import { isStayChosen, chosenStayIds } from "../lib/selection.js";
 import { sortStayOptions, stayNumbers, circledNumber } from "../lib/optionSort.js";
 import { nightCoverage, stopStayTotal } from "../lib/coverage.js";
-import { priceCheck, checkPricesButton } from "./pricePanel.js";
+import { priceCheck } from "./pricePanel.js";
 import { addStayFormDialog, editStayFormDialog, providerLabel } from "./stayForm.js";
 
 function externalLinkRow(url, label) {
@@ -61,7 +61,6 @@ export function createStaysSection({ tripId, myUid, onError, onFocusOnMap }) {
   let currentStops = null;
 
   const addStayBtn = el("button", { type: "button", className: "btn btn-primary", textContent: "Add stay" });
-  const checkPricesEl = el("div", { className: "stays-check-prices" });
   const routeHintEl = el("p", { className: "empty-state" }, [
     "No route chosen yet. ",
     el("a", { href: `#/trip/${tripId}/routes`, textContent: "Choose an option on Routes" }),
@@ -299,48 +298,34 @@ export function createStaysSection({ tripId, myUid, onError, onFocusOnMap }) {
 
     if (stays.length === 0) {
       staysListEl.replaceChildren(el("p", { className: "empty-state", textContent: "No stays yet. Search above, then paste a link to add one." }));
-      checkPricesEl.replaceChildren(checkPricesButton({ items: [], tripId, currency: trip.currency, myUid }));
       return;
     }
 
     // Numbers are stable (createdAt order) and independent of the display sort below.
     const numbers = stayNumbers(stays);
     const chosenIds = chosenStayIds(trip);
-    const screenOrder = [];
     let sections;
 
     if (stops === null) {
       const sorted = sortStayOptions(stays, chosenIds);
-      screenOrder.push(...sorted);
       sections = [el("div", { className: "stays-list" }, sorted.map((s) => renderStayCard(s, trip, usersById, numbers[s.id])))];
     } else {
       const { groups, noStop } = groupByStop(stays, stops);
       sections = groups.map(({ stop, stays: groupStays }) => {
         const sorted = sortStayOptions(groupStays, chosenIds);
-        screenOrder.push(...sorted);
         return renderStopGroup(stop, sorted, trip, usersById, numbers, chosenIds, adults);
       });
       if (noStop.length > 0) {
         const sorted = sortStayOptions(noStop, chosenIds);
-        screenOrder.push(...sorted);
         sections.push(renderNoStopGroup(sorted, trip, usersById, numbers));
       }
     }
 
-    checkPricesEl.replaceChildren(
-      checkPricesButton({
-        items: screenOrder.map((s) => ({ subcollection: "stays", docId: s.id, prices: s.prices || [], link: s.link, label: s.name })),
-        tripId,
-        currency: trip.currency,
-        myUid,
-      })
-    );
     staysListEl.replaceChildren(...sections);
   }
 
   const element = el("div", {}, [
     el("div", { className: "stays-header" }, [addStayBtn]),
-    checkPricesEl,
     routeHintEl,
     staysListEl,
   ]);

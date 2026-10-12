@@ -1,7 +1,7 @@
 import { logPriceEntry, deletePriceEntry } from "../store.js";
 import { el, svgEl, setPending, confirmDialog, friendlyError } from "../ui.js";
 import { parseMoney, formatMoney } from "../lib/money.js";
-import { latestEntry, priceDelta, isNewLow, sortByTimeAsc, priceAgeDays, isStale, stalePriceQueue } from "../lib/totals.js";
+import { latestEntry, priceDelta, isNewLow, sortByTimeAsc, priceAgeDays, isStale } from "../lib/totals.js";
 import { relativeTime } from "../lib/dates.js";
 import { safeUrl } from "../lib/links.js";
 
@@ -289,80 +289,4 @@ export function priceCheck({ tripId, subcollection, docId, prices, link, currenc
   });
 
   return { summary, row };
-}
-
-/**
- * Walks through every stale price among `items` (each `{ subcollection,
- * docId, prices, link, label }`), one at a time, in the given screen order
- * — opening its link and asking the same question, with Skip and a
- * "N of M" counter (§5). Resolves once the walkthrough is closed.
- */
-function checkPricesDialog({ items, tripId, currency, myUid }) {
-  return new Promise((resolve) => {
-    let index = 0;
-    const counter = el("p", { className: "muted price-check-counter" });
-    const body = el("div", { className: "price-check-dialog-body" });
-    const closeBtn = el("button", { type: "button", className: "btn btn-secondary", textContent: "Close" });
-    const dialog = el("dialog", { className: "app-dialog price-check-dialog" }, [
-      counter,
-      body,
-      el("div", { className: "dialog-actions" }, [closeBtn]),
-    ]);
-    document.body.appendChild(dialog);
-
-    function finish() {
-      dialog.close();
-      dialog.remove();
-      resolve();
-    }
-    closeBtn.addEventListener("click", finish);
-    dialog.addEventListener("cancel", finish);
-
-    function advance() {
-      index += 1;
-      renderStep();
-    }
-
-    function renderStep() {
-      if (index >= items.length) {
-        finish();
-        return;
-      }
-      const item = items[index];
-      const latest = latestEntry(item.prices);
-      counter.textContent = `${index + 1} of ${items.length}`;
-      const skipBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Skip" });
-      skipBtn.addEventListener("click", advance);
-
-      const content = latest
-        ? askRow({ tripId, subcollection: item.subcollection, docId: item.docId, latest, currency, myUid, onSame: advance, onChanged: () => showChanged(item, latest) })
-        : amountFields({ tripId, subcollection: item.subcollection, docId: item.docId, latest: null, myUid, onSaved: advance, onCancel: advance });
-
-      body.replaceChildren(el("h3", { textContent: item.label }), content, skipBtn);
-      openLink(item.link);
-    }
-
-    function showChanged(item, latest) {
-      body.replaceChildren(
-        el("h3", { textContent: item.label }),
-        amountFields({ tripId, subcollection: item.subcollection, docId: item.docId, latest, myUid, onSaved: advance, onCancel: () => renderStep() })
-      );
-    }
-
-    renderStep();
-    dialog.showModal();
-  });
-}
-
-/**
- * The **Check prices** button (§5) for an option's flights, or the stays
- * list: disabled once nothing is stale, otherwise walks the stale ones.
- * `items`: `[{ subcollection, docId, prices, link, label }]` in screen order.
- */
-export function checkPricesButton({ items, tripId, currency, myUid, now = new Date() }) {
-  const stale = stalePriceQueue(items, now);
-  const btn = el("button", { type: "button", className: "btn btn-small", textContent: "Check prices" });
-  btn.disabled = stale.length === 0;
-  btn.addEventListener("click", () => checkPricesDialog({ items: stale, tripId, currency, myUid }));
-  return btn;
 }

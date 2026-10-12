@@ -65,10 +65,5 @@ export function isStale(prices, now = new Date()) {
   return age === null || age > 3;
 }
 
-/** The stale items among `items` (each with a `prices` array), in the given screen order. */
-export function stalePriceQueue(items, now = new Date()) {
-  return (items || []).filter((item) => isStale(item.prices, now));
-}
-
 // The per-traveler budget lives in js/lib/choices.js now (§11): it needs each
 // traveler's own choice and stops, and those need `latestEntry` from here.

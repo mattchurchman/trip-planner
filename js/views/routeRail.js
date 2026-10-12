@@ -8,7 +8,8 @@ import { nightsLabel } from "../lib/dates.js";
 import { formatLegDate } from "../lib/itineraryFormat.js";
 import { stopsFor, movements, totalFor, ideaEndpoints } from "../lib/route.js";
 import { byLatestPriceAsc } from "../lib/optionSort.js";
-import { priceCheck, checkPricesButton } from "./pricePanel.js";
+import { forTravelers } from "../lib/choices.js";
+import { priceCheck } from "./pricePanel.js";
 import { renderItinerary } from "./itinerary.js";
 
 /** Same fallback as flights.js's legsForCard: a flight's `legs` when it has
@@ -30,7 +31,7 @@ function legsForCard(flight) {
  * itinerary, the price check control (§5), and whatever action buttons the
  * caller supplies before Edit/Delete.
  */
-export function renderFlightRow(flight, { tripId, myUid, currency, usersById, onEdit, onDelete, leadingActions = [] } = {}) {
+export function renderFlightRow(flight, { tripId, myUid, currency, usersById, onEdit, onDelete, leadingActions = [], extra = null } = {}) {
   const itinerary = renderItinerary(legsForCard(flight), { outboundDetails: flight.outboundDetails, returnDetails: flight.returnDetails });
   const { summary, row } = priceCheck({
     tripId,
@@ -57,6 +58,7 @@ export function renderFlightRow(flight, { tripId, myUid, currency, usersById, on
     header,
     row,
     itinerary,
+    extra,
     el("div", { className: "flight-actions" }, [...leadingActions, editBtn, deleteBtn]),
   ]);
 }
@@ -81,10 +83,56 @@ function railNode(isHome) {
 }
 
 /**
- * Builds one option's card (V4 §4.6): name, total, path line, Chosen/Cheapest
- * badges, and — when `isOpen` — the rail of stops with each hop flight
- * hanging between them, plus Choose this option / Unchoose, Add flight,
- * Rename and Delete.
+ * "Who's this for?" on a hop (§7.6): who the flight's price counts for —
+ * worked out from who chose the option, or set by hand. `ids` is the
+ * resolved list; `onSet(ids)` takes a list of traveler ids, or null for
+ * automatic again.
+ */
+function forControl(flight, { ctx, travelers, editing, onToggle, onSet }) {
+  const ids = forTravelers(flight, "hop", ctx);
+  const byHand = Array.isArray(flight.forTravelerIds);
+  const names = travelers.filter((t) => ids.includes(t.id)).map((t) => t.name);
+
+  const toggleBtn = el("button", { type: "button", className: "btn btn-link route-for-btn", textContent: editing ? "Done" : "Who's this for?" });
+  toggleBtn.addEventListener("click", onToggle);
+  const line = el("div", { className: "route-for" }, [
+    el("span", { className: "muted", textContent: "For: " }),
+    el("b", { textContent: names.length ? names.join(", ") : "no one yet" }),
+    el("span", { className: "muted", textContent: byHand ? " · Set by hand" : " · Automatic" }),
+  ]);
+  if (byHand) {
+    const resetBtn = el("button", { type: "button", className: "btn btn-link route-for-btn", textContent: "Reset" });
+    resetBtn.addEventListener("click", () => onSet(null));
+    line.append(resetBtn);
+  }
+  line.append(toggleBtn);
+  if (!editing) return line;
+
+  const pill = (label, pressed, onClick) => {
+    const btn = el("button", { type: "button", className: "route-for-pill", textContent: label, attrs: { "aria-pressed": String(pressed) } });
+    btn.addEventListener("click", onClick);
+    return btn;
+  };
+  const pills = el("div", { className: "route-for-pills" }, [
+    pill("Automatic", !byHand, () => onSet(null)),
+    ...travelers.map((t) =>
+      pill(t.name, byHand && ids.includes(t.id), () => {
+        const next = new Set(ids);
+        if (next.has(t.id)) next.delete(t.id);
+        else next.add(t.id);
+        onSet(travelers.filter((x) => next.has(x.id)).map((x) => x.id));
+      })
+    ),
+  ]);
+  return el("div", { className: "route-for-edit" }, [line, pills]);
+}
+
+/**
+ * Builds one option's card (§7.6): name, its own flights' cost per person, who
+ * it's for, path line, Chosen/Cheapest badges (and initials of the other
+ * travelers who chose it), and — when `isOpen` — the rail of stops with each
+ * hop flight hanging between them, plus Choose this option / Unchoose, Paste
+ * flight link, Rename and Delete.
  */
 export function renderOptionCard({
   idea,
@@ -97,10 +145,16 @@ export function renderOptionCard({
   tripId,
   myUid,
   usersById,
+  ctx,
+  travelers,
+  othersChosen,
+  forEditingId,
   isOpen,
   isChosen,
   isCheapest,
   onToggle,
+  onToggleFor,
+  onSetFor,
   onChoose,
   onRename,
   onDelete,
@@ -110,16 +164,20 @@ export function renderOptionCard({
 }) {
   const stops = stopsFor({ homeFlights, hopFlights, airports });
   const hops = movements(hopFlights);
-  const { cents, complete } = totalFor({ homeFlights, hopFlights });
+  // Only this option's own flights: the flights from home are the same under every option.
+  const { cents, complete } = totalFor({ homeFlights: [], hopFlights });
+  const forNames = travelers.filter((t) => hopFlights.some((f) => forTravelers(f, "hop", ctx).includes(t.id))).map((t) => t.name);
   const hopFlightsById = Object.fromEntries(hopFlights.map((f) => [f.id, f]));
   const path = [...new Set(stops.map((s) => s.city).filter(Boolean))].join(" → ");
 
   const badges = [
-    isChosen ? el("span", { className: "chosen-badge", textContent: "Chosen ✓" }) : null,
+    isChosen ? el("span", { className: "chosen-badge", textContent: `Chosen by ${traveler.name} ✓` }) : null,
+    ...othersChosen.map((t) => el("span", { className: "route-initial", textContent: t.name.charAt(0).toUpperCase(), attrs: { title: `Chosen by ${t.name}`, "aria-label": `Chosen by ${t.name}` } })),
     isCheapest ? el("span", { className: "badge-new-low", textContent: "Cheapest" }) : null,
   ].filter(Boolean);
 
-  const detailsText = `${hopFlights.length} flight${hopFlights.length === 1 ? "" : "s"} · ${isOpen ? "hide" : "show"} details`;
+  const flightsText = `${hopFlights.length} flight${hopFlights.length === 1 ? "" : "s"} · ${isOpen ? "hide" : "show"} details`;
+  const totalText = hopFlights.length === 0 || complete ? formatMoney(cents, trip.currency) : `At least ${formatMoney(cents, trip.currency)}`;
 
   const headerBtn = el(
     "button",
@@ -127,11 +185,15 @@ export function renderOptionCard({
     [
       el("div", { className: "row" }, [
         el("span", { className: "route-option-name", textContent: option.name }),
-        el("span", { className: "route-option-total mono", textContent: `${complete ? "" : "At least "}${formatMoney(cents, trip.currency)}` }),
+        el("span", { className: "route-option-total mono", textContent: totalText }),
       ]),
       el("div", { className: "row" }, [
         el("span", { className: "muted", textContent: path || "No flights yet" }),
-        el("span", { className: "muted", textContent: detailsText }),
+        el("span", { className: "muted", textContent: "per person" }),
+      ]),
+      el("div", { className: "row" }, [
+        el("span", { className: "muted", textContent: hopFlights.length ? `For: ${forNames.length ? forNames.join(", ") : "no one yet"}` : "" }),
+        el("span", { className: "muted", textContent: flightsText }),
       ]),
       badges.length ? el("div", { className: "route-option-badges" }, badges) : null,
     ].filter(Boolean)
@@ -146,7 +208,6 @@ export function renderOptionCard({
     rail.append(el("li", {}, [el("p", { className: "empty-state", textContent: "No flights yet for this option. Add one below." })]));
   }
   const seenFlightIds = new Set();
-  const railFlightsInOrder = [];
   stops.forEach((stop, i) => {
     const right = el("div", {}, [stopLine(stop), ...warningBlocks(stop)]);
     const movement = hops[i];
@@ -154,7 +215,6 @@ export function renderOptionCard({
       const flight = hopFlightsById[movement.flightId] || null;
       if (flight && !seenFlightIds.has(flight.id)) {
         seenFlightIds.add(flight.id);
-        railFlightsInOrder.push(flight);
         right.append(
           el("div", { className: "route-hop" }, [
             renderFlightRow(flight, {
@@ -164,6 +224,13 @@ export function renderOptionCard({
               usersById,
               onEdit: () => onEditFlight(flight),
               onDelete: () => onDeleteFlight(flight),
+              extra: forControl(flight, {
+                ctx,
+                travelers,
+                editing: forEditingId === flight.id,
+                onToggle: () => onToggleFor(flight),
+                onSet: (ids) => onSetFor(flight, ids),
+              }),
             }),
           ])
         );
@@ -186,12 +253,6 @@ export function renderOptionCard({
 
   const pasteFlightBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Paste flight link" });
   pasteFlightBtn.addEventListener("click", onPasteFlight);
-  const checkPricesBtn = checkPricesButton({
-    items: railFlightsInOrder.map((f) => ({ subcollection: "flights", docId: f.id, prices: f.prices || [], link: f.link, label: f.label || "Flight" })),
-    tripId,
-    currency: trip.currency,
-    myUid,
-  });
   const chooseBtn = el("button", { type: "button", className: "btn btn-primary", textContent: isChosen ? "Unchoose" : "Choose this option" });
   chooseBtn.addEventListener("click", onChoose);
   const renameBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Rename" });
@@ -202,7 +263,7 @@ export function renderOptionCard({
   card.append(
     el("div", { className: "route-option-body" }, [
       rail,
-      el("div", { className: "route-option-foot" }, [chooseBtn, pasteFlightBtn, checkPricesBtn, renameBtn, deleteBtn]),
+      el("div", { className: "route-option-foot" }, [chooseBtn, pasteFlightBtn, renameBtn, deleteBtn]),
     ])
   );
   return card;
@@ -238,7 +299,11 @@ export function homeFlightsCardBody({ traveler, homeFlights, trip, tripId, myUid
     return node;
   }
 
-  const heading = el("h3", { textContent: `${traveler.name}'s flights to and from the region` });
+  // Only the flights being used count toward the total shown here.
+  const picked = totalFor({ homeFlights, hopFlights: [] });
+  const heading = el("h3", {
+    textContent: `${traveler.name}'s flights from home${picked.cents > 0 || picked.complete ? ` · ${picked.complete ? "" : "at least "}${formatMoney(picked.cents, trip.currency)}` : ""}`,
+  });
   const pasteBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Paste flight link" });
   pasteBtn.addEventListener("click", onPasteFlight);
 

@@ -39,7 +39,12 @@ Tab names: **Overview · Routes · Map · Days** (T23 removes Recap; T25 merges 
 | Ideas for this window / + Idea / Rename idea / Delete idea | Routes, idea switch |
 | Options once you land / + Option / Rename / Delete | Routes, option cards |
 | Use this / Using | Routes, home-flights card |
+| Choose idea / Chosen | Routes, beside Rename idea and Delete idea (press again to unchoose) |
 | Choose this option / Unchoose | Routes, option card |
+| {traveler}'s flights from home · $X | Routes, home-flights card heading (flights being used only) |
+| per person · For: Matt, Sam · Chosen by {name} ✓ | Routes, option card (cost of its own flights only) |
+| Who's this for? / Automatic / Set by hand · Reset | Routes, each hop flight |
+| {name}: home $A + option flights $B = $C | Routes, summary pinned to the bottom ("at least $C" while something is missing) |
 | Add flight | Routes, home-flights card and an open option (opens the existing flight dialog; T20 replaces this with pasting a link) |
 | No ideas yet. Add one to start planning flights. | Routes, empty tab |
 | No flights yet for {name}. Add one below. | Routes, empty home-flights card |

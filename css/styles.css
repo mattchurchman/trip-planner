@@ -1550,24 +1550,6 @@ textarea:focus {
   min-height: 44px;
 }
 
-/* The Check prices walkthrough (§5): a modal stepping through every stale
-   price in screen order, with a "N of M" counter above its content. */
-.price-check-dialog-body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  min-width: 240px;
-}
-
-.price-check-counter {
-  margin: 0 0 var(--space-2);
-}
-
-.stays-check-prices {
-  display: flex;
-  justify-content: flex-end;
-}
-
 .price-history {
   list-style: none;
   margin: 0;
@@ -1891,7 +1873,13 @@ textarea:focus {
 
 .route-idea-actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-3);
+}
+
+.route-idea-actions .btn {
+  min-height: 44px;
 }
 
 .route-home {
@@ -2025,6 +2013,93 @@ textarea:focus {
   border-radius: var(--radius);
   padding: var(--space-3);
   margin-bottom: var(--space-2);
+}
+
+/* "Who's this for?" on a hop (T36): the For line, and the pills that set it by hand. */
+.route-for-edit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.route-for {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-1);
+  font-size: 0.9em;
+}
+
+.route-for-btn {
+  min-height: 44px;
+  padding-inline: var(--space-2);
+}
+
+.route-for-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.route-for-pill {
+  min-height: 44px;
+  padding: var(--space-1) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.route-for-pill[aria-pressed="true"] {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: var(--on-teal);
+}
+
+.route-initial {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--sunk);
+  border: 1px solid var(--line);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+/* The per-traveler total pinned above the phone tab bar (T36). */
+.route-summary {
+  position: sticky;
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 0.9em;
+  box-shadow: var(--shadow-md);
+}
+
+.route-summary[hidden] {
+  display: none;
+}
+
+.route-summary b {
+  font-size: 1.1rem;
+}
+
+@media (min-width: 760px) {
+  .route-summary {
+    bottom: var(--space-3);
+  }
 }
 
 .route-warn {

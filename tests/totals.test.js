@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { latestEntry, priceDelta, isNewLow, perNightCents, priceAgeDays, isStale, stalePriceQueue } from "../js/lib/totals.js";
+import { latestEntry, priceDelta, isNewLow, perNightCents, priceAgeDays, isStale } from "../js/lib/totals.js";
 
 export const tests = [
   ["latestEntry picks the greatest checkedAt regardless of array order", () => {
@@ -73,14 +73,5 @@ export const tests = [
     assert.equal(isStale([], now), true);
     assert.equal(isStale([{ id: "a", amountCents: 100, checkedAt: "2026-03-07T00:00:00.000Z" }], now), false);
     assert.equal(isStale([{ id: "a", amountCents: 100, checkedAt: "2026-03-05T23:59:59.000Z" }], now), true);
-  }],
-  ["stalePriceQueue keeps only stale items, in screen order", () => {
-    const now = new Date("2026-03-10T00:00:00.000Z");
-    const items = [
-      { id: "fresh", prices: [{ id: "a", amountCents: 100, checkedAt: "2026-03-09T00:00:00.000Z" }] },
-      { id: "stale", prices: [{ id: "b", amountCents: 100, checkedAt: "2026-03-01T00:00:00.000Z" }] },
-      { id: "none", prices: [] },
-    ];
-    assert.deepEqual(stalePriceQueue(items, now).map((i) => i.id), ["stale", "none"]);
   }],
 ];

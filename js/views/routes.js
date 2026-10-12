@@ -6,6 +6,7 @@ import {
   watchOptions,
   updateOption,
   setChoice,
+  setForTravelers,
   setFlightPicked,
   addPastedFlight,
   updateFlight,
@@ -15,7 +16,7 @@ import {
 import { el, confirmDialog, friendlyError, renderWhenIdle } from "../ui.js";
 import { loadAirports } from "../lookup.js";
 import { totalFor, optionAutoName, directionsToClear } from "../lib/route.js";
-import { choiceFor } from "../lib/choices.js";
+import { choiceFor, budgetContext, travelerBreakdown } from "../lib/choices.js";
 import { editFlightFormDialog } from "./flightForm.js";
 import { pasteFlightDialog, moveFlightDialog, renderEarlierFlights } from "./pasteFlight.js";
 import { renderOptionCard, homeFlightsCardBody } from "./routeRail.js";
@@ -28,6 +29,7 @@ import {
   deleteOptionDialog,
   renderTravelerSwitch,
   renderIdeaSwitch,
+  renderSummaryBar,
 } from "./routeIdeas.js";
 
 /** Renders the Routes tab (V4 §4). Returns a single unsubscribe function. */
@@ -44,6 +46,7 @@ export function renderRoutesPage(container, tripId, myUid) {
   let selectedTravelerId = null;
   let selectedIdeaId = null;
   const openOptionIds = new Set();
+  let forEditingId = null;
 
   const loadErrorEl = el("div", { className: "field-error-holder" });
   const travelerSwitchEl = el("div", { className: "seg", attrs: { role: "group", "aria-label": "Traveler" } });
@@ -54,6 +57,7 @@ export function renderRoutesPage(container, tripId, myUid) {
   const addIdeaBtn = el("button", { type: "button", className: "btn btn-small", textContent: "+ Idea" });
   const addOptionBtn = el("button", { type: "button", className: "btn btn-small", textContent: "+ Option" });
   const earlierFlightsEl = el("div", { className: "route-earlier", hidden: true });
+  const summaryEl = el("div", { className: "route-summary", attrs: { "aria-live": "polite" } });
 
   const mainWrap = el("div", { className: "routes-main" }, [
     el("div", { className: "who" }, [el("span", { className: "label", textContent: "Flights from home for" }), travelerSwitchEl]),
@@ -64,6 +68,7 @@ export function renderRoutesPage(container, tripId, myUid) {
     ]),
     homeFlightsSectionEl,
     el("section", {}, [el("div", { className: "row" }, [el("h2", { textContent: "Options once you land" }), addOptionBtn]), optionsListEl]),
+    summaryEl,
   ]);
   const pasteEmptyBtn = el("button", { type: "button", className: "btn btn-primary", textContent: "Paste flight link" });
   pasteEmptyBtn.addEventListener("click", () => onPasteHomeFlight());
@@ -229,6 +234,17 @@ export function renderRoutesPage(container, tripId, myUid) {
     return run(() => setChoice(tripId, traveler.id, { optionId: chosen === option.id ? null : option.id }));
   }
 
+  /** The traveler on screen chooses (or unchooses) this idea — theirs only,
+   * and apart from their option (§7.6). Unchoosing it also drops an option
+   * under it, which would otherwise keep the idea looking chosen (§11). */
+  function onChooseIdea(idea, traveler) {
+    if (!traveler) return Promise.resolve();
+    const current = choiceFor(trip, traveler.id, options);
+    if (current.ideaId !== idea.id) return run(() => setChoice(tripId, traveler.id, { ideaId: idea.id }));
+    const optionHere = options.some((o) => o.id === current.optionId && o.ideaId === idea.id);
+    return run(() => setChoice(tripId, traveler.id, optionHere ? { ideaId: null, optionId: null } : { ideaId: null }));
+  }
+
   function renderHomeFlightsCard() {
     const traveler = travelers().find((t) => t.id === selectedTravelerId);
     const idea = ideas.find((i) => i.id === selectedIdeaId);
@@ -268,7 +284,8 @@ export function renderRoutesPage(container, tripId, myUid) {
       return;
     }
 
-    const totalsCents = ideaOptions.map((o) => totalFor({ homeFlights: travelerHomeFlights, hopFlights: hopFlightsFor(o.id) }).cents);
+    const ctx = budgetContext({ trip, travelers: travelers(), options, flights, airports });
+    const totalsCents = ideaOptions.map((o) => totalFor({ homeFlights: [], hopFlights: hopFlightsFor(o.id) }).cents);
     const cheapestCents = ideaOptions.length > 1 ? Math.min(...totalsCents) : null;
 
     optionsListEl.replaceChildren(
@@ -284,14 +301,23 @@ export function renderRoutesPage(container, tripId, myUid) {
           tripId,
           myUid,
           usersById,
+          ctx,
+          travelers: travelers(),
+          othersChosen: travelers().filter((t) => t.id !== traveler.id && ctx.choices[t.id].optionId === option.id),
+          forEditingId,
           isOpen: openOptionIds.has(option.id),
-          isChosen: choiceFor(trip, traveler.id, options).optionId === option.id,
+          isChosen: ctx.choices[traveler.id].optionId === option.id,
           isCheapest: cheapestCents !== null && totalsCents[i] === cheapestCents,
           onToggle: () => {
             if (openOptionIds.has(option.id)) openOptionIds.delete(option.id);
             else openOptionIds.add(option.id);
             renderDynamicSections();
           },
+          onToggleFor: (flight) => {
+            forEditingId = forEditingId === flight.id ? null : flight.id;
+            renderDynamicSections();
+          },
+          onSetFor: (flight, ids) => run(() => setForTravelers(tripId, "flights", flight.id, ids)),
           onChoose: () => onChooseOption(option, traveler),
           onRename: () => run(() => renameOptionDialog(tripId, option)),
           onDelete: () => onDeleteOption(option),
@@ -301,6 +327,15 @@ export function renderRoutesPage(container, tripId, myUid) {
         })
       )
     );
+  }
+
+  function renderSummary() {
+    const traveler = travelers().find((t) => t.id === selectedTravelerId);
+    summaryEl.hidden = !traveler || !airports;
+    if (summaryEl.hidden) return;
+    const ctx = budgetContext({ trip, travelers: travelers(), options, flights, airports });
+    const breakdown = travelerBreakdown({ travelerId: traveler.id, ctx, flights, stays: [], costs: [] });
+    renderSummaryBar(summaryEl, { traveler, breakdown, hasIdea: Boolean(ctx.choices[traveler.id].ideaId), currency: trip.currency });
   }
 
   /** Flights saved before V4 gave flights a `role` (V4 §4.6), shown regardless
@@ -351,15 +386,18 @@ export function renderRoutesPage(container, tripId, myUid) {
     renderIdeaSwitch(ideaSwitchEl, ideaActionsEl, {
       ideas,
       selectedIdeaId,
+      chosenIdeaId: selectedTravelerId ? choiceFor(trip, selectedTravelerId, options).ideaId : null,
       onSelect: (id) => {
         selectedIdeaId = id;
         renderDynamicSections();
       },
+      onChoose: (idea) => onChooseIdea(idea, travelers().find((t) => t.id === selectedTravelerId)),
       onRename: (idea) => run(() => renameIdeaDialog(tripId, idea)),
       onDelete: (idea) => run(() => deleteIdeaDialog(tripId, idea)),
     });
     renderHomeFlightsCard();
     renderOptionsList();
+    renderSummary();
   }
 
   function renderAll() {

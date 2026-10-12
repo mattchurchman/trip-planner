@@ -3,6 +3,7 @@
 // routes.js, which keeps the flights, the option cards and the watchers.
 import { addIdea, updateIdea, deleteIdea, addOption, updateOption, deleteOption } from "../store.js";
 import { el, confirmDialog, promptDialog } from "../ui.js";
+import { formatMoney } from "../lib/money.js";
 
 /** Prompts for a name (defaulting to `defaultName`), falling back to it if
  * the owner clears the field, then hands it to `create`. Null on cancel. */
@@ -73,11 +74,17 @@ export function renderTravelerSwitch(switchEl, { travelers, selectedTravelerId, 
   );
 }
 
-/** The idea segmented control plus its Rename / Delete links. */
-export function renderIdeaSwitch(switchEl, actionsEl, { ideas, selectedIdeaId, onSelect, onRename, onDelete }) {
+/** The idea segmented control, plus Choose idea / Rename / Delete. A check on
+ * a chip means the traveler on screen has chosen that idea (§7.6). */
+export function renderIdeaSwitch(switchEl, actionsEl, { ideas, selectedIdeaId, chosenIdeaId, onSelect, onChoose, onRename, onDelete }) {
   switchEl.replaceChildren(
     ...ideas.map((idea) => {
-      const btn = el("button", { type: "button", textContent: idea.name, attrs: { "aria-pressed": String(idea.id === selectedIdeaId) } });
+      const chosen = idea.id === chosenIdeaId;
+      const btn = el("button", {
+        type: "button",
+        textContent: chosen ? `${idea.name} ✓` : idea.name,
+        attrs: { "aria-pressed": String(idea.id === selectedIdeaId) },
+      });
       btn.addEventListener("click", () => onSelect(idea.id));
       return btn;
     })
@@ -87,9 +94,29 @@ export function renderIdeaSwitch(switchEl, actionsEl, { ideas, selectedIdeaId, o
     actionsEl.replaceChildren();
     return;
   }
+  const isChosen = currentIdea.id === chosenIdeaId;
+  const chooseBtn = el("button", {
+    type: "button",
+    className: `btn btn-small ${isChosen ? "badge-chosen" : "btn-primary"}`,
+    textContent: isChosen ? "Chosen" : "Choose idea",
+    attrs: { "aria-pressed": String(isChosen) },
+  });
+  chooseBtn.addEventListener("click", () => onChoose(currentIdea));
   const renameBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Rename idea" });
   renameBtn.addEventListener("click", () => onRename(currentIdea));
   const deleteBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Delete idea" });
   deleteBtn.addEventListener("click", () => onDelete(currentIdea));
-  actionsEl.replaceChildren(renameBtn, deleteBtn);
+  actionsEl.replaceChildren(chooseBtn, renameBtn, deleteBtn);
+}
+
+/** The sticky summary at the bottom of the tab (§7.6): the traveler on screen
+ * and what their own chosen flights add up to. `breakdown` comes from
+ * `travelerBreakdown`; "at least" whenever a price or flight is missing. */
+export function renderSummaryBar(barEl, { traveler, breakdown, hasIdea, currency }) {
+  const money = (cents) => formatMoney(cents, currency);
+  const note = hasIdea ? "" : " (no idea chosen)";
+  barEl.replaceChildren(
+    el("span", { textContent: `${traveler.name}: home ${money(breakdown.homeCents)} + option flights ${money(breakdown.hopCents)}${note}` }),
+    el("b", { className: "mono", textContent: `= ${breakdown.complete ? "" : "at least "}${money(breakdown.totalCents)}` })
+  );
 }
