@@ -79,8 +79,9 @@ Production mode starts fully locked, so until you publish these rules the app sh
 
 ### E. Turn on the website
 
-1. In your GitHub repo, go to **Settings → Pages**. Under **Build and deployment**, set the source to **Deploy from a branch**, the branch to `master`, and the folder to `/ (root)`. Click **Save**.
-2. After a minute or two, the page shows your site address: `https://<your-github-username>.github.io/trip-planner/`. This is the link you send to friends.
+1. In Firebase → **Project settings → Service accounts**, generate a new private key. Keep the downloaded JSON file private and out of the repository.
+2. In GitHub → **Settings → Secrets and variables → Actions**, add `FIREBASE_SERVICE_ACCOUNT` with the complete JSON file contents and `FIREBASE_PROJECT_ID` with `trip-planner-mattchurchman`.
+3. Every push to `master` runs the tests and, when they pass, deploys the site automatically. After a minute or two, open `https://trip-planner-mattchurchman.web.app`. This is the link you send to friends.
 
 ### F. Check Phase 0
 
@@ -98,7 +99,7 @@ For phases 1 through 6 (and optionally 7), the loop is:
 
 1. **Start a new Claude Code session** on the repo. Starting fresh each phase keeps smaller models focused.
 2. Send: **"Read CLAUDE.md, then build Phase N from PHASES.md. You may push to master when tests pass."**
-3. When it finishes, wait 1–2 minutes for GitHub Pages to update, then hard-refresh the site (Mac: ⌘⇧R, Windows: Ctrl+Shift+R).
+3. When it finishes, wait 1–2 minutes for Firebase Hosting to update, then reload the site.
 4. Go through that phase's **Owner check** list, with a friend where the list says so.
 5. If something fails, stay in the same session and describe exactly what you did and what you saw. For errors, open the browser console (Chrome on Mac: ⌥⌘J, Windows: Ctrl+Shift+J) and paste the red text.
 6. Move on only when the whole checklist passes.
@@ -132,7 +133,7 @@ A few habits that keep this working:
 ## 5. Staying free
 
 - Firebase must stay on the **Spark** plan. If Firebase ever asks you to upgrade, say no. The app is built to never need it.
-- GitHub Pages is free for public repositories.
+- Firebase Hosting is included on Firebase's free Spark plan for this small app.
 - The map (OpenStreetMap) and place search (Nominatim) need no keys or accounts.
 - Firestore's free daily limits are far above what a handful of friends will use. You can check usage under **Firestore → Usage**.
 
@@ -146,8 +147,8 @@ A few habits that keep this working:
 | The sign-in popup doesn't appear | Allow popups for your site in the browser |
 | "isn't on the trip list yet" for someone you added | The allowlist document ID must be their exact Google email, all lowercase, with no spaces |
 | Everything says "You don't have access" | The rules weren't published. Redo step D |
-| The site shows a 404 page | Pages isn't turned on (step E), or wait a few minutes after the first push |
-| Your latest changes don't show | Wait 1–2 minutes, then hard-refresh |
+| The site shows a 404 page | Wait a few minutes after the first deployment, then check the latest GitHub Actions run |
+| Your latest changes don't show | Wait 1–2 minutes for the GitHub Actions deployment, then reload |
 | The map is blank | Open the browser console, copy the red error, and give it to the model |
 
 ---
