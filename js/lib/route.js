@@ -321,52 +321,34 @@ function endpointsFor(legs, direction) {
   return { inCode: first.to, outCode: last.from };
 }
 
-/** Same trip shape: every endpoint the two have in common is the same city. */
-function sameEndpoints(a, b, airports) {
-  const checks = [];
-  if (a.inCode && b.inCode) checks.push(!differentCity(a.inCode, b.inCode, airports));
-  if (a.outCode && b.outCode) checks.push(!differentCity(a.outCode, b.outCode, airports));
-  return checks.length > 0 && checks.every(Boolean);
+/** A direction to fall back on when the flight doesn't touch a known home
+ * airport or city: "both" for a link that comes back to where it started,
+ * otherwise "out". */
+function guessDirection(legs, airports) {
+  const last = legs[legs.length - 1];
+  return legs.length > 1 && !differentCity(last.to, legs[0].from, airports) ? "both" : "out";
 }
 
 /**
- * Where a pasted flight belongs (V4 §4.5), for the traveler on screen.
- * Returns `{ role, direction, ideaId, newIdeaName }`:
- *  - `role` "home" or "hop", or null when the link gave us nothing to place.
- *  - `ideaId` the idea to add it to, or null with `newIdeaName` when one must be created.
- *  - `homeAirport` as well, only in the one case where we learn the traveler's
- *    home airport from the link itself (no home airport saved and no ideas yet).
- * Which option a hop goes in is the screen's call — it knows the open one.
+ * Where a flight pasted into the home-flights card lands (V4 §4.5): the
+ * direction it goes (out/back/both) for the traveler on screen, and — only
+ * when `ideaId` is null, because there's no idea to select yet — the name a
+ * new idea takes and the home airport to learn, when the traveler doesn't
+ * have one. Which idea and traveler a home flight joins, and which option a
+ * hop joins, is the screen's call: the button pressed already says so, so
+ * there's no `role` to work out here.
  */
-export function placePastedFlight({ parsed, traveler, ideas, homeFlightsByIdea, airports, currentIdeaId = null }) {
+export function placePastedFlight({ parsed, traveler, ideaId, airports }) {
   const legs = flightMovements(parsed);
-  if (legs.length === 0) return { role: null, direction: null, ideaId: null, newIdeaName: null };
+  if (legs.length === 0) return { direction: null, newIdeaName: null, homeAirport: null };
 
-  const list = ideas || [];
-  const byIdea = homeFlightsByIdea || {};
-  const direction = homeDirection(parsed, traveler, airports);
-
-  if (!direction) {
-    // Nothing to compare against yet: call it the flight from home and learn
-    // the traveler's home airport from it.
-    if (!code(traveler && traveler.homeAirport) && list.length === 0) {
-      const last = legs[legs.length - 1];
-      const guessed = legs.length > 1 && !differentCity(last.to, legs[0].from, airports) ? "both" : "out";
-      const ends = endpointsFor(legs, guessed);
-      return {
-        role: "home",
-        direction: guessed,
-        ideaId: null,
-        newIdeaName: ideaName({ ...ends, airports }),
-        homeAirport: legs[0].from || null,
-      };
-    }
-    const ideaId = currentIdeaId || (list[0] ? list[0].id : null);
-    return { role: "hop", direction: null, ideaId, newIdeaName: null };
-  }
+  const direction = homeDirection(parsed, traveler, airports) || guessDirection(legs, airports);
+  if (ideaId) return { direction, newIdeaName: null, homeAirport: null };
 
   const ends = endpointsFor(legs, direction);
-  const match = list.find((idea) => sameEndpoints(ends, ideaEndpoints(byIdea[idea.id]), airports));
-  if (match) return { role: "home", direction, ideaId: match.id, newIdeaName: null };
-  return { role: "home", direction, ideaId: null, newIdeaName: ideaName({ ...ends, airports }) };
+  return {
+    direction,
+    newIdeaName: ideaName({ ...ends, airports }),
+    homeAirport: code(traveler && traveler.homeAirport) ? null : legs[0].from || null,
+  };
 }

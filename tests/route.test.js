@@ -297,52 +297,55 @@ export const tests = [
     assert.equal(homeDirection({ fromAirport: "CIA", toAirport: "BCN", outboundDate: "2026-05-18" }, traveler, airports), "out");
   }],
 
-  ["placePastedFlight: a DEN to Rome round trip is a home flight that joins the existing Rome idea", () => {
+  ["placePastedFlight: a round trip home flight into the idea already selected names nothing new", () => {
     const result = placePastedFlight({
       parsed: { fromAirport: "DEN", toAirport: "FCO", outboundDate: "2026-05-14", returnDate: "2026-05-28" },
       traveler: { id: "t1", homeAirport: "DEN", homeCity: "Denver" },
-      ideas: [{ id: "athens" }, { id: "rome" }],
-      homeFlightsByIdea: { athens: [home({ fromAirport: "DEN", toAirport: "ATH", returnDate: "2026-06-10", direction: "both" })], rome: [romeHome] },
+      ideaId: "rome",
       airports,
     });
-    assert.deepEqual(result, { role: "home", direction: "both", ideaId: "rome", newIdeaName: null });
+    assert.deepEqual(result, { direction: "both", newIdeaName: null, homeAirport: null });
   }],
 
-  ["placePastedFlight: a home flight to a city with no idea yet names a new one", () => {
+  ["placePastedFlight: a one-way flight to a different city still joins the idea on screen", () => {
     const result = placePastedFlight({
       parsed: { fromAirport: "DEN", toAirport: "LHR", outboundDate: "2026-05-15" },
       traveler: { id: "t1", homeAirport: "DEN", homeCity: "Denver" },
-      ideas: [{ id: "rome" }],
-      homeFlightsByIdea: { rome: [romeHome] },
+      ideaId: "rome",
       airports,
     });
-    assert.deepEqual(result, { role: "home", direction: "out", ideaId: null, newIdeaName: "London trip" });
+    assert.deepEqual(result, { direction: "out", newIdeaName: null, homeAirport: null });
   }],
 
-  ["placePastedFlight: a flight that doesn't touch home is a hop on the idea on screen", () => {
+  ["placePastedFlight: with no idea yet, it names one from the flight", () => {
+    const result = placePastedFlight({
+      parsed: { fromAirport: "DEN", toAirport: "LHR", outboundDate: "2026-05-15" },
+      traveler: { id: "t1", homeAirport: "DEN", homeCity: "Denver" },
+      ideaId: null,
+      airports,
+    });
+    assert.deepEqual(result, { direction: "out", newIdeaName: "London trip", homeAirport: null });
+  }],
+
+  ["placePastedFlight: a flight that doesn't touch a known home still guesses a direction", () => {
     const result = placePastedFlight({
       parsed: { fromAirport: "FCO", toAirport: "FLR", outboundDate: "2026-05-18" },
       traveler: { id: "t1", homeAirport: "DEN", homeCity: "Denver" },
-      ideas: [{ id: "rome" }, { id: "athens" }],
-      homeFlightsByIdea: { rome: [romeHome] },
+      ideaId: "rome",
       airports,
-      currentIdeaId: "athens",
     });
-    assert.deepEqual(result, { role: "hop", direction: null, ideaId: "athens", newIdeaName: null });
+    assert.deepEqual(result, { direction: "out", newIdeaName: null, homeAirport: null });
   }],
 
   ["placePastedFlight: the very first flight teaches us the traveler's home airport", () => {
     const result = placePastedFlight({
       parsed: { fromAirport: "FCO", toAirport: "ATH", outboundDate: "2026-05-18", returnDate: "2026-05-25" },
       traveler: { id: "t1", homeAirport: "", homeCity: "" },
-      ideas: [],
-      homeFlightsByIdea: {},
+      ideaId: null,
       airports,
     });
     assert.deepEqual(result, {
-      role: "home",
       direction: "both",
-      ideaId: null,
       newIdeaName: "Athens round trip",
       homeAirport: "FCO",
     });
@@ -352,10 +355,9 @@ export const tests = [
     const result = placePastedFlight({
       parsed: { fromAirport: null, toAirport: null, legs: [], error: "We couldn't read that link." },
       traveler: { id: "t1", homeAirport: "DEN" },
-      ideas: [],
-      homeFlightsByIdea: {},
+      ideaId: null,
       airports,
     });
-    assert.deepEqual(result, { role: null, direction: null, ideaId: null, newIdeaName: null });
+    assert.deepEqual(result, { direction: null, newIdeaName: null, homeAirport: null });
   }],
 ];

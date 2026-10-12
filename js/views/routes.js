@@ -12,7 +12,7 @@ import {
   deleteFlight,
   updateTravelers,
 } from "../store.js";
-import { el, confirmDialog, friendlyError, renderWhenIdle, readClipboardText } from "../ui.js";
+import { el, confirmDialog, friendlyError, renderWhenIdle } from "../ui.js";
 import { loadAirports } from "../lookup.js";
 import { totalFor, optionAutoName, directionsToClear } from "../lib/route.js";
 import { editFlightFormDialog } from "./flightForm.js";
@@ -54,11 +54,7 @@ export function renderRoutesPage(container, tripId, myUid) {
   const addOptionBtn = el("button", { type: "button", className: "btn btn-small", textContent: "+ Option" });
   const earlierFlightsEl = el("div", { className: "route-earlier", hidden: true });
 
-  const pasteTopBtn = el("button", { type: "button", className: "btn btn-primary", textContent: "Paste flight link" });
-  pasteTopBtn.addEventListener("click", () => onPasteFlight(null));
-
   const mainWrap = el("div", { className: "routes-main" }, [
-    el("div", { className: "row" }, [el("h2", { textContent: "Add a flight" }), pasteTopBtn]),
     el("div", { className: "who" }, [el("span", { className: "label", textContent: "Flights from home for" }), travelerSwitchEl]),
     el("section", {}, [
       el("div", { className: "row" }, [el("h2", { textContent: "Ideas for this window" }), addIdeaBtn]),
@@ -69,7 +65,7 @@ export function renderRoutesPage(container, tripId, myUid) {
     el("section", {}, [el("div", { className: "row" }, [el("h2", { textContent: "Options once you land" }), addOptionBtn]), optionsListEl]),
   ]);
   const pasteEmptyBtn = el("button", { type: "button", className: "btn btn-primary", textContent: "Paste flight link" });
-  pasteEmptyBtn.addEventListener("click", () => onPasteFlight(null));
+  pasteEmptyBtn.addEventListener("click", () => onPasteHomeFlight());
   const addIdeaEmptyBtn = el("button", { type: "button", className: "btn btn-small", textContent: "+ Idea" });
   addIdeaEmptyBtn.addEventListener("click", () => onAddIdea());
   const emptyWrap = el("div", { className: "card" }, [
@@ -126,35 +122,43 @@ export function renderRoutesPage(container, tripId, myUid) {
     });
   }
 
-  /** Opens the Paste flight link sheet (V4 §4.5) for the traveler currently
-   * selected. `defaultOptionId` pins the hop target when this was pressed
-   * inside an already-open option; null means "work it out" (the idea's
-   * first option, or a new one named after the hop). */
-  function onPasteFlight(defaultOptionId) {
+  /** Opens the Paste flight link sheet (T34) from the home-flights card: a
+   * home flight for the traveler and idea currently selected. With no ideas
+   * yet, this creates the first one from the flight pasted. */
+  function onPasteHomeFlight() {
     return run(async () => {
       const traveler = travelers().find((t) => t.id === selectedTravelerId);
       if (!traveler) {
         onError("Add a traveler on Overview first.");
         return;
       }
-      const homeFlightsByIdea = {};
-      for (const idea of ideas) homeFlightsByIdea[idea.id] = homeFlightsFor(idea.id, traveler.id);
-      const clipboardText = await readClipboardText();
-      const result = await pasteFlightDialog({
-        clipboardText,
-        traveler,
-        trip,
-        airports,
-        ideas,
-        options,
-        flights,
-        homeFlightsByIdea,
-        currentIdeaId: selectedIdeaId,
-        defaultOptionId,
-        myUid,
-      });
+      const idea = ideas.find((i) => i.id === selectedIdeaId);
+      const target = {
+        role: "home",
+        ideaId: idea ? idea.id : null,
+        ideaName: idea ? idea.name : null,
+        homeFlights: idea ? homeFlightsFor(idea.id, traveler.id) : [],
+      };
+      const result = await pasteFlightDialog({ target, traveler, trip, airports, myUid });
       if (!result) return;
       await savePastedFlight(result, traveler);
+    });
+  }
+
+  /** Opens the Paste flight link sheet (T34) from inside an open option: a
+   * hop, always added to that option, however many it already holds. */
+  function onPasteHopFlight(option) {
+    return run(async () => {
+      const target = {
+        role: "hop",
+        ideaId: option.ideaId,
+        optionId: option.id,
+        optionName: option.name,
+        hopFlightsCount: hopFlightsFor(option.id).length,
+      };
+      const result = await pasteFlightDialog({ target, traveler: null, trip, airports, myUid });
+      if (!result) return;
+      await savePastedFlight(result, null);
     });
   }
 
@@ -240,6 +244,7 @@ export function renderRoutesPage(container, tripId, myUid) {
         onEdit: (flight) => onEditFlight(flight, traveler),
         onDelete: onDeleteFlight,
         onTogglePick: toggleUseThisFlight,
+        onPasteFlight: onPasteHomeFlight,
       })
     );
   }
@@ -287,7 +292,7 @@ export function renderRoutesPage(container, tripId, myUid) {
           onChoose: () => onChooseOption(option),
           onRename: () => run(() => renameOptionDialog(tripId, option)),
           onDelete: () => onDeleteOption(option),
-          onPasteFlight: () => onPasteFlight(option.id),
+          onPasteFlight: () => onPasteHopFlight(option),
           onEditFlight: (flight) => onEditFlight(flight, null),
           onDeleteFlight: (flight) => onDeleteFlight(flight),
         })

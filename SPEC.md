@@ -482,16 +482,12 @@ Trip window
 
 Stops — where you sleep and for how many nights — are **never typed**. They are worked out from the flights by `js/lib/route.js`.
 
-**Pasting a flight is the way in.** One **Paste flight link** action at the top of the tab, and another inside each open option.
+**Pasting a flight is the way in, and the button you press decides where it goes.** There's no clipboard-reading, guessing paste button at the top of the tab anymore.
 
-1. Read the clipboard with `navigator.clipboard.readText()` (iPhone shows its own Paste bubble). If that fails or is refused, the sheet's text box is there to paste into.
-2. Parse with `parseFlightLink` (§9.6). A short share link shows its own message.
-3. Decide what it is, for the traveler currently selected:
-   - Any leg starts or ends at their home airport or home city → **home flight**. If an idea with the same in and out cities exists, add it there; otherwise create the idea.
-   - Otherwise → **hop**, added to the option already open, or the idea's first option, or a new one named after the hop.
-   - If the traveler has no home airport and there are no ideas yet, treat it as a home flight and save its origin as their home airport.
-4. One confirmation sheet shows what was read (itinerary, dates, airline, the price Google showed, the landing date for an outbound flight) and **Adding to:** the idea and option, with selects to change either. One tap on **Add** saves the flight, and its new idea and option, in a single batch — so a dropped connection never leaves a flight pointing at an idea that was never written.
-5. The first home flight in a direction is `picked`; later alternatives are not until the user picks them.
+1. **Paste flight link** in the home-flights card always adds a flight from home, for the traveler and idea currently selected (an outbound and a return pasted separately land in the same idea). With no ideas yet, it creates the idea from the first flight pasted, naming it as below, and may learn the traveler's home airport from that flight's origin. **Paste flight link** inside an open option always adds a hop to that option, however many it already holds.
+2. The sheet opens empty, with focus in its text box, and parses on `paste` and on typing — it never reads the clipboard itself. Parse with `parseFlightLink` (§9.6). A short share link shows its own message.
+3. One confirmation sheet shows what was read (itinerary, dates, airline, the price Google showed, the landing date for an outbound flight) and a fixed **Adding to:** line naming the idea and traveler (home) or the option (hop) — there's nothing to pick. One tap on **Add** saves the flight, and a new idea when this is the first one, in a single batch — so a dropped connection never leaves a flight pointing at an idea that was never written.
+4. The first home flight in a direction is `picked`; later alternatives are not until the user picks them.
 
 **Names** come from the flights until someone renames them (`nameEdited`):
 

@@ -2052,17 +2052,11 @@ textarea:focus {
   margin-bottom: var(--space-3);
 }
 
-/* Paste flight link's "Adding to" block (T20), inside the confirmation sheet. */
+/* Paste flight link's fixed "Adding to" line (T34), inside the confirmation sheet. */
 .paste-flight-target {
   padding: var(--space-3);
   background: var(--sunk);
   border-radius: var(--radius);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.paste-flight-target .field {
   margin: 0;
 }
 

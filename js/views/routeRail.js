@@ -210,12 +210,13 @@ export function renderOptionCard({
 
 /**
  * The home-flights card (V4 §4.6): every alternative the selected traveler has
- * for this idea, cheapest first, each with Use this / Using. `onTogglePick`
- * gets the flight and its siblings (the other alternatives), since picking one
- * un-picks the ones it replaces. Returns the card's children, ready for
- * `replaceChildren`.
+ * for this idea, cheapest first, each with Use this / Using, and its own
+ * **Paste flight link** (T34) — always targeting this traveler and idea.
+ * `onTogglePick` gets the flight and its siblings (the other alternatives),
+ * since picking one un-picks the ones it replaces. Returns the card's
+ * children, ready for `replaceChildren`.
  */
-export function homeFlightsCardBody({ traveler, homeFlights, trip, tripId, myUid, usersById, onEdit, onDelete, onTogglePick }) {
+export function homeFlightsCardBody({ traveler, homeFlights, trip, tripId, myUid, usersById, onEdit, onDelete, onTogglePick, onPasteFlight }) {
   function row(flight) {
     const picked = flight.picked !== false;
     const useBtn = el("button", { type: "button", className: "btn btn-small", textContent: picked ? "Using" : "Use this" });
@@ -238,8 +239,11 @@ export function homeFlightsCardBody({ traveler, homeFlights, trip, tripId, myUid
   }
 
   const heading = el("h3", { textContent: `${traveler.name}'s flights to and from the region` });
+  const pasteBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Paste flight link" });
+  pasteBtn.addEventListener("click", onPasteFlight);
+
   if (homeFlights.length === 0) {
-    return [heading, el("p", { className: "empty-state", textContent: `No flights yet for ${traveler.name}. Paste a flight link above.` })];
+    return [heading, el("p", { className: "empty-state", textContent: `No flights yet for ${traveler.name}.` }), pasteBtn];
   }
-  return [heading, ...[...homeFlights].sort(byLatestPriceAsc).map(row)];
+  return [heading, ...[...homeFlights].sort(byLatestPriceAsc).map(row), pasteBtn];
 }

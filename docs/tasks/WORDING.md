@@ -86,14 +86,14 @@ Tab names: **Overview · Routes · Map · Days** (T23 removes Recap; T25 merges 
 | No pins found in that file. | Import dialog, a KML with no usable Placemarks |
 | Add {n} places / Add {n} places ({m} already here) | Import dialog's confirm button |
 
-## Paste flight link (T20)
+## Paste flight link (T20, scoped by T34)
 
 | Wording | Where |
 |---|---|
-| Paste flight link | Routes, top of the tab and inside each open option — replaces Add flight as the way in |
+| Paste flight link | Routes — inside the home-flights card (a home flight) and inside each open option (a hop); the button decides where the flight goes |
 | No ideas yet. Paste a flight link to start, or add an idea yourself. | Routes, empty tab |
-| No flights yet for {name}. Paste a flight link above. | Routes, empty home-flights card |
-| Adding to: | Paste sheet, the idea/option it will join (with selects to change either) |
+| No flights yet for {name}. | Routes, empty home-flights card |
+| Adding to {idea} · {traveler} / Adding to {option} | Paste sheet, the fixed line naming where this flight will land |
 | Earlier flights ({N}) | Routes, collapsed list of flights saved before Routes existed |
 
 ## Phone sign-in (T32)

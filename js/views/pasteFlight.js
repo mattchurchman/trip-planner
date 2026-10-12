@@ -4,7 +4,7 @@ import { el, field, dialogShell } from "../ui.js";
 import { parseFlightLink } from "../lib/flightlink.js";
 import { parseMoney, formatMoney } from "../lib/money.js";
 import { flightLabel } from "../lib/itineraryFormat.js";
-import { placePastedFlight, homeDirection, guessLandsDate, optionAutoName } from "../lib/route.js";
+import { placePastedFlight, homeDirection, guessLandsDate } from "../lib/route.js";
 import { renderItinerary } from "./itinerary.js";
 import { renderFlightRow } from "./routeRail.js";
 
@@ -28,25 +28,23 @@ function labelFor(legs, optionCount) {
 }
 
 /**
- * The confirmation sheet (V4 §4.5 steps 2–4): paste or auto-filled link, the
- * itinerary read from it, the price Google showed (or a field when there
- * wasn't one), the landing date for an outbound home flight, and "Adding to"
- * with a way to change the idea or option. Resolves `null` on cancel, or
- * everything `routes.js` needs to call `addPastedFlight` and learn the
- * traveler's home airport (§4.5 step 3's one case for that).
+ * The confirmation sheet (V4 §4.5): paste the link, see the itinerary read
+ * from it, the price Google showed (or a field when there wasn't one), the
+ * landing date for an outbound home flight, and a fixed "Adding to" line.
+ * Resolves `null` on cancel, or everything `routes.js` needs to call
+ * `addPastedFlight` and learn the traveler's home airport (the one case for
+ * that: the very first home flight, with no idea yet).
  *
- * `homeFlightsByIdea` is the traveler's own home flights, keyed by idea id
- * (§4.5 compares endpoints idea by idea, for this traveler only); `flights`
- * is every flight in the trip, used only to count an option's existing hops
- * for the new flight's label. `defaultOptionId` is the option already open
- * on screen, when the button was pressed inside one — null elsewhere,
- * meaning "the idea's first option, or a new one named after this hop".
+ * The button pressed already says where this flight goes — that's `target`:
+ * `{ role: "home", ideaId, ideaName, homeFlights }` from the home-flights
+ * card (`ideaId` null and `homeFlights` `[]` with no idea yet), or
+ * `{ role: "hop", ideaId, optionId, optionName, hopFlightsCount }` from an
+ * open option. The sheet itself never decides home vs. hop.
  */
-export function pasteFlightDialog({ clipboardText, traveler, trip, airports, ideas, options, flights, homeFlightsByIdea, currentIdeaId, defaultOptionId, myUid }) {
+export function pasteFlightDialog({ target, traveler, trip, airports, myUid }) {
   return dialogShell("paste-flight-dialog", (finish) => {
     const linkInput = el("textarea", {
       rows: 2,
-      value: clipboardText || "",
       placeholder: "Paste the address from Google Flights…",
       attrs: { "aria-label": "Google Flights link" },
     });
@@ -66,58 +64,20 @@ export function pasteFlightDialog({ clipboardText, traveler, trip, airports, ide
       priceTouched = true;
     });
 
-    const ideaSelect = el("select", { attrs: { "aria-label": "Idea" } });
-    const optionSelect = el("select", { attrs: { "aria-label": "Option" } });
-    const optionRow = field("Option", optionSelect);
-    const targetEl = el("div", { className: "paste-flight-target" }, [
-      el("p", { className: "muted", textContent: "Adding to:" }),
-      field("Idea", ideaSelect),
-      optionRow,
-    ]);
-    targetEl.hidden = true;
+    const targetLineEl = el("p", { className: "muted paste-flight-target" });
+    targetLineEl.hidden = true;
 
     let parsed = null;
-    let placement = null;
+    let placement = null; // set for a home flight only; a hop needs no placing
 
-    /** The name a brand-new option would take: what its one hop spells out
-     * (V4 §4.4), e.g. "Florence" — not "Option 2". */
-    function newOptionName() {
-      const forNewIdea = ideaSelect.value === "__new__";
-      const homeFlights = forNewIdea ? [] : homeFlightsByIdea[ideaSelect.value] || [];
-      return optionAutoName({ option: null, hopFlights: [parsed], homeFlights, airports });
+    function targetLineText() {
+      if (target.role === "hop") return `Adding to ${target.optionName}`;
+      const ideaName = target.ideaId ? target.ideaName : placement?.newIdeaName || "a new idea";
+      return `Adding to ${ideaName} · ${traveler.name}`;
     }
-
-    function populateOptionSelect() {
-      const forNewIdea = ideaSelect.value === "__new__";
-      const existing = forNewIdea ? [] : sortedOptionsFor(options, ideaSelect.value);
-      optionSelect.replaceChildren(
-        ...existing.map((o) => el("option", { value: o.id, textContent: o.name })),
-        el("option", { value: "__new__", textContent: `New option: ${newOptionName()}` })
-      );
-      const preferred = !forNewIdea && defaultOptionId && existing.some((o) => o.id === defaultOptionId) ? defaultOptionId : existing[0]?.id;
-      optionSelect.value = preferred || "__new__";
-    }
-
-    function applyPlacement() {
-      if (!placement || !placement.role) {
-        targetEl.hidden = true;
-        return;
-      }
-      ideaSelect.replaceChildren(
-        ...ideas.map((i) => el("option", { value: i.id, textContent: i.name })),
-        el("option", { value: "__new__", textContent: `New idea: ${placement.newIdeaName || "New idea"}` })
-      );
-      ideaSelect.value = placement.ideaId || "__new__";
-      optionRow.hidden = placement.role !== "hop";
-      if (placement.role === "hop") populateOptionSelect();
-      targetEl.hidden = false;
-    }
-    ideaSelect.addEventListener("change", () => {
-      if (placement?.role === "hop") populateOptionSelect();
-    });
 
     function applyLandsDate() {
-      const showLands = placement?.role === "home" && (placement.direction === "out" || placement.direction === "both");
+      const showLands = target.role === "home" && (placement.direction === "out" || placement.direction === "both");
       landsDateRow.hidden = !showLands;
       if (showLands) landsDateInput.value = guessLandsDate(parsed.fromAirport, parsed.toAirport, parsed.outboundDate, airports) || "";
     }
@@ -146,7 +106,7 @@ export function pasteFlightDialog({ clipboardText, traveler, trip, airports, ide
       previewEl.hidden = true;
       landsDateRow.hidden = true;
       priceRow.hidden = true;
-      targetEl.hidden = true;
+      targetLineEl.hidden = true;
       okBtn.disabled = true;
       linkErrorEl.textContent = message || "";
       linkErrorEl.hidden = !message;
@@ -164,10 +124,12 @@ export function pasteFlightDialog({ clipboardText, traveler, trip, airports, ide
         return;
       }
       parsed = result;
-      placement = placePastedFlight({ parsed, traveler, ideas, homeFlightsByIdea, airports, currentIdeaId });
-      if (!placement.role) {
-        showNothing("We couldn't tell where this flight goes. Try the full address from Google Flights.");
-        return;
+      if (target.role === "home") {
+        placement = placePastedFlight({ parsed, traveler, ideaId: target.ideaId, airports });
+        if (!placement.direction) {
+          showNothing("We couldn't tell where this flight goes. Try the full address from Google Flights.");
+          return;
+        }
       }
       linkErrorEl.hidden = true;
       previewEl.replaceChildren(
@@ -175,9 +137,10 @@ export function pasteFlightDialog({ clipboardText, traveler, trip, airports, ide
         renderItinerary(parsed.legs)
       );
       previewEl.hidden = false;
-      applyLandsDate();
+      if (target.role === "home") applyLandsDate();
       applyPrice();
-      applyPlacement();
+      targetLineEl.textContent = targetLineText();
+      targetLineEl.hidden = false;
       okBtn.disabled = false;
     }
     linkInput.addEventListener("paste", () => setTimeout(tryParse, 0));
@@ -195,7 +158,7 @@ export function pasteFlightDialog({ clipboardText, traveler, trip, airports, ide
       landsDateRow,
       priceRow,
       priceHelperEl,
-      targetEl,
+      targetLineEl,
       errorHolder,
       el("div", { className: "dialog-actions" }, [cancelBtn, okBtn]),
     ]);
@@ -203,7 +166,7 @@ export function pasteFlightDialog({ clipboardText, traveler, trip, airports, ide
     form.addEventListener("submit", (event) => {
       event.preventDefault();
       errorHolder.replaceChildren();
-      if (!parsed || !placement || !placement.role) return;
+      if (!parsed || (target.role === "home" && !placement?.direction)) return;
 
       let priceAmountCents = null;
       if (priceInput.value.trim()) {
@@ -216,47 +179,50 @@ export function pasteFlightDialog({ clipboardText, traveler, trip, airports, ide
         priceAmountCents = parsed.price.amountCents;
       }
 
-      const newIdea = ideaSelect.value === "__new__";
-      const idea = newIdea ? { name: placement.newIdeaName || "New idea", order: ideas.length } : { id: ideaSelect.value };
-
-      let option;
-      let optionCountForLabel = 0;
-      if (placement.role === "hop") {
-        const existingOptions = newIdea ? [] : sortedOptionsFor(options, ideaSelect.value);
-        const newOption = optionSelect.value === "__new__";
-        option = newOption ? { name: newOptionName(), order: existingOptions.length } : { id: optionSelect.value };
-        optionCountForLabel = newOption ? existingOptions.length : (flights || []).filter((f) => f.role === "hop" && f.optionId === option.id).length;
-      }
-
-      const existingHomeFlights = newIdea ? [] : homeFlightsByIdea[ideaSelect.value] || [];
-      if (placement.role === "home") optionCountForLabel = existingHomeFlights.length;
-      const alreadyPicked = placement.role === "home" && existingHomeFlights.some((f) => f.direction === placement.direction && f.picked !== false);
-
       // Dropped per-leg from/to, same as the hand-entry dialog: route.js
       // falls back to the flight doc's own fromAirport/toAirport for a leg
       // with no segments, so only date and segments need to be stored.
       const legs = (parsed.legs || []).map(({ date, segments }) => ({ date, segments }));
+      const sharedFields = {
+        legs,
+        fromCity: parsed.fromPlace || "",
+        fromAirport: parsed.fromAirport || "",
+        toCity: parsed.toPlace || "",
+        toAirport: parsed.toAirport || "",
+        outboundDate: parsed.outboundDate || null,
+        returnDate: parsed.returnDate || null,
+        link: linkInput.value.trim(),
+        firstPriceEntry: priceEntryFor(priceAmountCents, myUid),
+      };
+
+      if (target.role === "hop") {
+        finish({
+          homeAirport: null,
+          travelerId: null,
+          picked: undefined,
+          idea: { id: target.ideaId },
+          option: { id: target.optionId },
+          flight: { ...sharedFields, role: "hop", direction: null, landsDate: null, label: labelFor(legs, target.hopFlightsCount) },
+        });
+        return;
+      }
+
+      const newIdea = !target.ideaId;
+      const idea = newIdea ? { name: placement.newIdeaName || "New idea", order: 0 } : { id: target.ideaId };
+      const alreadyPicked = target.homeFlights.some((f) => f.direction === placement.direction && f.picked !== false);
 
       finish({
         homeAirport: placement.homeAirport || null,
-        travelerId: placement.role === "home" ? traveler.id : null,
-        picked: placement.role === "home" ? !alreadyPicked : undefined,
+        travelerId: traveler.id,
+        picked: !alreadyPicked,
         idea,
-        option,
+        option: undefined,
         flight: {
-          legs,
-          fromCity: parsed.fromPlace || "",
-          fromAirport: parsed.fromAirport || "",
-          toCity: parsed.toPlace || "",
-          toAirport: parsed.toAirport || "",
-          outboundDate: parsed.outboundDate || null,
-          returnDate: parsed.returnDate || null,
-          link: linkInput.value.trim(),
-          role: placement.role,
+          ...sharedFields,
+          role: "home",
           direction: placement.direction,
           landsDate: landsDateRow.hidden ? null : landsDateInput.value || null,
-          label: labelFor(legs, optionCountForLabel),
-          firstPriceEntry: priceEntryFor(priceAmountCents, myUid),
+          label: labelFor(legs, target.homeFlights.length),
         },
       });
     });
