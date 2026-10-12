@@ -7,7 +7,7 @@ import { latestEntry, perNightCents } from "../lib/totals.js";
 import { safeUrl, googleHotelsUrl, bookingUrl, airbnbUrl } from "../lib/links.js";
 import { isStayChosen, chosenStayIds } from "../lib/selection.js";
 import { sortStayOptions, stayNumbers, circledNumber } from "../lib/optionSort.js";
-import { priceSummary, priceUpdater } from "./pricePanel.js";
+import { priceCheck, checkPricesButton } from "./pricePanel.js";
 import { addStayFormDialog, editStayFormDialog, providerLabel } from "./stayForm.js";
 import { createStaysMap } from "./staysMap.js";
 
@@ -30,6 +30,7 @@ export function createStaysSection({ tripId, myUid, onError }) {
   const addStayBtn = el("button", { type: "button", className: "btn btn-primary", textContent: "Add stay" });
   const staysDiscoverEl = el("div", { className: "discover-section" });
   const staysMapHolder = el("div", { className: "stays-map-holder" });
+  const checkPricesEl = el("div", { className: "stays-check-prices" });
   const staysListEl = el("div", { className: "stays-list" });
 
   const staysMap = createStaysMap(staysMapHolder, {
@@ -120,17 +121,18 @@ export function createStaysSection({ tripId, myUid, onError }) {
       el("span", { className: "provider-pill", textContent: providerLabel(stay.provider) }),
       isChosen ? el("span", { className: "chosen-badge", textContent: "Chosen ✓" }) : null,
     ].filter(Boolean));
-    const summary = priceSummary({ prices: stay.prices || [], currency: trip.currency, perNightCents: perNight, usersById });
-    const header = el("div", { className: "flight-card-header stay-card-title" }, [headerLeft, summary]);
-
-    const { button: updateBtn, row: updateRow } = priceUpdater({
+    const { summary, row: priceRow } = priceCheck({
       tripId,
       subcollection: "stays",
       docId: stay.id,
       prices: stay.prices || [],
-      myUid,
+      link: stay.link,
       currency: trip.currency,
+      perNightCents: perNight,
+      usersById,
+      myUid,
     });
+    const header = el("div", { className: "flight-card-header stay-card-title" }, [headerLeft, summary]);
 
     const dateRange = [formatLegDate(stay.checkIn), formatLegDate(stay.checkOut)].filter(Boolean).join(" – ") || null;
     const metaText = [stay.neighborhood || null, dateRange, nights != null ? `${nights} night${nights === 1 ? "" : "s"}` : null, `${stay.guests} guest${stay.guests === 1 ? "" : "s"}`]
@@ -158,12 +160,12 @@ export function createStaysSection({ tripId, myUid, onError }) {
 
     return el("article", { className: `card stay-card${isChosen ? " stay-card-chosen" : ""}`, attrs: { "data-stay-id": stay.id } }, [
       header,
-      updateRow,
+      priceRow,
       el("p", { className: "muted", textContent: metaText }),
       locationLine,
       rank,
       note,
-      el("div", { className: "stay-actions" }, [chooseBtn, updateBtn, openLink, editBtn, deleteBtn].filter(Boolean)),
+      el("div", { className: "stay-actions" }, [chooseBtn, openLink, editBtn, deleteBtn].filter(Boolean)),
       errorHolder,
       commentsEl,
     ].filter(Boolean));
@@ -186,6 +188,14 @@ export function createStaysSection({ tripId, myUid, onError }) {
     // Numbers are stable (createdAt order) and independent of the display sort below.
     const numbers = stayNumbers(stays);
     const sorted = sortStayOptions(stays, chosenStayIds(trip));
+    checkPricesEl.replaceChildren(
+      checkPricesButton({
+        items: sorted.map((s) => ({ subcollection: "stays", docId: s.id, prices: s.prices || [], link: s.link, label: s.name })),
+        tripId,
+        currency: trip.currency,
+        myUid,
+      })
+    );
     if (sorted.length === 0) {
       staysListEl.replaceChildren(el("p", { className: "empty-state", textContent: "No stays yet. Search above, then paste a link to add one." }));
     } else {
@@ -197,6 +207,7 @@ export function createStaysSection({ tripId, myUid, onError }) {
     el("div", { className: "stays-header" }, [el("h2", { textContent: "Stays" }), addStayBtn]),
     staysDiscoverEl,
     staysMapHolder,
+    checkPricesEl,
     staysListEl,
   ]);
 

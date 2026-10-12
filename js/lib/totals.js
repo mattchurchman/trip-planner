@@ -53,6 +53,24 @@ export function perNightCents(totalCents, nights) {
   return Math.round(totalCents / nights);
 }
 
+/** Whole days between the latest check and `now`; null with no entries. */
+export function priceAgeDays(prices, now = new Date()) {
+  const latest = latestEntry(prices);
+  if (!latest) return null;
+  return Math.floor((toMillis(now) - toMillis(latest.checkedAt)) / 86400000);
+}
+
+/** Stale (§5): no price yet, or the latest check is older than 3 days. */
+export function isStale(prices, now = new Date()) {
+  const age = priceAgeDays(prices, now);
+  return age === null || age > 3;
+}
+
+/** The stale items among `items` (each with a `prices` array), in the given screen order. */
+export function stalePriceQueue(items, now = new Date()) {
+  return (items || []).filter((item) => isStale(item.prices, now));
+}
+
 /**
  * Per-traveler and combined totals (§11, §5.3 multi-select).
  * `selectedFlightIdsByTraveler`: { [travelerId]: [flightId] }, from selection.js.

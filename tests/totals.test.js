@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { latestEntry, priceDelta, isNewLow, perNightCents, computeTotals } from "../js/lib/totals.js";
+import { latestEntry, priceDelta, isNewLow, perNightCents, computeTotals, priceAgeDays, isStale, stalePriceQueue } from "../js/lib/totals.js";
 
 export const tests = [
   ["latestEntry picks the greatest checkedAt regardless of array order", () => {
@@ -126,5 +126,26 @@ export const tests = [
     const result = computeTotals({ travelers, selectedFlightIdsByTraveler, flightsById, stays: [], sharedCosts: [] });
     assert.equal(result.complete, true);
     assert.deepEqual(result.missing, []);
+  }],
+  ["priceAgeDays is null with no prices, 0 right after checking, and whole days later", () => {
+    const now = new Date("2026-03-10T00:00:00.000Z");
+    assert.equal(priceAgeDays([], now), null);
+    assert.equal(priceAgeDays([{ id: "a", amountCents: 100, checkedAt: "2026-03-10T00:00:00.000Z" }], now), 0);
+    assert.equal(priceAgeDays([{ id: "a", amountCents: 100, checkedAt: "2026-03-05T00:00:00.000Z" }], now), 5);
+  }],
+  ["isStale: no price is stale, 3 days is not yet stale, older than 3 days is", () => {
+    const now = new Date("2026-03-10T00:00:00.000Z");
+    assert.equal(isStale([], now), true);
+    assert.equal(isStale([{ id: "a", amountCents: 100, checkedAt: "2026-03-07T00:00:00.000Z" }], now), false);
+    assert.equal(isStale([{ id: "a", amountCents: 100, checkedAt: "2026-03-05T23:59:59.000Z" }], now), true);
+  }],
+  ["stalePriceQueue keeps only stale items, in screen order", () => {
+    const now = new Date("2026-03-10T00:00:00.000Z");
+    const items = [
+      { id: "fresh", prices: [{ id: "a", amountCents: 100, checkedAt: "2026-03-09T00:00:00.000Z" }] },
+      { id: "stale", prices: [{ id: "b", amountCents: 100, checkedAt: "2026-03-01T00:00:00.000Z" }] },
+      { id: "none", prices: [] },
+    ];
+    assert.deepEqual(stalePriceQueue(items, now).map((i) => i.id), ["stale", "none"]);
   }],
 ];

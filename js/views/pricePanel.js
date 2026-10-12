@@ -1,12 +1,14 @@
 import { logPriceEntry, deletePriceEntry } from "../store.js";
 import { el, svgEl, setPending, confirmDialog, friendlyError } from "../ui.js";
 import { parseMoney, formatMoney } from "../lib/money.js";
-import { latestEntry, priceDelta, isNewLow, sortByTimeAsc } from "../lib/totals.js";
+import { latestEntry, priceDelta, isNewLow, sortByTimeAsc, priceAgeDays, stalePriceQueue } from "../lib/totals.js";
 import { relativeTime } from "../lib/dates.js";
+import { safeUrl } from "../lib/links.js";
 
-// Whether the Update-price row and its History list are open, kept per flight/
-// stay so a card rebuilding around this on a live update doesn't close it out
-// from under the person using it (§8) — same pattern as comments.js's threadState.
+// Whether a flight/stay's price-check row (and its History list) is open,
+// and which half it's showing — kept per flight/stay so a card rebuilding
+// around this on a live update doesn't close it out from under the person
+// using it (§8) — same pattern as comments.js's threadState.
 const rowState = new Map();
 
 function buildSparkline(prices) {
@@ -28,63 +30,74 @@ function buildSparkline(prices) {
   ]);
 }
 
+function openLink(link) {
+  const url = link ? safeUrl(link) : null;
+  if (url) window.open(url, "_blank", "noopener,noreferrer");
+}
+
+/** Movement in words, with a class naming the color (§5). Null with fewer than 2 entries. */
+function movement(prices, currency) {
+  const delta = priceDelta(prices);
+  if (delta === null) return null;
+  if (delta > 0) return { text: `▲ ${formatMoney(delta, currency)} higher`, className: "price-higher" };
+  if (delta < 0) return { text: `▼ ${formatMoney(-delta, currency)} lower`, className: "price-lower" };
+  return { text: "No change", className: "price-same" };
+}
+
 /**
- * The price summary for a card header's right side (§7.8): the latest price
- * (large), an optional per-night line (stays only — pass `perNightCents`),
- * the change from the previous check with when it was checked (who and the
- * exact time sit in a `title` tooltip, not the visible text), a New low pill,
- * and a sparkline once there are 2+ entries. "No price yet" with none.
+ * The price summary for a card header's right side (§5, §7.8): the price
+ * itself as a button, a small age label with a stale dot past 3 days, the
+ * change from the previous check with when it was checked (who and the
+ * exact time sit in a `title` tooltip, not the visible text), a New low
+ * pill, and a sparkline once there are 2+ entries. "No price yet" with none.
+ * `onOpen` is called when the price button is tapped.
  */
-export function priceSummary({ prices, currency, perNightCents = null, usersById = {} }) {
+function priceSummary({ prices, currency, perNightCents = null, usersById = {}, now, onOpen }) {
   const latest = latestEntry(prices);
   if (!latest) {
-    return el("div", { className: "price-summary" }, [el("p", { className: "muted", textContent: "No price yet" })]);
+    const btn = el("button", { type: "button", className: "btn-link price-latest price-latest-btn", textContent: "Add price" });
+    btn.addEventListener("click", onOpen);
+    return el("div", { className: "price-summary" }, [btn]);
   }
 
-  const delta = priceDelta(prices);
-  const newLow = isNewLow(prices);
-  const when = latest.checkedAt ? relativeTime(new Date(latest.checkedAt)) : "";
+  const age = priceAgeDays(prices, now);
+  const stale = age === null || age > 3;
+  const when = latest.checkedAt ? relativeTime(new Date(latest.checkedAt), now) : "";
   const byName = (usersById[latest.byUid] && usersById[latest.byUid].displayName) || "someone";
   const exactTime = latest.checkedAt ? new Date(latest.checkedAt).toLocaleString() : "";
 
   // Stays store the TOTAL for the whole stay (§5.4); when a per-night figure
   // is given, label the primary line "total" so it isn't misread as nightly.
   const latestText = perNightCents != null ? `${formatMoney(latest.amountCents, currency)} total` : formatMoney(latest.amountCents, currency);
-  const rows = [el("p", { className: "price-latest", textContent: latestText })];
+  const priceBtn = el("button", { type: "button", className: "btn-link price-latest price-latest-btn", textContent: latestText });
+  priceBtn.addEventListener("click", onOpen);
+
+  const ageLine = el("div", { className: "price-age-line" }, [
+    priceBtn,
+    el("span", { className: "price-age muted", textContent: `${age}d` }),
+    stale ? el("span", { className: "price-stale-dot", title: "Checked more than 3 days ago", "aria-label": "May be out of date" }) : null,
+  ].filter(Boolean));
+
+  const rows = [ageLine];
   if (perNightCents != null) {
     rows.push(el("p", { className: "price-per-night muted", textContent: `${formatMoney(perNightCents, currency)} / night` }));
   }
 
-  let deltaText = null;
-  if (delta !== null) {
-    if (delta > 0) deltaText = `▲ ${formatMoney(delta, currency)} higher`;
-    else if (delta < 0) deltaText = `▼ ${formatMoney(-delta, currency)} lower`;
-    else deltaText = "No change";
-  }
-  const changeText = [deltaText, when].filter(Boolean).join(" · ");
-  if (changeText) {
-    rows.push(el("p", { className: "price-delta muted", textContent: changeText, title: `${byName}${exactTime ? `, ${exactTime}` : ""}` }));
+  const move = movement(prices, currency);
+  if (move) {
+    const changeText = [move.text, when].filter(Boolean).join(" · ");
+    rows.push(el("p", { className: `price-delta muted ${move.className}`, textContent: changeText, title: `${byName}${exactTime ? `, ${exactTime}` : ""}` }));
   }
 
-  if (newLow) rows.push(el("span", { className: "badge-new-low", textContent: "New low" }));
+  if (isNewLow(prices)) rows.push(el("span", { className: "badge-new-low", textContent: "New low" }));
   if (prices.length >= 2) rows.push(buildSparkline(prices));
 
   return el("div", { className: "price-summary" }, rows);
 }
 
-/**
- * The footer's **Update price** ("Add price" with none yet) button and the
- * row it opens (§7.8): amount, note, Save price, Cancel, and — with 2+
- * entries — a History link expanding the full list (delete with confirmation,
- * `arrayRemove` on the exact entry). Returns `{ button, row }`; the caller
- * places `button` among the footer actions and `row` right under the header.
- */
-export function priceUpdater({ tripId, subcollection, docId, prices, myUid, currency }) {
-  const stateKey = `${tripId}:${subcollection}:${docId}`;
-  const saved = rowState.get(stateKey) || { open: false, historyOpen: false };
-  const latest = latestEntry(prices);
+/** The amount + note + Save fields shared by "Changed" and "Add price". */
+function amountFields({ tripId, subcollection, docId, latest, myUid, onSaved, onCancel }) {
   const errorHolder = el("div", { className: "field-error-holder" });
-
   const amountInput = el("input", {
     type: "text",
     placeholder: "Amount",
@@ -94,12 +107,6 @@ export function priceUpdater({ tripId, subcollection, docId, prices, myUid, curr
   const noteInput = el("input", { type: "text", placeholder: "Note (optional)", attrs: { "aria-label": "Note about this price" } });
   const saveBtn = el("button", { type: "button", className: "btn btn-small btn-primary", textContent: "Save price" });
   const cancelBtn = el("button", { type: "button", className: "btn btn-small btn-secondary", textContent: "Cancel" });
-
-  function closeRow() {
-    row.hidden = true;
-    saved.open = false;
-    rowState.set(stateKey, saved);
-  }
 
   saveBtn.addEventListener("click", async () => {
     errorHolder.replaceChildren();
@@ -112,8 +119,7 @@ export function priceUpdater({ tripId, subcollection, docId, prices, myUid, curr
     setPending(saveBtn, true, "Saving…");
     try {
       await logPriceEntry(tripId, subcollection, docId, entry);
-      noteInput.value = "";
-      closeRow();
+      onSaved();
     } catch (err) {
       errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
     } finally {
@@ -122,62 +128,241 @@ export function priceUpdater({ tripId, subcollection, docId, prices, myUid, curr
   });
   cancelBtn.addEventListener("click", () => {
     errorHolder.replaceChildren();
-    closeRow();
+    onCancel();
   });
 
-  const rowChildren = [
-    el("p", { className: "muted price-hint" }, ["Check the price on the site first, then save what you saw."]),
+  return el("div", {}, [
     el("div", { className: "price-update-fields" }, [amountInput, noteInput, saveBtn, cancelBtn]),
     errorHolder,
-  ];
+  ]);
+}
 
-  if (prices.length >= 2) {
-    const historyToggle = el("button", {
-      type: "button",
-      className: "btn btn-link",
-      textContent: `History (${prices.length})`,
-      attrs: { "aria-expanded": saved.historyOpen ? "true" : "false" },
-    });
-    const historyList = el("ul", { className: "price-history", hidden: !saved.historyOpen });
-    historyToggle.addEventListener("click", () => {
-      historyList.hidden = !historyList.hidden;
-      historyToggle.setAttribute("aria-expanded", historyList.hidden ? "false" : "true");
-      saved.historyOpen = !historyList.hidden;
-      rowState.set(stateKey, saved);
-    });
-    historyList.append(
-      ...[...prices]
-        .sort((a, b) => (a.checkedAt < b.checkedAt ? 1 : a.checkedAt > b.checkedAt ? -1 : 0))
-        .map((entry) => {
-          const when = entry.checkedAt ? new Date(entry.checkedAt).toLocaleString() : "";
-          const deleteBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Delete" });
-          deleteBtn.addEventListener("click", async () => {
-            const confirmed = await confirmDialog(`Delete this price entry (${formatMoney(entry.amountCents, currency)})?`, "Delete");
-            if (!confirmed) return;
-            try {
-              await deletePriceEntry(tripId, subcollection, docId, entry);
-            } catch (err) {
-              errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
-            }
-          });
-          return el("li", { className: "price-history-item" }, [
-            el("span", { textContent: `${formatMoney(entry.amountCents, currency)} — ${when}${entry.note ? " — " + entry.note : ""}` }),
-            deleteBtn,
-          ]);
-        })
-    );
-    rowChildren.push(historyToggle, historyList);
+/** The "Still $64?" row (§5): Same logs a fresh entry at the same amount; Changed swaps in `amountFields`. */
+function askRow({ tripId, subcollection, docId, latest, currency, myUid, onSame, onChanged }) {
+  const errorHolder = el("div", { className: "field-error-holder" });
+  const sameBtn = el("button", { type: "button", className: "btn btn-small btn-primary", textContent: "Same" });
+  const changedBtn = el("button", { type: "button", className: "btn btn-small btn-secondary", textContent: "Changed" });
+
+  sameBtn.addEventListener("click", async () => {
+    errorHolder.replaceChildren();
+    setPending(sameBtn, true, "Saving…");
+    try {
+      await logPriceEntry(tripId, subcollection, docId, {
+        id: crypto.randomUUID(),
+        amountCents: latest.amountCents,
+        checkedAt: new Date().toISOString(),
+        byUid: myUid,
+        note: "",
+      });
+      onSame();
+    } catch (err) {
+      errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
+    } finally {
+      setPending(sameBtn, false);
+    }
+  });
+  changedBtn.addEventListener("click", onChanged);
+
+  return el("div", {}, [
+    el("div", { className: "price-ask-row" }, [
+      el("p", { className: "price-ask", textContent: `Still ${formatMoney(latest.amountCents, currency)}?` }),
+      sameBtn,
+      changedBtn,
+    ]),
+    errorHolder,
+  ]);
+}
+
+/** History disclosure (§5): price history and delete, as they were before T21. */
+function historySection({ tripId, subcollection, docId, prices, currency, stateKey, saved }) {
+  if (prices.length < 2) return null;
+  const historyToggle = el("button", {
+    type: "button",
+    className: "btn btn-link",
+    textContent: `History (${prices.length})`,
+    attrs: { "aria-expanded": saved.historyOpen ? "true" : "false" },
+  });
+  const historyList = el("ul", { className: "price-history", hidden: !saved.historyOpen });
+  historyToggle.addEventListener("click", () => {
+    historyList.hidden = !historyList.hidden;
+    historyToggle.setAttribute("aria-expanded", historyList.hidden ? "false" : "true");
+    saved.historyOpen = !historyList.hidden;
+    rowState.set(stateKey, saved);
+  });
+  const errorHolder = el("div", { className: "field-error-holder" });
+  historyList.append(
+    ...[...prices]
+      .sort((a, b) => (a.checkedAt < b.checkedAt ? 1 : a.checkedAt > b.checkedAt ? -1 : 0))
+      .map((entry) => {
+        const when = entry.checkedAt ? new Date(entry.checkedAt).toLocaleString() : "";
+        const deleteBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Delete" });
+        deleteBtn.addEventListener("click", async () => {
+          const confirmed = await confirmDialog(`Delete this price entry (${formatMoney(entry.amountCents, currency)})?`, "Delete");
+          if (!confirmed) return;
+          try {
+            await deletePriceEntry(tripId, subcollection, docId, entry);
+          } catch (err) {
+            errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
+          }
+        });
+        return el("li", { className: "price-history-item" }, [
+          el("span", { textContent: `${formatMoney(entry.amountCents, currency)} — ${when}${entry.note ? " — " + entry.note : ""}` }),
+          deleteBtn,
+        ]);
+      })
+  );
+  return el("div", {}, [historyToggle, historyList, errorHolder]);
+}
+
+/**
+ * The price button for a card header (§5) plus the row it opens right under
+ * the header: tapping the price opens the saved link and reveals **Still
+ * $X?** (Same/Changed), or — with no price yet — the amount field straight
+ * away. Returns `{ summary, row }`; the caller places `summary` in the
+ * header's right side and `row` right under the header. `link` is the
+ * flight/stay's saved booking link (opened on tap; no link just asks).
+ */
+export function priceCheck({ tripId, subcollection, docId, prices, link, currency, perNightCents = null, usersById = {}, myUid, now = new Date() }) {
+  const stateKey = `${tripId}:${subcollection}:${docId}`;
+  const saved = rowState.get(stateKey) || { open: false, mode: "ask", historyOpen: false };
+  const latest = latestEntry(prices);
+
+  const row = el("div", { className: "price-check-row", hidden: !saved.open });
+
+  function closeRow() {
+    row.hidden = true;
+    saved.open = false;
+    rowState.set(stateKey, saved);
   }
 
-  const row = el("div", { className: "price-update-row", hidden: !saved.open }, rowChildren);
+  function renderRowBody() {
+    const body =
+      latest && saved.mode === "ask"
+        ? askRow({
+            tripId,
+            subcollection,
+            docId,
+            latest,
+            currency,
+            myUid,
+            onSame: closeRow,
+            onChanged: () => {
+              saved.mode = "changed";
+              rowState.set(stateKey, saved);
+              renderRowBody();
+            },
+          })
+        : amountFields({
+            tripId,
+            subcollection,
+            docId,
+            latest,
+            myUid,
+            onSaved: closeRow,
+            onCancel: latest ? () => { saved.mode = "ask"; rowState.set(stateKey, saved); renderRowBody(); } : closeRow,
+          });
+    const history = historySection({ tripId, subcollection, docId, prices, currency, stateKey, saved });
+    row.replaceChildren(
+      el("p", { className: "muted price-hint" }, ["Check the price on the site first, then save what you saw."]),
+      body,
+      ...(history ? [history] : [])
+    );
+  }
+  renderRowBody();
 
-  const button = el("button", { type: "button", className: "btn btn-link btn-small", textContent: latest ? "Update price" : "Add price" });
-  button.addEventListener("click", () => {
-    row.hidden = !row.hidden;
-    saved.open = !row.hidden;
+  function openRow() {
+    saved.mode = latest ? "ask" : "changed";
+    saved.open = true;
     rowState.set(stateKey, saved);
-    if (!row.hidden) amountInput.focus();
+    row.hidden = false;
+    renderRowBody();
+    openLink(link);
+  }
+
+  const summary = priceSummary({
+    prices,
+    currency,
+    perNightCents,
+    usersById,
+    now,
+    onOpen: () => (row.hidden ? openRow() : closeRow()),
   });
 
-  return { button, row };
+  return { summary, row };
+}
+
+/**
+ * Walks through every stale price among `items` (each `{ subcollection,
+ * docId, prices, link, label }`), one at a time, in the given screen order
+ * — opening its link and asking the same question, with Skip and a
+ * "N of M" counter (§5). Resolves once the walkthrough is closed.
+ */
+function checkPricesDialog({ items, tripId, currency, myUid }) {
+  return new Promise((resolve) => {
+    let index = 0;
+    const counter = el("p", { className: "muted price-check-counter" });
+    const body = el("div", { className: "price-check-dialog-body" });
+    const closeBtn = el("button", { type: "button", className: "btn btn-secondary", textContent: "Close" });
+    const dialog = el("dialog", { className: "app-dialog price-check-dialog" }, [
+      counter,
+      body,
+      el("div", { className: "dialog-actions" }, [closeBtn]),
+    ]);
+    document.body.appendChild(dialog);
+
+    function finish() {
+      dialog.close();
+      dialog.remove();
+      resolve();
+    }
+    closeBtn.addEventListener("click", finish);
+    dialog.addEventListener("cancel", finish);
+
+    function advance() {
+      index += 1;
+      renderStep();
+    }
+
+    function renderStep() {
+      if (index >= items.length) {
+        finish();
+        return;
+      }
+      const item = items[index];
+      const latest = latestEntry(item.prices);
+      counter.textContent = `${index + 1} of ${items.length}`;
+      const skipBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Skip" });
+      skipBtn.addEventListener("click", advance);
+
+      const content = latest
+        ? askRow({ tripId, subcollection: item.subcollection, docId: item.docId, latest, currency, myUid, onSame: advance, onChanged: () => showChanged(item, latest) })
+        : amountFields({ tripId, subcollection: item.subcollection, docId: item.docId, latest: null, myUid, onSaved: advance, onCancel: advance });
+
+      body.replaceChildren(el("h3", { textContent: item.label }), content, skipBtn);
+      openLink(item.link);
+    }
+
+    function showChanged(item, latest) {
+      body.replaceChildren(
+        el("h3", { textContent: item.label }),
+        amountFields({ tripId, subcollection: item.subcollection, docId: item.docId, latest, myUid, onSaved: advance, onCancel: () => renderStep() })
+      );
+    }
+
+    renderStep();
+    dialog.showModal();
+  });
+}
+
+/**
+ * The **Check prices** button (§5) for an option's flights, or the stays
+ * list: disabled once nothing is stale, otherwise walks the stale ones.
+ * `items`: `[{ subcollection, docId, prices, link, label }]` in screen order.
+ */
+export function checkPricesButton({ items, tripId, currency, myUid, now = new Date() }) {
+  const stale = stalePriceQueue(items, now);
+  const btn = el("button", { type: "button", className: "btn btn-small", textContent: "Check prices" });
+  btn.disabled = stale.length === 0;
+  btn.addEventListener("click", () => checkPricesDialog({ items: stale, tripId, currency, myUid }));
+  return btn;
 }

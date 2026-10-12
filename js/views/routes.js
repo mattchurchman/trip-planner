@@ -271,6 +271,8 @@ export function renderRoutesPage(container, tripId, myUid) {
       setPending(useBtn, false);
     });
     const row = renderFlightRow(flight, {
+      tripId,
+      myUid,
       currency: trip.currency,
       usersById,
       onEdit: () => onEditFlight(flight, traveler),
@@ -368,6 +370,8 @@ export function renderRoutesPage(container, tripId, myUid) {
           hopFlights: hopFlightsFor(option.id),
           airports,
           trip,
+          tripId,
+          myUid,
           usersById,
           isOpen: openOptionIds.has(option.id),
           isChosen: trip.chosenOptionId === option.id,
@@ -395,6 +399,8 @@ export function renderRoutesPage(container, tripId, myUid) {
     const node = renderEarlierFlights({
       flights,
       trip,
+      tripId,
+      myUid,
       usersById,
       onMove: onMoveFlight,
       onEdit: (flight) => onEditFlight(flight, null),

@@ -7,7 +7,7 @@ import { formatMoney } from "../lib/money.js";
 import { nightsLabel } from "../lib/dates.js";
 import { formatLegDate } from "../lib/itineraryFormat.js";
 import { stopsFor, movements, totalFor, ideaEndpoints } from "../lib/route.js";
-import { priceSummary } from "./pricePanel.js";
+import { priceCheck, checkPricesButton } from "./pricePanel.js";
 import { renderItinerary } from "./itinerary.js";
 
 /** Same fallback as flights.js's legsForCard: a flight's `legs` when it has
@@ -26,12 +26,21 @@ function legsForCard(flight) {
 
 /**
  * One flight's compact row inside the rail or the home-flights card: its
- * itinerary, the price summary (§7.8 — T21 replaces this control), and
- * whatever action buttons the caller supplies before Edit/Delete.
+ * itinerary, the price check control (§5), and whatever action buttons the
+ * caller supplies before Edit/Delete.
  */
-export function renderFlightRow(flight, { currency, usersById, onEdit, onDelete, leadingActions = [] } = {}) {
+export function renderFlightRow(flight, { tripId, myUid, currency, usersById, onEdit, onDelete, leadingActions = [] } = {}) {
   const itinerary = renderItinerary(legsForCard(flight), { outboundDetails: flight.outboundDetails, returnDetails: flight.returnDetails });
-  const summary = priceSummary({ prices: flight.prices || [], currency, usersById });
+  const { summary, row } = priceCheck({
+    tripId,
+    subcollection: "flights",
+    docId: flight.id,
+    prices: flight.prices || [],
+    link: flight.link,
+    currency,
+    usersById,
+    myUid,
+  });
 
   const editBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Edit" });
   editBtn.addEventListener("click", onEdit);
@@ -45,6 +54,7 @@ export function renderFlightRow(flight, { currency, usersById, onEdit, onDelete,
 
   return el("div", { className: "route-flight-row" }, [
     header,
+    row,
     itinerary,
     el("div", { className: "flight-actions" }, [...leadingActions, editBtn, deleteBtn]),
   ]);
@@ -83,6 +93,8 @@ export function renderOptionCard({
   hopFlights,
   airports,
   trip,
+  tripId,
+  myUid,
   usersById,
   isOpen,
   isChosen,
@@ -133,6 +145,7 @@ export function renderOptionCard({
     rail.append(el("li", {}, [el("p", { className: "empty-state", textContent: "No flights yet for this option. Add one below." })]));
   }
   const seenFlightIds = new Set();
+  const railFlightsInOrder = [];
   stops.forEach((stop, i) => {
     const right = el("div", {}, [stopLine(stop), ...warningBlocks(stop)]);
     const movement = hops[i];
@@ -140,9 +153,12 @@ export function renderOptionCard({
       const flight = hopFlightsById[movement.flightId] || null;
       if (flight && !seenFlightIds.has(flight.id)) {
         seenFlightIds.add(flight.id);
+        railFlightsInOrder.push(flight);
         right.append(
           el("div", { className: "route-hop" }, [
             renderFlightRow(flight, {
+              tripId,
+              myUid,
               currency: trip.currency,
               usersById,
               onEdit: () => onEditFlight(flight),
@@ -169,6 +185,12 @@ export function renderOptionCard({
 
   const pasteFlightBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Paste flight link" });
   pasteFlightBtn.addEventListener("click", onPasteFlight);
+  const checkPricesBtn = checkPricesButton({
+    items: railFlightsInOrder.map((f) => ({ subcollection: "flights", docId: f.id, prices: f.prices || [], link: f.link, label: f.label || "Flight" })),
+    tripId,
+    currency: trip.currency,
+    myUid,
+  });
   const chooseBtn = el("button", { type: "button", className: "btn btn-primary", textContent: isChosen ? "Unchoose" : "Choose this option" });
   chooseBtn.addEventListener("click", onChoose);
   const renameBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Rename" });
@@ -179,7 +201,7 @@ export function renderOptionCard({
   card.append(
     el("div", { className: "route-option-body" }, [
       rail,
-      el("div", { className: "route-option-foot" }, [chooseBtn, pasteFlightBtn, renameBtn, deleteBtn]),
+      el("div", { className: "route-option-foot" }, [chooseBtn, pasteFlightBtn, checkPricesBtn, renameBtn, deleteBtn]),
     ])
   );
   return card;

@@ -330,13 +330,15 @@ export function moveFlightDialog({ flight, travelers, ideas, options, airports }
  * Routes gave flights a role, each with Move to… and Delete. `null` when
  * there are none, so the caller can hide its holder element entirely.
  */
-export function renderEarlierFlights({ flights, trip, usersById, onMove, onEdit, onDelete }) {
+export function renderEarlierFlights({ flights, trip, tripId, myUid, usersById, onMove, onEdit, onDelete }) {
   const list = flights.filter((f) => !f.role);
   if (list.length === 0) return null;
   const rows = list.map((flight) => {
     const moveBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Move to…" });
     moveBtn.addEventListener("click", () => onMove(flight));
     return renderFlightRow(flight, {
+      tripId,
+      myUid,
       currency: trip.currency,
       usersById,
       onEdit: () => onEdit(flight),
