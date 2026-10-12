@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { nightCoverage, stayNights, stopStayTotal } from "../js/lib/coverage.js";
+import { nightCoverage, coverageSummary, stayNights, stopStayTotal } from "../js/lib/coverage.js";
 
 const price = (cents) => (cents == null ? [] : [{ id: "p1", amountCents: cents, checkedAt: "2026-01-01T00:00:00.000Z", byUid: "u1", note: "" }]);
 const stop = (from, to) => ({ city: "Rome", code: "FCO", from, to });
@@ -14,10 +14,10 @@ export const tests = [
   ["nightCoverage: a stay covering part of the stop leaves the rest open", () => {
     const entries = nightCoverage(stop("2026-06-01", "2026-06-05"), [{ checkIn: "2026-06-01", checkOut: "2026-06-03" }]);
     assert.deepEqual(entries, [
-      { date: "2026-06-01", status: "covered" },
-      { date: "2026-06-02", status: "covered" },
-      { date: "2026-06-03", status: "open" },
-      { date: "2026-06-04", status: "open" },
+      { date: "2026-06-01", status: "covered", travelerIds: null },
+      { date: "2026-06-02", status: "covered", travelerIds: null },
+      { date: "2026-06-03", status: "open", travelerIds: null },
+      { date: "2026-06-04", status: "open", travelerIds: null },
     ]);
   }],
 
@@ -45,8 +45,8 @@ export const tests = [
   ["nightCoverage: empty with a missing stop or stay date", () => {
     assert.deepEqual(nightCoverage(stop(null, "2026-06-03"), [{ checkIn: "2026-06-01", checkOut: "2026-06-02" }]), []);
     assert.deepEqual(nightCoverage(stop("2026-06-01", "2026-06-03"), [{ checkIn: null, checkOut: "2026-06-02" }]), [
-      { date: "2026-06-01", status: "open" },
-      { date: "2026-06-02", status: "open" },
+      { date: "2026-06-01", status: "open", travelerIds: null },
+      { date: "2026-06-02", status: "open", travelerIds: null },
     ]);
   }],
 
@@ -62,5 +62,36 @@ export const tests = [
 
   ["stopStayTotal: zero and complete with no chosen stays", () => {
     assert.deepEqual(stopStayTotal([]), { cents: 0, complete: true });
+  }],
+
+  ["nightCoverage: a merged stop's nights say who is there each night", () => {
+    const merged = {
+      ...stop("2026-06-01", "2026-06-04"),
+      nights: [
+        { date: "2026-06-01", travelerIds: ["a", "b", "c"] },
+        { date: "2026-06-02", travelerIds: ["a", "b"] },
+      ],
+    };
+    const entries = nightCoverage(merged, []);
+    assert.deepEqual(entries.map((e) => e.travelerIds), [["a", "b", "c"], ["a", "b"], []]);
+  }],
+
+  ["coverageSummary: complete only when every night has a chosen stay", () => {
+    const entries = nightCoverage(stop("2026-06-01", "2026-06-04"), [{ checkIn: "2026-06-01", checkOut: "2026-06-03" }]);
+    assert.deepEqual(coverageSummary(entries), { covered: 2, total: 3, complete: false });
+    const full = nightCoverage(stop("2026-06-01", "2026-06-04"), [{ checkIn: "2026-06-01", checkOut: "2026-06-04" }]);
+    assert.deepEqual(coverageSummary(full), { covered: 3, total: 3, complete: true });
+  }],
+
+  ["coverageSummary: a double-booked night still counts as covered", () => {
+    const entries = nightCoverage(stop("2026-06-01", "2026-06-03"), [
+      { checkIn: "2026-06-01", checkOut: "2026-06-03" },
+      { checkIn: "2026-06-02", checkOut: "2026-06-03" },
+    ]);
+    assert.equal(coverageSummary(entries).complete, true);
+  }],
+
+  ["coverageSummary: a stop with no dated nights is not complete", () => {
+    assert.deepEqual(coverageSummary([]), { covered: 0, total: 0, complete: false });
   }],
 ];

@@ -58,7 +58,12 @@ Tab names: **Overview · Routes · Map · Days** (T23 removes Recap; T25 merges 
 
 | Wording | Where |
 |---|---|
-| Shortlisted / Out / Chosen | Stays, status select on each stay card |
+| Choose / Chosen | Stays, toggle button on each stay card (Chosen = teal) |
+| Out | Stays, toggle button on each stay card — dims the card and sorts it last |
+| For: {names} · Automatic / Set by hand · Who's this for? | Stays, on each stay card (same as hops on Routes) |
+| 2 of 3 | Stays, each night cell: travelers sleeping in that city that night |
+| All {N} nights covered ✓ | Stays, a stop whose every night has a chosen stay |
+| No map pin · Set location | Stays, a stay with no location |
 | No stop yet | Stays, the group for stays with no matching stop |
 | {N} of {N} nights covered | Stays, each stop's coverage bar |
 | No route chosen yet. Choose an option on Routes to group stays by city. | Stays, shown instead of grouping until an option is chosen |

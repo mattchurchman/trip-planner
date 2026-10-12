@@ -1349,31 +1349,61 @@ textarea:focus {
   margin-top: var(--space-2);
 }
 
-/* One cell per night (T24): open (not covered), covered, or double-booked by
-   two chosen stays. Wraps instead of scrolling so a long stop still fits at
-   375px. */
+/* One cell per night (T24, T38): the date, "2 of 3" travelers there, and a
+   status mark. Tinted rather than solid so the text reads in both themes;
+   wraps instead of scrolling so a long stop still fits at 375px. */
 .coverage-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 3px;
+  gap: var(--space-1);
 }
 
 .coverage-cell {
-  width: 18px;
-  height: 10px;
-  border-radius: 3px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 56px;
+  padding: 2px var(--space-2);
+  border-radius: 6px;
   background: var(--sunk);
   border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.75em;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.coverage-who {
+  font-weight: 600;
 }
 
 .coverage-covered {
-  background: var(--good);
-  border-color: var(--good);
+  background: var(--teal-soft);
+  border: 2px solid var(--good);
+  color: var(--ink);
 }
 
 .coverage-double {
-  background: var(--sun);
+  background: var(--sun-soft);
+  border: 2px solid var(--sun);
+  color: var(--ink);
+}
+
+.coverage-summary-complete {
+  color: var(--good);
+  font-weight: 600;
+}
+
+/* Choose / Out toggles on a stay card (T38): 44px tap targets. */
+.stay-toggle {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.stay-out-btn[aria-pressed="true"] {
+  background: var(--sun-soft);
   border-color: var(--sun);
+  color: var(--sun);
 }
 
 .coverage-summary {

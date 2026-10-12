@@ -1,4 +1,4 @@
-import { addStay, updateStay, deleteStay, duplicateStay, chooseStay, unchooseStay } from "../store.js";
+import { addStay, updateStay, deleteStay, duplicateStay, chooseStay, unchooseStay, setForTravelers } from "../store.js";
 import { el, confirmDialog, friendlyError, renderWhenIdle } from "../ui.js";
 import { renderComments } from "./comments.js";
 import { nightsBetween } from "../lib/dates.js";
@@ -8,19 +8,22 @@ import { formatMoney } from "../lib/money.js";
 import { safeUrl, googleHotelsUrl, bookingUrl, airbnbUrl } from "../lib/links.js";
 import { isStayChosen, chosenStayIds } from "../lib/selection.js";
 import { sortStayOptions, stayNumbers, circledNumber } from "../lib/optionSort.js";
-import { nightCoverage, stopStayTotal } from "../lib/coverage.js";
+import { nightCoverage, coverageSummary, stopStayTotal } from "../lib/coverage.js";
+import { stayStopKey } from "../lib/stops.js";
 import { priceCheck } from "./pricePanel.js";
 import { addStayFormDialog, editStayFormDialog, providerLabel } from "./stayForm.js";
+import { forControl } from "./forControl.js";
 
 function externalLinkRow(url, label) {
   return el("a", { className: "discover-link", href: url, target: "_blank", rel: "noopener noreferrer", textContent: label });
 }
 
 /**
- * Groups `stays` by the stop of the chosen route whose `cityKey` matches
- * their `stopKey` (T24), in route order; stays with no match, or whose
- * `stopKey` no longer matches any stop, land in "No stop yet". A route that
- * returns to the same city twice shares one group, keyed by its first visit.
+ * Groups `stays` by the stop of the merged route they belong to (T24, T38), in
+ * route order: the stay's own `stopKey` while it still matches a stop,
+ * otherwise the stop its check-in dates or pin point to (`stayStopKey`). Stays
+ * that match nothing land in "No stop yet". A route that returns to the same
+ * city twice shares one group, keyed by its first visit.
  */
 function groupByStop(stays, stops) {
   const groups = [];
@@ -33,7 +36,8 @@ function groupByStop(stays, stops) {
   }
   const noStop = [];
   for (const stay of stays) {
-    const group = stay.stopKey && byKey.get(stay.stopKey);
+    const key = stayStopKey(stay, stops, stops);
+    const group = key && byKey.get(key);
     if (group) group.stays.push(stay);
     else noStop.push(stay);
   }
@@ -46,11 +50,11 @@ function groupByStop(stays, stops) {
  * its own hotel search links (T31, §9.1), a night-coverage bar and total —
  * or, with no route chosen, every stay ungrouped and a hint to choose one.
  * Call `render(stays,
- * trip, usersById, stops)` whenever trip/stays/users/the chosen route's
- * stops (or the stop chip filtering `stays`, T25) change — it defers
- * rebuilding the list on its own while someone is editing inside it (§8).
- * `stops` is `stopsFor`'s result for the chosen option, or `null` when none
- * is chosen yet. `onFocusOnMap(stay)` pans the caller's shared map (T25) to
+ * trip, usersById, stops, ctx)` whenever trip/stays/users/the merged route
+ * (or the stop chip filtering `stays`, T25) change — it defers rebuilding the
+ * list on its own while someone is editing inside it (§8). `stops` is the
+ * merged route (§11), or `null` when nobody has chosen an option yet; `ctx`
+ * is `budgetContext`'s result, for each stay's "Who's this for?". `onFocusOnMap(stay)` pans the caller's shared map (T25) to
  * that stay's pin; `focusCard(stayId)` (returned below) is the inverse,
  * called by the caller when that pin is tapped.
  */
@@ -59,6 +63,9 @@ export function createStaysSection({ tripId, myUid, onError, onFocusOnMap }) {
   let currentTrip = null;
   let currentStays = [];
   let currentStops = null;
+  let currentUsers = {};
+  let currentCtx = null;
+  let forEditingId = null;
 
   const addStayBtn = el("button", { type: "button", className: "btn btn-primary", textContent: "Add stay" });
   const routeHintEl = el("p", { className: "empty-state" }, [
@@ -73,6 +80,8 @@ export function createStaysSection({ tripId, myUid, onError, onFocusOnMap }) {
     const result = await addStayFormDialog(currentTrip, stopDefaults);
     if (!result) return;
     const { priceAmountCents, ...fields } = result;
+    // A stay added from the top finds its stop from its dates or pin (T38).
+    fields.stopKey = stayStopKey(fields, currentStops || [], currentStops || []);
     const firstPriceEntry = priceAmountCents
       ? { id: crypto.randomUUID(), amountCents: priceAmountCents, checkedAt: new Date().toISOString(), byUid: myUid, note: "" }
       : undefined;
@@ -88,13 +97,17 @@ export function createStaysSection({ tripId, myUid, onError, onFocusOnMap }) {
    * dialog's search links — `null` when the stay has no stop yet or no
    * route is chosen, same as everywhere else here. */
   function cityForStay(stay) {
-    const stop = (currentStops || []).find((s) => s.cityKey === stay.stopKey);
+    const key = stayStopKey(stay, currentStops || [], currentStops || []);
+    const stop = key ? (currentStops || []).find((s) => s.cityKey === key) : null;
     return stop ? stop.city : null;
   }
 
   async function openEditStayDialog(stay, trip, focusLocation = false) {
     const result = await editStayFormDialog(stay, trip, focusLocation, cityForStay(stay));
     if (!result) return;
+    // Only fills in a missing or outdated stop; a stop that still fits stays put.
+    const key = stayStopKey({ ...stay, ...result }, currentStops || [], currentStops || []);
+    if (key && key !== stay.stopKey) result.stopKey = key;
     try {
       await updateStay(tripId, stay.id, result);
     } catch (err) {
@@ -109,38 +122,47 @@ export function createStaysSection({ tripId, myUid, onError, onFocusOnMap }) {
     const latest = latestEntry(stay.prices);
     const perNight = latest && nights ? perNightCents(latest.amountCents, nights) : null;
 
-    // Status (§7.7, T24): Shortlisted (default), Out (dimmed, sorted last) or
-    // Chosen (the existing selectedStayIds). Choosing/un-choosing and the Out
-    // flag are independent writes, so every combination the select offers is
-    // reachable from any starting state.
-    const statusSelect = el(
-      "select",
-      { attrs: { "aria-label": `${stay.name} status` } },
-      [
-        el("option", { value: "shortlisted", textContent: "Shortlisted" }),
-        el("option", { value: "out", textContent: "Out" }),
-        el("option", { value: "chosen", textContent: "Chosen" }),
-      ]
-    );
-    statusSelect.value = isChosen ? "chosen" : stay.out ? "out" : "shortlisted";
-    statusSelect.addEventListener("change", async () => {
-      const wantChosen = statusSelect.value === "chosen";
-      const wantOut = statusSelect.value === "out";
-      statusSelect.disabled = true;
+    // Status (§7.7, T38): Choose/Chosen and Out are two toggles, and a stay is
+    // never both — choosing a stay that is Out brings it back in, and marking
+    // a chosen stay Out unchooses it.
+    const chooseBtn = el("button", {
+      type: "button",
+      className: `btn btn-small stay-toggle ${isChosen ? "badge-chosen" : "btn-primary"}`,
+      textContent: isChosen ? "Chosen" : "Choose",
+      attrs: { "aria-pressed": String(isChosen), "aria-label": `Choose ${stay.name}` },
+    });
+    const outBtn = el("button", {
+      type: "button",
+      className: "btn btn-small btn-secondary stay-toggle stay-out-btn",
+      textContent: "Out",
+      attrs: { "aria-pressed": String(!!stay.out), "aria-label": `${stay.name} is out` },
+    });
+    async function changeStatus(write) {
+      chooseBtn.disabled = true;
+      outBtn.disabled = true;
       try {
-        if (wantChosen !== isChosen) {
-          if (wantChosen) await chooseStay(tripId, trip, stay.id);
-          else await unchooseStay(tripId, trip, stay.id);
-        }
-        if (wantOut !== !!stay.out) {
-          await updateStay(tripId, stay.id, { out: wantOut });
-        }
+        await write();
       } catch (err) {
         errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
       } finally {
-        statusSelect.disabled = false;
+        chooseBtn.disabled = false;
+        outBtn.disabled = false;
       }
-    });
+    }
+    chooseBtn.addEventListener("click", () =>
+      changeStatus(async () => {
+        if (isChosen) return unchooseStay(tripId, trip, stay.id);
+        await chooseStay(tripId, trip, stay.id);
+        if (stay.out) await updateStay(tripId, stay.id, { out: false });
+      })
+    );
+    outBtn.addEventListener("click", () =>
+      changeStatus(async () => {
+        if (stay.out) return updateStay(tripId, stay.id, { out: false });
+        if (isChosen) await unchooseStay(tripId, trip, stay.id);
+        await updateStay(tripId, stay.id, { out: true });
+      })
+    );
 
     const editBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Edit" });
     editBtn.addEventListener("click", () => openEditStayDialog(stay, trip));
@@ -198,7 +220,7 @@ export function createStaysSection({ tripId, myUid, onError, onFocusOnMap }) {
     } else {
       const setLocationBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Set location" });
       setLocationBtn.addEventListener("click", () => openEditStayDialog(stay, trip, true));
-      locationLine = el("p", { className: "muted" }, ["No pin yet · ", setLocationBtn]);
+      locationLine = el("p", { className: "muted" }, ["No map pin · ", setLocationBtn]);
     }
 
     const safeLink = stay.link ? safeUrl(stay.link) : null;
@@ -209,38 +231,74 @@ export function createStaysSection({ tripId, myUid, onError, onFocusOnMap }) {
 
     const note = stay.note ? el("p", { className: "card-notes-clamp", textContent: stay.note }) : null;
 
+    const forLine = currentCtx
+      ? forControl(stay, "stay", {
+          ctx: currentCtx,
+          travelers: trip.travelers || [],
+          editing: forEditingId === stay.id,
+          onToggle: () => {
+            forEditingId = forEditingId === stay.id ? null : stay.id;
+            renderSection(currentStays, currentTrip, currentUsers, currentStops);
+          },
+          onSet: (ids) =>
+            setForTravelers(tripId, "stays", stay.id, ids).catch((err) =>
+              errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }))
+            ),
+        })
+      : null;
+
     return el("article", { className: `card stay-card${isChosen ? " stay-card-chosen" : ""}${stay.out ? " stay-card-out" : ""}`, attrs: { "data-stay-id": stay.id } }, [
       header,
       priceRow,
       el("p", { className: "muted", textContent: metaText }),
       locationLine,
       note,
-      el("div", { className: "stay-actions" }, [statusSelect, openLink, editBtn, duplicateBtn, deleteBtn].filter(Boolean)),
+      forLine,
+      el("div", { className: "stay-actions" }, [chooseBtn, outBtn, openLink, editBtn, duplicateBtn, deleteBtn].filter(Boolean)),
       errorHolder,
       commentsEl,
     ].filter(Boolean));
   }
 
-  /** The coverage bar, its "X of Y nights covered" summary, and (once at
-   * least one stay here is chosen) the chosen total and per-person share. */
+  /** One cell per night: the date, how many of the travelers sleep in this
+   * city that night ("2 of 3"), and a mark for covered / double-booked — plus
+   * the "X of Y nights covered" summary, and (once at least one stay here is
+   * chosen) the chosen total and per-person share. */
   function renderCoverage(stop, chosenStaysHere, trip) {
     const entries = nightCoverage(stop, chosenStaysHere);
     if (entries.length === 0) return null;
-    const coveredCount = entries.filter((e) => e.status !== "open").length;
+    const travelerCount = (trip.travelers || []).length;
+    const { covered, total, complete } = coverageSummary(entries);
+    const marks = { open: "", covered: " ✓", double: " ×2" };
+    const words = { open: "no stay chosen", covered: "covered", double: "double-booked" };
     const bar = el(
       "div",
       { className: "coverage-bar" },
-      entries.map((e) => el("span", { className: `coverage-cell coverage-${e.status}`, attrs: { title: `${formatLegDate(e.date)}: ${e.status}` } }))
+      entries.map((e) => {
+        const date = (formatLegDate(e.date) || e.date).split(" ").slice(1).join(" ");
+        const who = e.travelerIds ? `${e.travelerIds.length} of ${travelerCount}` : null;
+        return el(
+          "span",
+          {
+            className: `coverage-cell coverage-${e.status}`,
+            attrs: { title: `${formatLegDate(e.date)}: ${words[e.status]}${who ? `, ${who} travelers` : ""}` },
+          },
+          [el("span", { className: "coverage-date", textContent: `${date}${marks[e.status]}` }), who ? el("span", { className: "coverage-who", textContent: who }) : null].filter(Boolean)
+        );
+      })
     );
-    const summary = el("p", { className: "muted coverage-summary", textContent: `${coveredCount} of ${entries.length} night${entries.length === 1 ? "" : "s"} covered` });
+    const summary = el("p", {
+      className: `muted coverage-summary${complete ? " coverage-summary-complete" : ""}`,
+      textContent: complete ? `All ${total} night${total === 1 ? "" : "s"} covered ✓` : `${covered} of ${total} night${total === 1 ? "" : "s"} covered`,
+    });
     const children = [bar, summary];
     if (chosenStaysHere.length > 0) {
-      const { cents, complete } = stopStayTotal(chosenStaysHere);
-      const n = (trip.travelers || []).length || 1;
+      const { cents, complete: priced } = stopStayTotal(chosenStaysHere);
+      const n = travelerCount || 1;
       children.push(
         el("p", {
           className: "stop-total",
-          textContent: `${formatMoney(cents, trip.currency)}${complete ? "" : " so far"} total · ${formatMoney(Math.round(cents / n), trip.currency)} each`,
+          textContent: `${formatMoney(cents, trip.currency)}${priced ? "" : " so far"} total · ${formatMoney(Math.round(cents / n), trip.currency)} each`,
         })
       );
     }
@@ -332,10 +390,12 @@ export function createStaysSection({ tripId, myUid, onError, onFocusOnMap }) {
 
   return {
     element,
-    render(stays, trip, usersById, stops = null) {
+    render(stays, trip, usersById, stops = null, ctx = null) {
       currentTrip = trip;
       currentStays = stays;
       currentStops = stops;
+      currentUsers = usersById;
+      currentCtx = ctx;
       renderWhenIdle(staysListEl, () => renderSection(stays, trip, usersById, stops));
     },
     focusCard(stayId) {

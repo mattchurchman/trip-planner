@@ -3,8 +3,8 @@ import { el, friendlyError, toast } from "../ui.js";
 import { importFromMyMapsDialog } from "./importPlaces.js";
 import { loadAirports } from "../lookup.js";
 import { stopsFor } from "../lib/route.js";
-import { mergedStops } from "../lib/choices.js";
-import { nearestStop, stopChips } from "../lib/stops.js";
+import { mergedStops, budgetContext } from "../lib/choices.js";
+import { nearestStop, stopChips, stayStopKey } from "../lib/stops.js";
 import { categoryColor } from "../lib/categories.js";
 import { voteCounts } from "../lib/votes.js";
 import { stayNumbers } from "../lib/optionSort.js";
@@ -83,6 +83,7 @@ export function renderMapPage(container, tripId, myUid) {
   let listMode = "places";
   const mapClickState = { armed: false, onPick: null, disarm: null };
   const cities = []; // mutated in place; read live by the places section's forms
+  let routeStops = []; // the merged route (§11), empty until someone chooses an option
   const placeMarkersById = new Map();
   const stayMarkersById = new Map();
 
@@ -196,6 +197,12 @@ export function renderMapPage(container, tripId, myUid) {
     return null;
   }
 
+  /** A stay's stop for chip filtering (T38): the same rule the Stays list
+   * groups by, so a stay's pin and its card always agree on where it is. */
+  function effectiveStayKey(stay) {
+    return stayStopKey(stay, routeStops, cities);
+  }
+
   function matchesChip(stopKey) {
     if (selectedChip == null) return true;
     if (selectedChip === ELSEWHERE) return !stopKey || !isKnownCity(stopKey);
@@ -268,23 +275,30 @@ export function renderMapPage(container, tripId, myUid) {
     }
   }
 
+  /** Moves the map to the chip's city or the visible pins; true when it had
+   * something real to show (false = the empty world view). */
   function fitMap(visiblePlaces, visibleStays) {
-    if (!map) return;
+    if (!map) return false;
     if (selectedChip && selectedChip !== ELSEWHERE) {
       const city = cities.find((c) => c.stopKey === selectedChip);
       if (city && city.lat != null && city.lng != null) {
         map.setView([city.lat, city.lng], 12);
-        return;
+        return true;
       }
     }
     const points = [...visiblePlaces, ...visibleStays].filter((p) => p.lat != null && p.lng != null).map((p) => [p.lat, p.lng]);
-    if (points.length > 0) map.fitBounds(points, { padding: [30, 30], maxZoom: 15 });
-    else map.setView([20, 0], 2);
+    if (points.length > 0) {
+      map.fitBounds(points, { padding: [30, 30], maxZoom: 15 });
+      return true;
+    }
+    map.setView([20, 0], 2);
+    return false;
   }
 
   function rerenderAll(forceFit = false) {
     if (!trip) return;
     const chosen = airports ? chosenStops(trip, flights, options, airports) : [];
+    routeStops = chosen;
     const fallback = chosen.length === 0 && airports ? allOptionCities(flights, options, airports) : [];
     cities.splice(0, cities.length, ...(chosen.length > 0 ? chosen : fallback));
     const chips = stopChips(chosen, fallback);
@@ -293,15 +307,15 @@ export function renderMapPage(container, tripId, myUid) {
     noRouteHintEl.hidden = chosen.length > 0 || fallback.length === 0;
 
     const visiblePlaces = places.filter((p) => matchesChip(effectiveStopKey(p)));
-    const visibleStays = stays.filter((s) => matchesChip(effectiveStopKey(s)));
+    const visibleStays = stays.filter((s) => matchesChip(effectiveStayKey(s)));
 
     placesSection.render(visiblePlaces, trip, usersById, selectedCityName());
-    staysSection.render(visibleStays, trip, usersById, chosen.length > 0 ? chosen : null);
+    const ctx = budgetContext({ trip, travelers: trip.travelers || [], options, flights, airports });
+    staysSection.render(visibleStays, trip, usersById, chosen.length > 0 ? chosen : null, ctx);
     renderPins(visiblePlaces, visibleStays);
-    if (forceFit || !everFitted) {
-      fitMap(visiblePlaces, visibleStays);
-      everFitted = true;
-    }
+    // The first render usually lands before places and stays have loaded, so
+    // only stop re-fitting once the map has had real pins to show.
+    if (forceFit || !everFitted) everFitted = fitMap(visiblePlaces, visibleStays) || everFitted;
   }
 
   const unsubTrip = watchTrip(tripId, (t) => { trip = t; rerenderAll(); }, (err) => onError(friendlyError(err)));

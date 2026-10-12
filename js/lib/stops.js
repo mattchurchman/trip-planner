@@ -35,6 +35,49 @@ export function nearestStop(lat, lng, cities, maxKm = 150) {
   return bestKm <= maxKm ? bestKey : null;
 }
 
+const keyOf = (stop) => (stop && (stop.stopKey || stop.cityKey)) || null;
+
+/**
+ * The stop a stay belongs to (T38, §7.7), as its `stopKey`, or `null`:
+ * the merged-route stop whose dates contain the stay's check-in (a stop
+ * runs from its first night up to, not including, the day it ends — a
+ * check-in on that last day is the next stop's night), else the nearest
+ * city within 150km of its pin. When several stops overlap the check-in
+ * (travelers in different cities at once), the one nearest the pin wins.
+ * `mergedStops` carry `from`/`to`/`cityKey`; `cities` is `nearestStop`'s list.
+ */
+export function stopForStay(stay, mergedStops, cities) {
+  if (!stay) return null;
+  const hasPin = stay.lat != null && stay.lng != null;
+  if (stay.checkIn) {
+    const containing = (mergedStops || []).filter(
+      (stop) => keyOf(stop) && stop.from && stop.from <= stay.checkIn && (!stop.to || stay.checkIn < stop.to)
+    );
+    if (containing.length === 1 || (containing.length > 1 && !hasPin)) return keyOf(containing[0]);
+    if (containing.length > 1) {
+      const coords = new Map((cities || []).map((c) => [keyOf(c), c]));
+      const km = (stop) => {
+        const c = coords.get(keyOf(stop));
+        return c && c.lat != null && c.lng != null ? haversineKm(stay.lat, stay.lng, c.lat, c.lng) : Infinity;
+      };
+      return keyOf(containing.reduce((best, stop) => (km(stop) < km(best) ? stop : best)));
+    }
+  }
+  return hasPin ? nearestStop(stay.lat, stay.lng, cities) : null;
+}
+
+/**
+ * The stop a stay shows under today: its own `stopKey` while that is still a
+ * stop of the current route (or a known city), otherwise whatever
+ * `stopForStay` works out — never written back, so changing the route never
+ * needs a mass-write.
+ */
+export function stayStopKey(stay, mergedStops, cities) {
+  const own = stay && stay.stopKey;
+  if (own && [...(mergedStops || []), ...(cities || [])].some((stop) => keyOf(stop) === own)) return own;
+  return stopForStay(stay, mergedStops, cities);
+}
+
 /**
  * Stop chips for the Map tab (V4 §8): one per distinct city, in route
  * order, first occurrence wins when the route visits a city twice. Falls

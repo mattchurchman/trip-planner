@@ -19,10 +19,12 @@ export function stayNights(stay) {
 }
 
 /**
- * One entry per night of `stop` (a `stopsFor` result: `from`/`to` dates),
- * earliest first: `{ date, status }` where `status` is "open" (no chosen
+ * One entry per night of `stop` (a merged stop: `from`/`to` dates), earliest
+ * first: `{ date, status, travelerIds }` where `status` is "open" (no chosen
  * stay covers that night), "covered" (exactly one does) or "double" (two or
- * more do). Empty when the stop has no dates.
+ * more do), and `travelerIds` is who sleeps in this city that night, from the
+ * stop's `nights` list (T38) — `null` when the stop doesn't carry one. Empty
+ * when the stop has no dates.
  */
 export function nightCoverage(stop, chosenStays) {
   const nights = nightsBetween(stop && stop.from, stop && stop.to);
@@ -32,9 +34,22 @@ export function nightCoverage(stop, chosenStays) {
   for (let i = 0; i < nights; i++) {
     const date = addDays(stop.from, i);
     const count = covering.reduce((sum, dates) => sum + (dates.includes(date) ? 1 : 0), 0);
-    entries.push({ date, status: count === 0 ? "open" : count === 1 ? "covered" : "double" });
+    const there = Array.isArray(stop.nights) ? stop.nights.find((n) => n.date === date) : null;
+    entries.push({
+      date,
+      status: count === 0 ? "open" : count === 1 ? "covered" : "double",
+      travelerIds: Array.isArray(stop.nights) ? (there ? there.travelerIds : []) : null,
+    });
   }
   return entries;
+}
+
+/** `nightCoverage`'s tally: how many nights have a chosen stay, and whether
+ * every one does (T38). A stop with no dated nights is never complete. */
+export function coverageSummary(entries) {
+  const total = (entries || []).length;
+  const covered = (entries || []).filter((e) => e.status !== "open").length;
+  return { covered, total, complete: total > 0 && covered === total };
 }
 
 /** The chosen stays' combined latest price for one stop. `complete` is false
