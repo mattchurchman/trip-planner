@@ -429,6 +429,8 @@ service cloud.firestore {
 
 - Signed out: a centered card with the logo, the app name, one sentence, **Continue with Google**, and email-and-password beside it — sign in, create account, forgot password — with `autocomplete` set so iPhone offers Face ID fill.
 - Google uses `signInWithRedirect` on phones and in the home-screen app, and `signInWithPopup` on desktop. `authDomain` is the app's own site (`trip-planner-mattchurchman.web.app`), which is what makes the redirect stick on iPhone.
+- Safari can restore the page from its back-forward cache after the Google redirect instead of loading it fresh, which would leave sign-in looking like it silently did nothing. A `pageshow` listener reloads the page when that happens (§7.1, T32).
+- In the iPhone home-screen app, iOS sometimes can't hand the redirect result back to the installed app at all. If a Google sign-in attempt there returns with no user, the sign-in screen shows "On iPhone, Google sign-in can't return to the home-screen app. Sign in with email and password here, or sign in once in Safari." (remembered across the redirect in `sessionStorage`, T32).
 - A brand-new password account is sent a confirmation email and sees "Check your email, then tap **Continue**" until it is verified — the rules require `email_verified` (§6).
 - After sign-in, read `allowlist/<lowercase email>`. If it doesn't exist, show "You're signed in as <email>, but this account isn't on the trip list yet. Ask the owner to add it." plus **Sign out**, and load nothing else.
 - If allowed, write the `users/{uid}` document, then show the trips list.

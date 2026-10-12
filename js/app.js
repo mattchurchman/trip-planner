@@ -23,6 +23,17 @@ let tripWatchers = [];
 let removeRouter = null;
 let redirectError = "";
 
+const GOOGLE_REDIRECT_ATTEMPT_KEY = "googleRedirectAttempted";
+
+// Safari can restore this page from its back-forward cache after the Google
+// redirect round trip instead of loading it fresh, so our code never reruns
+// to pick up the sign-in that Firebase already completed. A reload forces
+// that fresh run. Other browsers rarely hit this, and a reload is harmless
+// either way.
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted) location.reload();
+});
+
 function clearTripWatchers() {
   for (const unsubscribe of tripWatchers) unsubscribe();
   tripWatchers = [];
@@ -37,17 +48,29 @@ function showSetupMessage() {
   );
 }
 
+function isStandaloneApp() {
+  return window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+}
+
 function useRedirectSignIn() {
-  return window.matchMedia("(max-width: 767px)").matches
-    || window.matchMedia("(display-mode: standalone)").matches
-    || navigator.standalone === true;
+  return window.matchMedia("(max-width: 767px)").matches || isStandaloneApp();
 }
 
 function showSignedOut() {
   root.replaceChildren(renderSignIn({
-    google: () => useRedirectSignIn()
-      ? signInWithRedirect(auth, new GoogleAuthProvider())
-      : signInWithPopup(auth, new GoogleAuthProvider()),
+    google: () => {
+      if (isStandaloneApp()) {
+        try {
+          sessionStorage.setItem(GOOGLE_REDIRECT_ATTEMPT_KEY, "1");
+        } catch {
+          // Safari private mode or a full storage can refuse this; the
+          // fallback message below just won't show if sign-in doesn't return.
+        }
+      }
+      return useRedirectSignIn()
+        ? signInWithRedirect(auth, new GoogleAuthProvider())
+        : signInWithPopup(auth, new GoogleAuthProvider());
+    },
     signIn: (email, password) => signInWithEmailAndPassword(auth, email, password),
     create: async (email, password) => {
       const credential = await createUserWithEmailAndPassword(auth, email, password);
@@ -228,6 +251,13 @@ async function init() {
     showSetupMessage();
     return;
   }
+  let hadRedirectAttempt = false;
+  try {
+    hadRedirectAttempt = sessionStorage.getItem(GOOGLE_REDIRECT_ATTEMPT_KEY) === "1";
+    sessionStorage.removeItem(GOOGLE_REDIRECT_ATTEMPT_KEY);
+  } catch {
+    // Can't read the flag back; worst case the fallback message doesn't show.
+  }
   getRedirectResult(auth).catch((error) => {
     redirectError = error.message || "Google sign-in didn't finish. Try again.";
     if (!auth.currentUser) showSignedOut();
@@ -239,6 +269,10 @@ async function init() {
     if (user) {
       handleSignedIn(user);
     } else {
+      if (hadRedirectAttempt && isStandaloneApp()) {
+        redirectError = "On iPhone, Google sign-in can't return to the home-screen app. Sign in with email and password here, or sign in once in Safari.";
+        hadRedirectAttempt = false;
+      }
       showSignedOut();
     }
   });

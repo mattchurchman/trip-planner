@@ -95,4 +95,10 @@ Tab names: **Overview · Routes · Map · Days** (T23 removes Recap; T25 merges 
 | No flights yet for {name}. Paste a flight link above. | Routes, empty home-flights card |
 | Adding to: | Paste sheet, the idea/option it will join (with selects to change either) |
 | Earlier flights ({N}) | Routes, collapsed list of flights saved before Routes existed |
+
+## Phone sign-in (T32)
+
+| Wording | Where |
+|---|---|
+| On iPhone, Google sign-in can't return to the home-screen app. Sign in with email and password here, or sign in once in Safari. | Sign-in screen, shown only after a Google sign-in attempt from the home-screen app comes back with no user |
 | Move to… | Earlier flights row — picks a traveler (home) or a shared hop, plus the idea and option |
