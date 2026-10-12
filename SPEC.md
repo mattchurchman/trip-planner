@@ -199,7 +199,7 @@ Also: spacing `--space-1`…`--space-7` (4, 8, 12, 16, 24, 32, 48 px), `--r: 16p
 
 Conventions:
 
-- Money is stored as integer cents in a field ending in `Cents`. `$741.24` is stored as `74124`. Each trip has one `currency` (ISO code, default `"USD"`) and every amount in the trip uses it.
+- Money is stored as integer cents in a field ending in `Cents`. `$741.24` is stored as `74124`. Every trip's `currency` is fixed at `"USD"` (not editable in the UI) and every amount in the trip uses it.
 - Calendar dates are strings `"YYYY-MM-DD"`. Document timestamps (`createdAt`, `updatedAt`) use Firestore `serverTimestamp()`. Timestamps inside arrays (price entries) are ISO 8601 UTC strings from `new Date().toISOString()`, because `serverTimestamp()` cannot be used inside arrays.
 - IDs are Firestore auto-IDs, except array items (travelers, price entries), which use `crypto.randomUUID()`.
 - Optional values are stored as `null`, never left missing, so every document of a type has the same fields.
@@ -460,7 +460,7 @@ Any place, stay, or the trip itself can have a thread. Show the count, expand in
 
 ### 7.5 Overview tab
 
-- Editable: trip name (non-blank), start and end dates (end not before start), currency (three uppercase letters).
+- Editable: trip name (non-blank), start and end dates (end not before start). Currency is fixed at USD and not shown as a field.
 - **Travelers** (`travelers.js`): add by choosing an app member or typing a name; edit name, home city and home airport inline; **Remove** with confirmation. At least one traveler must remain. Removing someone asks whether to delete their flights too, since Routes lists home flights per traveler and nobody could reach them afterwards.
 - **Route**: the chosen option as a one-line path ("Rome → Florence → Barcelona → Rome", linking to Routes) with the signed-in traveler's total beneath it, shown as "at least $X" when a price is missing. With nothing chosen, a hint pointing at Routes.
 - **Split costs** (`splitCosts.js`): add, edit and delete a label, amount and note. Split equally across all travelers.

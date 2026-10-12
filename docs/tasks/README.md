@@ -51,7 +51,7 @@ If a task fails twice, say "Revert the last commit" and rerun it in a fresh sess
 | # | Task | Model | Effort | Depends on | Status |
 |---|---|---|---|---|---|
 | T32 | [Google sign-in on phones](T32-phone-sign-in.md) | Sonnet | high | — | Done (2026-10-12) |
-| T33 | [No currency field; traveler details always save](T33-overview-fixes.md) | Sonnet | medium | — | To do |
+| T33 | [No currency field; traveler details always save](T33-overview-fixes.md) | Sonnet | medium | — | Done (2026-10-12) |
 | T34 | [Paste where it goes: one button per section](T34-scoped-paste.md) | Sonnet | high | — | To do |
 | T35 | [Per-traveler choices, "who's it for", merged stops](T35-choices-and-costs-model.md) | Opus | high | T34 | To do |
 | T36 | [Routes: choose ideas and options separately, clear costs](T36-routes-choose-and-costs.md) | Sonnet | high | T35 | To do |

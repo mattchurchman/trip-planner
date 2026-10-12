@@ -136,7 +136,7 @@ export function pasteFlightDialog({ clipboardText, traveler, trip, airports, ide
       } else {
         if (!priceTouched) priceInput.value = "";
         const shown = new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(parsed.price.amountCents / 100);
-        priceHelperEl.textContent = `Google showed ${shown} ${parsed.price.currency} — this trip uses ${trip.currency}, so type the price in ${trip.currency} if you know it.`;
+        priceHelperEl.textContent = `Google showed ${shown} ${parsed.price.currency} — type the USD price if you know it.`;
       }
     }
 
