@@ -172,9 +172,8 @@ export function renderOverviewPage(container, tripId, myUid) {
     unsubComments = unsubscribe;
   }
 
-  let flushTravelers = () => {};
   function renderTravelersCard() {
-    flushTravelers = renderTravelers(travelersEl, travelerError, { tripId, trip, usersById });
+    renderTravelers(travelersEl, travelerError, { tripId, getTrip: () => trip, usersById, myUid });
   }
 
   function renderCostsSection() {
@@ -193,17 +192,6 @@ export function renderOverviewPage(container, tripId, myUid) {
     renderAlbum();
     renderTripComments();
   }
-
-  // Backup for cases a tab switch doesn't trigger this module's own teardown
-  // first (e.g. the phone's PWA going to the background).
-  function onVisibilityChange() {
-    if (document.visibilityState === "hidden") flushTravelers();
-  }
-  function onPageHide() {
-    flushTravelers();
-  }
-  document.addEventListener("visibilitychange", onVisibilityChange);
-  window.addEventListener("pagehide", onPageHide);
 
   const unsubTrip = watchTrip(
     tripId,
@@ -281,9 +269,6 @@ export function renderOverviewPage(container, tripId, myUid) {
     .catch((err) => onError(friendlyError(err)));
 
   return () => {
-    flushTravelers();
-    document.removeEventListener("visibilitychange", onVisibilityChange);
-    window.removeEventListener("pagehide", onPageHide);
     unsubTrip();
     unsubUsers();
     unsubFlights();

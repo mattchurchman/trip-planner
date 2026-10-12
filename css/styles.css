@@ -810,18 +810,44 @@ textarea:focus {
   gap: var(--space-3);
 }
 
-.traveler-row {
+/* One card per traveler (T43): border/shadow tokens keep two travelers from
+   blurring together the way the old inline-field rows could. */
+.traveler-card {
   display: flex;
-  gap: var(--space-2);
   align-items: center;
+  gap: var(--space-3);
   margin-bottom: var(--space-2);
-  flex-wrap: wrap;
 }
 
-.traveler-row input {
-  padding: 6px var(--space-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+.traveler-card-avatar {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  font-size: 1.1rem;
+}
+
+.traveler-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.traveler-card-name {
+  margin: 0;
+  font-weight: 600;
+}
+
+.traveler-card-detail {
+  margin: 0;
+}
+
+.traveler-card-edit {
+  flex: none;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.btn-danger-link {
+  color: var(--bad);
 }
 
 .rank-control {
