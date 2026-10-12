@@ -55,6 +55,7 @@ export function renderRoutesPage(container, tripId, myUid) {
   const homeFlightsSectionEl = el("div", { className: "route-home card" });
   const optionsListEl = el("div", { className: "route-options-list" });
   const addIdeaBtn = el("button", { type: "button", className: "btn btn-small", textContent: "+ Idea" });
+  addIdeaBtn.addEventListener("click", () => onAddIdea());
   const addOptionBtn = el("button", { type: "button", className: "btn btn-small", textContent: "+ Option" });
   const earlierFlightsEl = el("div", { className: "route-earlier", hidden: true });
   const summaryEl = el("div", { className: "route-summary", attrs: { "aria-live": "polite" } });
@@ -81,6 +82,13 @@ export function renderRoutesPage(container, tripId, myUid) {
   mainWrap.hidden = true;
 
   container.replaceChildren(loadErrorEl, mainWrap, emptyWrap, earlierFlightsEl);
+
+  // The summary bar is sticky and floats over whatever is last in the flow
+  // (T44); keep that much room below it so the last card can scroll clear.
+  const summaryResizeObserver = new ResizeObserver(() => {
+    mainWrap.style.paddingBottom = summaryEl.hidden ? "" : `${summaryEl.offsetHeight}px`;
+  });
+  summaryResizeObserver.observe(summaryEl);
 
   function onError(message) {
     loadErrorEl.replaceChildren(el("p", { className: "field-error", textContent: message }));
@@ -209,9 +217,14 @@ export function renderRoutesPage(container, tripId, myUid) {
   }
 
   function onAddIdea() {
+    addIdeaBtn.disabled = true;
+    addIdeaEmptyBtn.disabled = true;
     return run(async () => {
       const ref = await addIdeaDialog(tripId, ideas, myUid);
       if (ref) selectedIdeaId = ref.id;
+    }).finally(() => {
+      addIdeaBtn.disabled = false;
+      addIdeaEmptyBtn.disabled = false;
     });
   }
 
@@ -436,6 +449,7 @@ export function renderRoutesPage(container, tripId, myUid) {
   ];
 
   return () => {
+    summaryResizeObserver.disconnect();
     for (const unsubscribe of unsubscribes) unsubscribe();
   };
 }

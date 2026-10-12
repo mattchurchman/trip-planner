@@ -109,14 +109,52 @@ export function renderIdeaSwitch(switchEl, actionsEl, { ideas, selectedIdeaId, c
   actionsEl.replaceChildren(chooseBtn, renameBtn, deleteBtn);
 }
 
+// Whether the compact phone bar's breakdown is expanded, remembered for the
+// session (not persisted) so re-renders don't collapse it under the owner.
+let detailsOpen = false;
+
 /** The sticky summary at the bottom of the tab (§7.6): the traveler on screen
  * and what their own chosen flights add up to. `breakdown` comes from
- * `travelerBreakdown`; "at least" whenever a price or flight is missing. */
+ * `travelerBreakdown`; "at least" whenever a price or flight is missing.
+ * Below 760px this collapses to one line with a Details toggle (T44); the
+ * full line above stays for the 760px+ bar. */
 export function renderSummaryBar(barEl, { traveler, breakdown, hasIdea, currency }) {
   const money = (cents) => formatMoney(cents, currency);
   const note = hasIdea ? "" : " (no idea chosen)";
+  const prefix = breakdown.complete ? "" : "at least ";
+
+  const toggleBtn = el("button", {
+    type: "button",
+    className: "btn btn-link route-summary-toggle",
+    textContent: detailsOpen ? "Details ▲" : "Details ▾",
+    attrs: { "aria-expanded": String(detailsOpen) },
+  });
+  toggleBtn.addEventListener("click", () => {
+    detailsOpen = !detailsOpen;
+    renderSummaryBar(barEl, { traveler, breakdown, hasIdea, currency });
+  });
+
+  const detailsEl = el(
+    "div",
+    { className: "route-summary-details", hidden: !detailsOpen },
+    [
+      el("p", { textContent: `Home flights: ${money(breakdown.homeCents)}` }),
+      el("p", { textContent: `Option flights: ${money(breakdown.hopCents)}` }),
+      el("p", { textContent: `Stays: ${money(breakdown.stayCents)}` }),
+      el("p", { textContent: `Other costs: ${money(breakdown.costCents)}` }),
+      ...(breakdown.missing.length
+        ? [el("ul", { className: "route-summary-missing" }, breakdown.missing.map((m) => el("li", { textContent: m })))]
+        : []),
+    ]
+  );
+
   barEl.replaceChildren(
-    el("span", { textContent: `${traveler.name}: home ${money(breakdown.homeCents)} + option flights ${money(breakdown.hopCents)}${note}` }),
-    el("b", { className: "mono", textContent: `= ${breakdown.complete ? "" : "at least "}${money(breakdown.totalCents)}` })
+    el("div", { className: "route-summary-row" }, [
+      el("span", { className: "route-summary-full", textContent: `${traveler.name}: home ${money(breakdown.homeCents)} + option flights ${money(breakdown.hopCents)}${note}` }),
+      el("b", { className: "mono route-summary-full", textContent: `= ${prefix}${money(breakdown.totalCents)}` }),
+      el("span", { className: "route-summary-compact", textContent: `${traveler.name}: ${prefix}${money(breakdown.totalCents)}` }),
+      toggleBtn,
+    ]),
+    detailsEl
   );
 }

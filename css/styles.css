@@ -2205,17 +2205,13 @@ textarea:focus {
   font-weight: 600;
 }
 
-/* The per-traveler total pinned above the phone tab bar (T36). */
+/* The per-traveler total pinned above the phone tab bar (T36). Below 760px
+   (T44) it's a slim single-line bar with a Details toggle that expands the
+   breakdown; the full line is for the 760px+ bar only. */
 .route-summary {
   position: sticky;
   bottom: calc(72px + env(safe-area-inset-bottom, 0px));
   z-index: 5;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2) var(--space-3);
-  padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-card);
   background: var(--ink);
   color: var(--bg);
@@ -2227,8 +2223,69 @@ textarea:focus {
   display: none;
 }
 
+.route-summary-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+
 .route-summary b {
   font-size: 1.1rem;
+}
+
+.route-summary-compact,
+.route-summary-toggle {
+  display: none;
+}
+
+.route-summary-details {
+  display: none;
+}
+
+@media (max-width: 759px) {
+  .route-summary-row {
+    min-height: 44px;
+    padding: var(--space-2) var(--space-4);
+    flex-wrap: nowrap;
+  }
+
+  .route-summary-full {
+    display: none;
+  }
+
+  .route-summary-compact {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .route-summary-toggle {
+    display: inline-block;
+    color: var(--bg);
+    flex: none;
+  }
+
+  .route-summary-details[hidden] {
+    display: none;
+  }
+
+  .route-summary-details:not([hidden]) {
+    display: block;
+    padding: 0 var(--space-4) var(--space-3);
+  }
+
+  .route-summary-details p {
+    margin: 0 0 var(--space-1);
+  }
+
+  .route-summary-missing {
+    margin: var(--space-1) 0 0;
+    padding-left: var(--space-4);
+  }
 }
 
 @media (min-width: 760px) {
