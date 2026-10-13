@@ -129,6 +129,32 @@ Tab names: **Overview · Routes · Map · Days** (T23 removes Recap; T25 merges 
 |---|---|
 | 🏠 {stay name} | Days, the house pin of the day's chosen stay — the stay's name alone in its popup ("Stay" when it has no name) |
 
+## Round 6, the phone pass (T41–T52)
+
+| Wording | Where |
+|---|---|
+| Help (as the round **?** button's `aria-label`) | Top bar, beside the account avatar — no text link, no ↗ arrow |
+| Edit | Overview, on each traveler card — opens the sheet with name, home city and airport |
+| {Name} (you) | Overview, the signed-in person's traveler card |
+| Add home city and airport | Overview, a traveler card with both fields empty |
+| Save / Cancel / Remove traveler | Overview, traveler edit sheet (Remove is a quiet danger link at the bottom) |
+| At least one traveler must remain. | Overview, traveler edit sheet, Remove on the last traveler |
+| Paste | Every link box (flight, stay, place) — fills it from the clipboard; the box also reads the clipboard once when the sheet opens |
+| Couldn't read this link — fill in the details below. | Any link box, when the text isn't a link it understands |
+| Check / Check price / + Add price | Price chip (§7.9): the amount plus ↻ and **Check**, **Check price** once over 3 days old, **+ Add price** with no price yet |
+| Checked today / Checked {N} days ago | Price chip, the age line under the amount |
+| Details ▾ / Details ▲ | Routes, the slim bottom total bar on phones — opens and closes the breakdown |
+| I live here — no flight needed | Routes, under **Paste flight link** in the home-flights card |
+| Matches your home airport | Routes, beside the tick when the home airport already says they live there (ticked and not switchable) |
+| No flight needed — {name} lives in {city} | Routes, the home-flights card for a local traveler (no money in its heading) |
+| Already home | Routes, the end of a local traveler's rail, in place of a flight home |
+| Flights saved here stay put, but they don't count while {name} lives in {city}. | Routes, under flights saved before the traveler became local |
+| No stays yet for {city}. | Stays, a stop group with no stays — shown with its dates, nights, empty night bar, search links and **Add stay** |
+| No stays yet. Search above, then paste a link to add one. | Stays, only when there's no route **and** no stays |
+| {city} · {Day, Mon D} | Days, a day card's header — the date alone with no title, the title alone when undated, **Undated day** when it has neither |
+
+Round 6 retires the event fields: **Add place** no longer asks for event dates, the "Events during trip dates" filter is gone, and Days no longer shows "Happening this day". Put a date in the place's note instead.
+
 ## Phone sign-in (T32)
 
 | Wording | Where |

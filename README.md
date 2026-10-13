@@ -152,6 +152,11 @@ A few habits that keep this working:
 | Everything says "You don't have access" | The rules weren't published. Redo step C |
 | The site shows a 404 page | Wait a few minutes after the first deployment, then check the latest GitHub Actions run |
 | Your latest changes don't show | Wait 1–2 minutes for the GitHub Actions deployment, then reload |
+| A paste box stays empty when the sheet opens | The phone only hands over the clipboard when asked. Tap the **Paste** bubble if iOS shows one, or the **Paste** button beside the box, or long-press and paste |
+| A traveler's name or airport didn't stick | Editing a traveler is one sheet now: change the fields and tap **Save**. Closing it without saving keeps the old values |
+| Routes says "No flight needed" for someone unexpectedly | Their home airport is the city that idea flies into, so the app counts them as living there. Fix the airport on Overview, or untick **I live here** where it was ticked by hand |
+| A city appears twice in Stays or Days | On purpose since T46: you leave and come back, so each visit has its own dates and nights. The city you fly into ends at your first hop |
+| A day has no **Open walking route** button | It needs two places with pins, or one place plus that night's hotel in the same city. Places with no pin are left out |
 | A pasted flight link says it can't be read | You copied the **Share** link. Open it, then copy the whole address out of the browser's address bar instead |
 | "This looks like a KMZ file" when importing places | In My Maps, use ⋮ → Export to KML/KMZ and tick "Export as KML instead of KMZ" |
 | Overview says "Not chosen yet" for someone who did choose | Choosing is per traveler. On Routes, pick that person's name at the top first — the Choose buttons only ever set the traveler on screen |

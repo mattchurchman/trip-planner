@@ -32,6 +32,7 @@
         <p><strong>Jump to:</strong></p>
         <ul>
           <li><a href="#home-screen">Add to home screen and sign in</a></li>
+          <li><a href="#travelers">Overview: who's coming</a></li>
           <li><a href="#routes">Routes: paste flights where they go</a></li>
           <li><a href="#choosing">Choose your idea and your option</a></li>
           <li><a href="#totals">Who's this for, and how totals add up</a></li>
@@ -51,6 +52,7 @@
           <li><strong>On iPhone, email and password is the safer choice.</strong> Google sign-in sometimes can't come back to a home-screen app, and the app will tell you so and ask for a password instead. If you'd rather use Google, sign in once in Safari first — then the home-screen app opens already signed in.</li>
           <li>A brand-new password account gets one confirmation email. Open it on the same phone, then tap <strong>Continue</strong>.</li>
           <li>If you see "this account isn't on the trip list yet," ask the owner to add your email — lowercase, exactly as you typed it.</li>
+          <li>The round <strong>?</strong> in the top bar, beside your initial, opens this page again at any time.</li>
         </ol>
         <details>
           <summary><strong>If it doesn't work</strong></summary>
@@ -63,24 +65,44 @@
         </details>
       </section>
 
+      <section class="card help-section" id="travelers">
+        <h2>Overview: who's coming</h2>
+        <p>Start on <strong>Overview</strong>: name the trip, set rough dates, and add everyone who's coming. The app needs each person's home airport before it can work out whose flight is whose.</p>
+        <ol>
+          <li>Under <strong>Travelers</strong>, each person is a card with their name and <strong>Home city · AIRPORT</strong> underneath. Yours is marked <strong>(you)</strong>.</li>
+          <li>Tap <strong>Edit</strong> on a card to open a sheet with name, home city and home airport together. Change what you like and tap <strong>Save</strong> once — nothing saves until you do, so you can't lose half an edit.</li>
+          <li><strong>Add traveler</strong> picks someone who already uses the app, or just takes a name. Their edit sheet opens straight away so you can fill in the airport.</li>
+          <li><strong>Remove traveler</strong> is at the bottom of the same sheet. It asks first, and asks again whether to delete their flights.</li>
+          <li>The airport is the 3-letter code, like LIS or DEN. It's what tells the app a flight is this person's flight from home.</li>
+        </ol>
+        <!-- IMAGE: traveler cards on a phone, edit sheet open -->
+      </section>
+
       <section class="card help-section" id="routes">
         <h2>Routes: paste flights where they go</h2>
         <p>Everything on Routes starts with a pasted Google Flights link. You never type stops or nights — the app works them out from the flights.</p>
         <p><strong>The button you press decides where the flight goes.</strong> There's one <strong>Paste flight link</strong> button in the flights-from-home card, and another inside each open option. Press the one that belongs to the flight you're adding.</p>
         <ol>
           <li>On Google Flights, find the flight you'd actually book. Copy the <strong>whole address out of your browser's address bar</strong> — not a short share link, which carries no price.</li>
-          <li>Open the <strong>Routes</strong> tab. At the top, pick your own name, then tap <strong>Paste flight link</strong> in the "{your name}'s flights from home" card. Paste, check what the app read, and tap <strong>Add</strong>.</li>
+          <li>Open the <strong>Routes</strong> tab. At the top, pick your own name, then tap <strong>Paste flight link</strong> in the "{your name}'s flights from home" card.</li>
+          <li><strong>The sheet fills itself in.</strong> If the link is already on your clipboard it appears in the box on its own, and the flights, dates and price show underneath. On iPhone you may get a small <strong>Paste</strong> bubble first — tap it. If nothing appears, tap the <strong>Paste</strong> button beside the box, or long-press and paste by hand; typing works too. Either way the read-out updates as soon as the link lands, with no second paste.</li>
+          <li>Check what the app read, then tap <strong>Add</strong>.</li>
           <li>The first flight you paste creates the <strong>idea</strong> — the overall shape of the trip, named from the flight, like "Rome round trip" or "London in, Madrid out". Your flight home goes in the same way, as a second paste.</li>
           <li>Each traveler picks their own name first and pastes their own flights. You can leave on different days from different cities.</li>
           <li>Paste as many alternatives as you like. The card lists them cheapest first; <strong>Use this</strong> says which one you're counting, and it reads <strong>Using</strong> once it's the one.</li>
           <li>Now the flights <em>inside</em> the region. Under "Options once you land", open an option and tap the <strong>Paste flight link</strong> button inside it. That flight becomes a hop in that option, shared by everyone who chooses it.</li>
           <li>Open an option to see the route it makes: each city as a dot with the nights you'd sleep there, the hop flights in between, and a warning on any stop where the flights don't line up.</li>
         </ol>
+        <p><strong>Nights follow the flights.</strong> The city you fly into ends the moment your first hop leaves it — land in Lisbon on the 1st and fly to Porto on the 2nd and that's one night in Lisbon, not two weeks. Come back to the same city later and it's a second stop with its own nights, listed again in Stays and Days.</p>
+        <p><strong>Already live there? No flight needed.</strong> If someone's home airport is the city an idea flies into, the app works that out by itself: their card reads <strong>No flight needed — {name} lives in {city}</strong>, the tick says "Matches your home airport", and nothing is counted or missing for them. They still get the trip's dates and every hop of the option they choose.</p>
+        <p>For anything the app can't tell on its own — a second home, or a city you're already in — tick <strong>I live here — no flight needed</strong> under the paste button for the person on screen. Untick it and the paste prompts come back. Flights they already pasted are never deleted; they just stop being counted, and the card says so.</p>
         <details>
           <summary><strong>If it doesn't work</strong></summary>
           <ul>
             <li><strong>Short share links don't work.</strong> Open the link in Google Flights, then copy the full address out of the address bar and paste that.</li>
             <li><strong>No price was read.</strong> The price has to be showing on Google Flights when you copy the address. Go back, open the flight, and copy again.</li>
+            <li><strong>The box stayed empty when the sheet opened.</strong> Your phone only hands over the clipboard when you ask it to: tap the <strong>Paste</strong> bubble if one appears, or the <strong>Paste</strong> button beside the box, or long-press and paste.</li>
+            <li><strong>Someone's card says "No flight needed" and shouldn't.</strong> Their home airport is the city this idea flies into. Either fix the airport on Overview, or untick <strong>I live here</strong> — if the airport really is their home, the tick stays on by design.</li>
             <li><strong>The flight landed in the wrong place.</strong> Delete it and paste it again with the right button — the one in the flights-from-home card for a flight from home, the one inside an option for a hop.</li>
             <li><strong>A stop has a warning.</strong> It's telling you something doesn't line up: the next flight leaves from a city you're not in, the dates run backwards, or a flight has no date. Fix the flight, or leave it if you know why.</li>
           </ul>
@@ -123,10 +145,11 @@
         <h2>Check a price</h2>
         <p>Prices are a snapshot from when the link was copied. The app never looks a price up itself, so it's worth re-checking the ones you care about.</p>
         <ol>
-          <li>On a flight or stay, <strong>the price is a button</strong>. Tapping it opens the saved link in a new tab, so you can see today's price on the site.</li>
-          <li>Back in the app, answer <strong>Still $64?</strong> — tap <strong>Same</strong>, or tap <strong>Changed</strong>, type what you saw and tap <strong>Save price</strong>.</li>
+          <li>On every flight and stay, <strong>the price is a chip you can tap</strong> — the amount, a ↻ and the word <strong>Check</strong>. Tapping it opens the saved link in a new tab, so you can see today's price on the site.</li>
+          <li>Back in the app, the chip has opened a row that says <strong>Opened the link in a new tab. Is it still $64?</strong> Tap <strong>Same</strong>, or tap <strong>Changed</strong>, type what you saw and tap <strong>Save price</strong>.</li>
           <li>The app shows the move in words ("▲ $38 higher", "▼ $12 lower"), a <strong>New low</strong> pill when it's the cheapest you've seen, and a little chart once there are two checks.</li>
-          <li>The small label beside a price is how old it is. A sun-colored dot means nobody has checked it in more than 3 days.</li>
+          <li>Under the amount it says how old the price is — <strong>Checked today</strong>, <strong>Checked 3 days ago</strong>. Once it's older than 3 days the chip reads <strong>Check price</strong> with a sun-colored dot, which is the app's way of saying nobody has looked lately.</li>
+          <li>Nothing saved yet? The chip reads <strong>+ Add price</strong>, so there's never an empty space where a price should be.</li>
         </ol>
         <details>
           <summary><strong>If it doesn't work</strong></summary>
@@ -143,15 +166,17 @@
         <p>Pin the restaurants, museums and hotels you want to see. The chips across the top are the cities of your route, built from everyone's chosen options — tap one to see just that city, or <strong>All</strong> for everything. <strong>Elsewhere</strong> holds anything that isn't near a city you're sleeping in.</p>
         <p><strong>Places</strong></p>
         <ol>
-          <li>Tap <strong>Add place</strong>. Start with <strong>Find on Google Maps ↗</strong>, then paste the link back in — the pin and the name fill themselves in. Pick a category, and add a note if you like.</li>
+          <li>Tap <strong>Add place</strong>. Start with <strong>Find on Google Maps ↗</strong>, then paste the link back in — the box takes it from your clipboard by itself where the phone allows it, and the pin and the name fill themselves in. Pick a category, and add a note if you like.</li>
           <li>The city chip you have selected is the city those searches use, so select the city before you search.</li>
-          <li>Give places <strong>Love</strong>, <strong>Like</strong> or <strong>Pass</strong>. The group's favorites sort to the top, and <strong>I haven't ranked yet</strong> shows you what you haven't looked at.</li>
+          <li><strong>Each place is one short row:</strong> its category, its name, and how the group voted (♥2 👍1). Tap the row to open it — that's where the note, the link, the <strong>Love</strong> / <strong>Like</strong> / <strong>Pass</strong> buttons, comments, Edit and Delete live. A long list stays scannable, and tapping a pin on the map opens that place's row.</li>
+          <li>The group's favorites sort to the top, and <strong>I haven't ranked yet</strong> shows you what you haven't looked at.</li>
           <li><strong>Import from My Maps</strong> brings in a whole Google My Maps layer at once. Export it from My Maps as KML (not KMZ) and pick the file; you give each layer a category, and pins you already have are skipped.</li>
           <li>Got a pin in the wrong spot? <strong>Edit location</strong> on the place fixes it without deleting anything.</li>
         </ol>
         <p><strong>Stays</strong></p>
         <ol>
-          <li>Switch the list under the map to <strong>Stays</strong>. Stays are grouped under the cities of the route, and each group has its own <strong>Search Google Hotels</strong>, <strong>Search Booking.com</strong> and <strong>Search Airbnb</strong> links, already pointed at that city, and at those nights where the site takes dates.</li>
+          <li>Switch the list under the map to <strong>Stays</strong>. <strong>Every city of your route is listed from the start</strong> — before anyone has added a single stay — with its dates, how many nights, an empty night bar and <strong>Add stay</strong>, so you can see what still needs booking.</li>
+          <li>Each group has its own <strong>Search Google Hotels</strong>, <strong>Search Booking.com</strong> and <strong>Search Airbnb</strong> links, already pointed at that city, and at those nights where the site takes dates.</li>
           <li>Tap <strong>Add stay</strong> inside a city's group and the check-in, check-out and number of guests are filled in from that stop. Paste a Booking.com, Airbnb or Google Hotels link and type the price.</li>
           <li><strong>Stays find their own city.</strong> You never pick it: the app matches the stay to the stop whose dates cover your check-in, or to the nearest city to its pin. If it can't tell yet, the stay waits under <strong>No stop yet</strong> — give it dates or a pin and it moves itself.</li>
           <li>Those booking sites don't carry an address, so set the pin yourself with <strong>Where is it?</strong> — either <strong>Find "{name}" on the map</strong> or a Google Maps link. Without a pin the stay still works, it's just left off the map.</li>
@@ -165,6 +190,7 @@
             <li><strong>Short share links don't work.</strong> Open the link, copy the full address from your browser's address bar, and paste that.</li>
             <li><strong>KMZ files don't import.</strong> In My Maps, use ⋮ → Export to KML/KMZ and tick "Export as KML instead of KMZ", then try again.</li>
             <li><strong>The chips say to choose an option on Routes.</strong> Nobody has chosen one yet, so there's no route to group by. Choose an option on Routes and the cities appear.</li>
+            <li><strong>A city is listed twice.</strong> That's on purpose: you're there, you leave, and you come back, so each visit has its own nights and its own stays.</li>
             <li><strong>A stay is stuck under "No stop yet".</strong> Its check-in is outside every city's dates and it has no pin near one. Fix the dates, or set its location.</li>
           </ul>
         </details>
@@ -175,13 +201,13 @@
         <h2>Days: plan day by day</h2>
         <p>Turn your pins into a day-by-day plan.</p>
         <ol>
-          <li>Go to <strong>Days</strong> and tap <strong>Create days from route</strong> — one day per date, each already titled with the city you're in that day. Before anyone has chosen an option the same button reads <strong>Create days from trip dates</strong>. <strong>Add day</strong> makes an extra day with no date.</li>
+          <li>Go to <strong>Days</strong> and tap <strong>Create days from route</strong> — one day per date, each headed with the city and the date, like <strong>Lisbon · Sat, Oct 17</strong>. Before anyone has chosen an option the same button reads <strong>Create days from trip dates</strong>. <strong>Add day</strong> makes an extra day with no date.</li>
           <li>Pick a day. The map shows that city's places, and <strong>Not planned</strong> below it lists the ones not on a day yet, with your group's favorites first.</li>
           <li>Tap a pin and choose the day to put it on, or <strong>Remove from day</strong> to take it back off. Pins are numbered and colored by day.</li>
-          <li><strong>Your stay shows up as a house.</strong> If a chosen stay covers that night, the day's map shows it with a house mark — that's where you start and end.</li>
+          <li><strong>Your stay shows up as a house.</strong> If a chosen stay covers that night, the day's map shows it with a house mark — that's where you start and end. It's always the hotel in <em>that</em> city, so on the day you change cities the house is the new one, not last night's.</li>
           <li>On a day card, <strong>▲</strong> and <strong>▼</strong> reorder the places, and <strong>Remove</strong> sends one back to Not planned.</li>
-          <li><strong>Open walking route</strong> sends the day to Google Maps for walking directions, in your order. With a house on the map, the route starts and finishes at your stay.</li>
-          <li>Anything you saved with dates shows "Happening this day" on the days it falls on.</li>
+          <li><strong>Open walking route</strong> sends that one day to Google Maps for walking directions, in your order — only the places on that card, plus that night's hotel if it's in the same city. The button appears once a day has two places with pins, or one place and a hotel. A very long day comes out as <strong>Route part 1</strong> and <strong>Route part 2</strong>.</li>
+          <li>Got something happening on a certain day? Put it in the place's note — the app no longer asks for event dates.</li>
         </ol>
         <!-- IMAGE: day list, place pins numbered by day, house pin for the stay -->
       </section>
@@ -203,6 +229,9 @@
           <li><strong>Your name shows "Not chosen yet" on Overview.</strong> Choosing is per person: open Routes, pick your own name at the top, then <strong>Choose idea</strong> and <strong>Choose this option</strong>.</li>
           <li><strong>A total says "at least".</strong> Something counted in it has no price yet. The budget card lists exactly what's missing.</li>
           <li><strong>A cost looks like it's charging the wrong people.</strong> Tap <strong>Who's this for?</strong> on the flight, stay or split cost and set the names by hand.</li>
+          <li><strong>You changed a traveler's name or airport and it didn't stick.</strong> Editing is a sheet now: change the fields, then tap <strong>Save</strong>. Closing the sheet without saving keeps the old values.</li>
+          <li><strong>A day has no walking route button.</strong> It needs two places with pins, or one place plus that night's hotel. Places with no pin are left out — set a location on them.</li>
+          <li><strong>A price looks old.</strong> The sun-colored dot and <strong>Check price</strong> mean nobody has looked in over 3 days. Tap it, check the site, and answer Same or Changed.</li>
           <li><strong>You just heard about an update but don't see it.</strong> Wait a minute or two, then hard-refresh the page (Mac: ⌘⇧R, Windows: Ctrl+Shift+R).</li>
           <li><strong>The map is blank, or something looks broken.</strong> A reload usually fixes it. If not, open your browser's console (Chrome: Option+⌘+J on Mac, Ctrl+Shift+J on Windows) and send the red error text to the owner.</li>
         </ul>

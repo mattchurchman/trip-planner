@@ -78,7 +78,7 @@ If a task fails twice, say "Revert the last commit" and rerun it in a fresh sess
 | T50 | [Days: dated names; walking routes stay in the day](T50-days-names-and-walks.md) | Sonnet | medium | T46 | Done (2026-10-12) |
 | T51 | [Phone pass: Trips, Overview, Routes](T51-phone-overview-routes.md) | Sonnet | high | T41–T47 | Done (2026-10-12) |
 | T52 | [Phone pass: Map and Days](T52-phone-map-days.md) | Sonnet | high | T48–T51 | Done (2026-10-12) |
-| T53 | [Help page, wording and final review](T53-review-round6.md) | Opus | medium | T41–T52 | To do |
+| T53 | [Help page, wording and final review](T53-review-round6.md) | Opus | medium | T41–T52 | Done (2026-10-12) |
 
 **Order.** Run top to bottom, one at a time — most of these share `css/styles.css`. T41 comes first because every later screen builds on it. T46 touches only logic, so it can go any time after T40 if you want the night math fixed early, but T47, T48 and T50 must wait for it.
 
