@@ -76,7 +76,7 @@ If a task fails twice, say "Revert the last commit" and rerun it in a fresh sess
 | T48 | [Stays show every stop before any stay](T48-stays-show-stops.md) | Sonnet | medium | T46 | Done (2026-10-12) |
 | T49 | [Map places: compact rows; no event dates](T49-compact-places.md) | Sonnet | medium | T41 | Done (2026-10-12) |
 | T50 | [Days: dated names; walking routes stay in the day](T50-days-names-and-walks.md) | Sonnet | medium | T46 | Done (2026-10-12) |
-| T51 | [Phone pass: Trips, Overview, Routes](T51-phone-overview-routes.md) | Sonnet | high | T41–T47 | To do |
+| T51 | [Phone pass: Trips, Overview, Routes](T51-phone-overview-routes.md) | Sonnet | high | T41–T47 | Done (2026-10-12) |
 | T52 | [Phone pass: Map and Days](T52-phone-map-days.md) | Sonnet | high | T48–T51 | To do |
 | T53 | [Help page, wording and final review](T53-review-round6.md) | Opus | medium | T41–T52 | To do |
 

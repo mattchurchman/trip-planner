@@ -219,7 +219,13 @@ input {
 
 .btn-small {
   padding: var(--space-1) var(--space-3);
-  font-size: 0.85em;
+  font-size: 13px;
+}
+
+@media (min-width: 760px) {
+  .btn-small {
+    font-size: 0.85em;
+  }
 }
 
 .btn-link {
@@ -251,18 +257,31 @@ a:focus-visible {
 
 .btn-quiet:hover:not(:disabled) { background: var(--teal-soft); }
 
+/* Mobile-first: chips scroll sideways in their own track instead of
+   wrapping, so a long traveler/idea list never grows the page. The pressed
+   chip is usually the first one, already in view at scrollLeft 0. */
 .seg {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 4px;
   padding: 4px;
   background: var(--sunk);
   border-radius: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.seg::-webkit-scrollbar {
+  display: none;
 }
 
 .seg button {
-  min-height: 40px;
-  flex: 1 1 auto;
+  min-height: 44px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  scroll-snap-align: start;
   border: 0;
   border-radius: 9px;
   background: transparent;
@@ -275,6 +294,20 @@ a:focus-visible {
   background: var(--surface);
   box-shadow: var(--shadow-sm);
   font-weight: 600;
+}
+
+@media (min-width: 760px) {
+  .seg {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    scroll-snap-type: none;
+  }
+
+  .seg button {
+    min-height: 40px;
+    flex: 1 1 auto;
+    white-space: normal;
+  }
 }
 
 .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
@@ -533,6 +566,7 @@ textarea:focus {
   line-height: 1.3;
   font-weight: 600;
   letter-spacing: normal;
+  overflow-wrap: anywhere;
 }
 
 .trip-card-link {
@@ -540,6 +574,7 @@ textarea:focus {
   color: var(--ink);
   font-weight: 600;
   font-size: 1.05em;
+  overflow-wrap: anywhere;
 }
 
 .trip-card-link:hover {
@@ -555,7 +590,13 @@ textarea:focus {
 .trip-card-updated {
   margin: 4px 0 0;
   color: var(--muted);
-  font-size: 0.8em;
+  font-size: 13px;
+}
+
+@media (min-width: 760px) {
+  .trip-card-updated {
+    font-size: 0.8em;
+  }
 }
 
 .empty-state {
@@ -644,19 +685,28 @@ textarea:focus {
   .toast { bottom: var(--space-5); }
 }
 
+/* Mobile-first: a full-width bottom sheet. Content scrolls inside the
+   dialog itself; the action row stays sticky at the bottom so Cancel/Save
+   are always reachable without scrolling past a long form. */
 .app-dialog {
+  position: fixed;
+  inset: auto 0 0 0;
+  margin: 0;
   border: none;
-  border-radius: var(--radius-card);
-  padding: var(--space-5);
-  max-width: 360px;
-  width: calc(100% - 32px);
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  padding: var(--space-4);
+  padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+  max-width: none;
+  width: 100%;
+  max-height: 90dvh;
+  overflow-y: auto;
   box-shadow: var(--shadow-lift);
 }
 
 /* Form dialogs carry up to a dozen fields, several paired side by side; the
    360px confirm/prompt width leaves them unusably cramped. */
 .app-dialog-form {
-  max-width: 520px;
+  max-width: none;
 }
 
 .app-dialog::backdrop {
@@ -668,7 +718,39 @@ textarea:focus {
   display: flex;
   justify-content: flex-end;
   gap: var(--space-2);
-  margin-top: var(--space-4);
+  position: sticky;
+  bottom: 0;
+  margin: var(--space-4) calc(-1 * var(--space-4)) calc(-1 * var(--space-4));
+  padding: var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+}
+
+@media (min-width: 760px) {
+  .app-dialog {
+    position: static;
+    inset: auto;
+    margin: auto;
+    border-radius: var(--radius-card);
+    padding: var(--space-5);
+    padding-bottom: var(--space-5);
+    max-width: 360px;
+    width: calc(100% - 32px);
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .app-dialog-form {
+    max-width: 520px;
+  }
+
+  .dialog-actions {
+    position: static;
+    margin: var(--space-4) 0 0;
+    padding: 0;
+    background: none;
+    border-top: none;
+  }
 }
 
 .prompt-label {
@@ -693,10 +775,16 @@ textarea:focus {
   color: var(--teal);
   background: var(--teal-soft);
   font-weight: 600;
-  font-size: 0.8em;
+  font-size: 13px;
   padding: 3px var(--space-3);
   border-radius: var(--radius-pill);
   text-decoration: none;
+}
+
+@media (min-width: 760px) {
+  .stage-badge {
+    font-size: 0.8em;
+  }
 }
 
 .stage-badge:hover {
@@ -839,10 +927,12 @@ textarea:focus {
 .traveler-card-name {
   margin: 0;
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .traveler-card-detail {
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .traveler-card-edit {
@@ -908,12 +998,19 @@ textarea:focus {
 
 .comment-text {
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .comment-meta {
   margin: 0;
   color: var(--muted);
-  font-size: 0.8em;
+  font-size: 13px;
+}
+
+@media (min-width: 760px) {
+  .comment-meta {
+    font-size: 0.8em;
+  }
 }
 
 .comment-form {
@@ -1317,11 +1414,17 @@ textarea:focus {
 }
 
 .itinerary-label {
-  font-size: 0.75rem;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
+}
+
+@media (min-width: 760px) {
+  .itinerary-label {
+    font-size: 0.75rem;
+  }
 }
 
 .itinerary-stops {
@@ -1415,10 +1518,16 @@ textarea:focus {
   color: var(--teal);
   background: var(--teal-soft);
   font-weight: 600;
-  font-size: 0.8em;
+  font-size: 13px;
   padding: 2px var(--space-3);
   border-radius: var(--radius-pill);
   white-space: nowrap;
+}
+
+@media (min-width: 760px) {
+  .chosen-badge {
+    font-size: 0.8em;
+  }
 }
 
 /* Stay cards side by side for comparing, one column once they no longer fit
@@ -2126,6 +2235,8 @@ textarea:focus {
 .route-option-name {
   font-weight: 600;
   font-size: 1.0625rem;
+  overflow-wrap: anywhere;
+  min-width: 0;
 }
 
 .route-option-total {
