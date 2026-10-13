@@ -128,11 +128,42 @@ function forControl(flight, { ctx, travelers, editing, onToggle, onSet }) {
 }
 
 /**
+ * "I live here — no flight needed" (§7.6), for the traveler on screen. When
+ * their home airport is already in the idea's city it shows ticked and
+ * disabled, because that isn't something to switch off. `onToggle(on)` returns
+ * an error message to show inline, or nothing when the write worked.
+ */
+function localToggle({ info, onToggle }) {
+  const box = el("input", { type: "checkbox", checked: info.local, disabled: info.auto });
+  const errorHolder = el("div", { className: "field-error-holder" });
+  box.addEventListener("change", async () => {
+    const on = box.checked;
+    box.disabled = true;
+    errorHolder.replaceChildren();
+    const message = await onToggle(on);
+    box.disabled = info.auto;
+    if (message) {
+      box.checked = !on;
+      errorHolder.replaceChildren(el("p", { className: "field-error", textContent: message }));
+    }
+  });
+  return el("div", { className: "route-local" }, [
+    el("label", { className: "checkbox-label" }, [box, " I live here — no flight needed"]),
+    info.auto ? el("span", { className: "muted", textContent: "Matches your home airport" }) : null,
+    errorHolder,
+  ]);
+}
+
+/**
  * Builds one option's card (§7.6): name, its own flights' cost per person, who
  * it's for, path line, Chosen/Cheapest badges (and initials of the other
  * travelers who chose it), and — when `isOpen` — the rail of stops with each
  * hop flight hanging between them, plus Choose this option / Unchoose, Paste
  * flight link, Rename and Delete.
+ *
+ * `local` is `localRoute`'s result when the traveler on screen lives in this
+ * idea's city: their stops then come from the group's dates instead of flights
+ * they don't need, and the rail ends at home rather than at a flight home.
  */
 export function renderOptionCard({
   idea,
@@ -152,6 +183,7 @@ export function renderOptionCard({
   isOpen,
   isChosen,
   isCheapest,
+  local = null,
   onToggle,
   onToggleFor,
   onSetFor,
@@ -162,7 +194,13 @@ export function renderOptionCard({
   onEditFlight,
   onDeleteFlight,
 }) {
-  const stops = stopsFor({ homeFlights, hopFlights, airports });
+  const stops = stopsFor({
+    homeFlights: local ? [] : homeFlights,
+    hopFlights,
+    airports,
+    arrival: local ? local.arrival : null,
+    departure: local ? local.departure : null,
+  });
   const hops = movements(hopFlights);
   // Only this option's own flights: the flights from home are the same under every option.
   const { cents, complete } = totalFor({ homeFlights: [], hopFlights });
@@ -244,10 +282,15 @@ export function renderOptionCard({
   if (stops.length > 0) {
     const { outCode } = ideaEndpoints(homeFlights);
     const lastStop = stops[stops.length - 1];
-    const homeLine = el("div", { className: "route-stop" }, [
-      el("span", {}, [el("b", { textContent: "Fly home" }), " ", el("span", { className: "mono muted", textContent: `${outCode || lastStop.code || "?"} → ${traveler.homeAirport || traveler.homeCity || "home"}` })]),
-      el("span", { className: "muted", textContent: formatLegDate(lastStop.to) || "Date not set" }),
-    ]);
+    const homeLine = local
+      ? el("div", { className: "route-stop" }, [
+          el("span", {}, [el("b", { textContent: "Already home" }), " ", el("span", { className: "muted", textContent: local.info.city || "no flight needed" })]),
+          el("span", { className: "muted", textContent: formatLegDate(lastStop.to) || "" }),
+        ])
+      : el("div", { className: "route-stop" }, [
+          el("span", {}, [el("b", { textContent: "Fly home" }), " ", el("span", { className: "mono muted", textContent: `${outCode || lastStop.code || "?"} → ${traveler.homeAirport || traveler.homeCity || "home"}` })]),
+          el("span", { className: "muted", textContent: formatLegDate(lastStop.to) || "Date not set" }),
+        ]);
     rail.append(el("li", { className: "route-rail-item" }, [railNode(true), homeLine]));
   }
 
@@ -276,8 +319,12 @@ export function renderOptionCard({
  * `onTogglePick` gets the flight and its siblings (the other alternatives),
  * since picking one un-picks the ones it replaces. Returns the card's
  * children, ready for `replaceChildren`.
+ *
+ * `localInfo` is `localIdeaInfo`'s result for this traveler and idea (§7.6):
+ * when they live here the paste prompts give way to "No flight needed", and
+ * any flight they already saved stays on screen, uncounted.
  */
-export function homeFlightsCardBody({ traveler, homeFlights, trip, tripId, myUid, usersById, onEdit, onDelete, onTogglePick, onPasteFlight }) {
+export function homeFlightsCardBody({ traveler, homeFlights, trip, tripId, myUid, usersById, localInfo, onEdit, onDelete, onTogglePick, onPasteFlight, onToggleLocal }) {
   function row(flight) {
     const picked = flight.picked !== false;
     const useBtn = el("button", { type: "button", className: "btn btn-small", textContent: picked ? "Using" : "Use this" });
@@ -299,16 +346,39 @@ export function homeFlightsCardBody({ traveler, homeFlights, trip, tripId, myUid
     return node;
   }
 
-  // Only the flights being used count toward the total shown here.
+  const info = localInfo || { local: false, auto: false, byHand: false, city: "", code: "" };
+  const toggle = localToggle({ info, onToggle: onToggleLocal });
+
+  // Only the flights being used count toward the total shown here — and for
+  // someone who lives here, none of them do, so the heading carries no money.
   const picked = totalFor({ homeFlights, hopFlights: [] });
+  const showTotal = !info.local && (picked.cents > 0 || picked.complete);
   const heading = el("h3", {
-    textContent: `${traveler.name}'s flights from home${picked.cents > 0 || picked.complete ? ` · ${picked.complete ? "" : "at least "}${formatMoney(picked.cents, trip.currency)}` : ""}`,
+    textContent: `${traveler.name}'s flights from home${showTotal ? ` · ${picked.complete ? "" : "at least "}${formatMoney(picked.cents, trip.currency)}` : ""}`,
   });
+  const rows = [...homeFlights].sort(byLatestPriceAsc).map(row);
+
+  if (info.local) {
+    const uncounted = homeFlights.length
+      ? el("p", {
+          className: "muted",
+          textContent: `Flights saved here stay put, but they don't count while ${traveler.name} lives in ${info.city || "this city"}.`,
+        })
+      : null;
+    return [
+      heading,
+      el("p", { textContent: `No flight needed — ${traveler.name} lives in ${info.city || "this city"}` }),
+      toggle,
+      uncounted,
+      ...rows,
+    ].filter(Boolean);
+  }
+
   const pasteBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Paste flight link" });
   pasteBtn.addEventListener("click", onPasteFlight);
 
   if (homeFlights.length === 0) {
-    return [heading, el("p", { className: "empty-state", textContent: `No flights yet for ${traveler.name}.` }), pasteBtn];
+    return [heading, el("p", { className: "empty-state", textContent: `No flights yet for ${traveler.name}.` }), pasteBtn, toggle];
   }
-  return [heading, ...[...homeFlights].sort(byLatestPriceAsc).map(row), pasteBtn];
+  return [heading, ...rows, pasteBtn, toggle];
 }

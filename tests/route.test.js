@@ -6,6 +6,7 @@ import {
   totalFor,
   ideaName,
   ideaEndpoints,
+  ideaWindow,
   optionName,
   optionAutoName,
   directionsToClear,
@@ -184,6 +185,62 @@ export const tests = [
     });
     assert.deepEqual(stopSummary(stops), [["Rome", 3], ["Barcelona", 4], ["Rome", 6]]);
     assert.deepEqual(stops.flatMap((s) => s.warnings), []);
+  }],
+
+  ["stopsFor: given endpoints instead of flights, the route runs between them (T47)", () => {
+    // Someone who lives in Rome: no flights of their own, so the dates stand
+    // in. A departure with no code is never the wrong city to leave from.
+    const stops = stopsFor({
+      homeFlights: [],
+      hopFlights: [hop("f1", "FCO", "FLR", "2026-05-18"), hop("f2", "FLR", "BCN", "2026-05-22")],
+      airports,
+      arrival: { code: "FCO", date: "2026-05-15" },
+      departure: { code: null, date: "2026-05-28" },
+    });
+    assert.deepEqual(stopSummary(stops), [["Rome", 3], ["Florence", 4], ["Barcelona", 6]]);
+    assert.deepEqual(stops.flatMap((s) => s.warnings), []);
+  }],
+
+  ["stopsFor: given endpoints with no dates, nothing is blamed on a missing flight (T47)", () => {
+    const stops = stopsFor({
+      homeFlights: [],
+      hopFlights: [],
+      airports,
+      arrival: { code: "FCO", date: null },
+      departure: { code: null, date: null },
+    });
+    assert.deepEqual(stopSummary(stops), [["Rome", null]]);
+    assert.deepEqual(stops[0].warnings, []);
+  }],
+
+  ["stopsFor: given endpoints beat the flights that are there (T47)", () => {
+    // A flight saved before someone became local doesn't move their stops.
+    const stops = stopsFor({
+      homeFlights: [romeHome],
+      hopFlights: [],
+      airports,
+      arrival: { code: "FCO", date: "2026-05-10" },
+      departure: { code: null, date: "2026-05-12" },
+    });
+    assert.deepEqual(stopSummary(stops), [["Rome", 2]]);
+    assert.equal(stops[0].from, "2026-05-10");
+  }],
+
+  ["ideaWindow: the earliest anyone lands and the latest anyone leaves (T47)", () => {
+    const early = home({ id: "h2", fromAirport: "LHR", toAirport: "FCO", outboundDate: "2026-05-12", returnDate: "2026-05-20", direction: "both" });
+    assert.deepEqual(ideaWindow([romeHome, early]), { from: "2026-05-12", to: "2026-05-28" });
+    // romeHome lands on its landsDate, not its departure date.
+    assert.deepEqual(ideaWindow([romeHome]), { from: "2026-05-15", to: "2026-05-28" });
+    // Unpicked flights and one-way halves without dates don't count.
+    assert.deepEqual(ideaWindow([{ ...early, picked: false }]), { from: null, to: null });
+    assert.deepEqual(ideaWindow([]), { from: null, to: null });
+    assert.deepEqual(ideaWindow(null), { from: null, to: null });
+  }],
+
+  ["ideaWindow: separate out and back flights give both ends", () => {
+    const out = home({ id: "h1", direction: "out", fromAirport: "DEN", toAirport: "FCO", outboundDate: "2026-05-14", landsDate: "2026-05-15" });
+    const back = home({ id: "h2", direction: "back", fromAirport: "FCO", toAirport: "DEN", outboundDate: "2026-05-28" });
+    assert.deepEqual(ideaWindow([out, back]), { from: "2026-05-15", to: "2026-05-28" });
   }],
 
   ["totalFor: picked home flight plus every hop", () => {

@@ -4,6 +4,9 @@ import {
   choiceFor,
   hasAnyOption,
   forTravelers,
+  isLocalToIdea,
+  localIdeaInfo,
+  localRoute,
   stopsByTraveler,
   mergeStops,
   mergedStops,
@@ -27,6 +30,8 @@ const price = (cents) => [{ id: `p${cents}`, amountCents: cents, checkedAt: "202
 const sam = { id: "t1", name: "Sam" };
 const alex = { id: "t2", name: "Alex" };
 const jo = { id: "t3", name: "Jo" };
+// Rita lives in Lisbon, so a Lisbon idea needs no flight from home for her (T47).
+const rita = { id: "t4", name: "Rita", homeAirport: "LIS" };
 
 const options = [
   { id: "o1", ideaId: "i1", name: "Florence + Barcelona" },
@@ -145,6 +150,93 @@ export const tests = [
     // No dates, and nobody with stops at all, both fall back to everyone.
     assert.deepEqual(forTravelers({ name: "No dates" }, "stay", ctx), ["t1", "t2"]);
     assert.deepEqual(forTravelers(rome, "stay", ctxFor({ choices: {} }, travelers, flights)), ["t1", "t2"]);
+  }],
+
+  ["isLocalToIdea: a home airport in the idea's arrival city is local on its own", () => {
+    const flights = [lisbonHome({ travelerId: "t1" })];
+    const trip = { choices: { t1: { ideaId: "i1", optionId: "o1" }, t4: { ideaId: "i1" } } };
+    const info = localIdeaInfo({ traveler: rita, trip, ideaId: "i1", flights, airports });
+    assert.deepEqual(info, { local: true, auto: true, byHand: false, city: "Lisbon", code: "LIS" });
+    // Auto-detected is not something they ticked, so there's nothing to untick.
+    assert.equal(isLocalToIdea({ traveler: rita, trip: { choices: {} }, ideaId: "i1", flights, airports }), true);
+  }],
+
+  ["isLocalToIdea: ticking I live here by hand is local on an idea that flies elsewhere", () => {
+    // The Rome idea lands in Rome, nowhere near Rita's Lisbon — but she says
+    // she lives there, so she's local by hand and can untick it.
+    const flights = [home({ travelerId: "t1" })];
+    const trip = { choices: { t4: { ideaId: "i1", localIdeaIds: ["i1"] } } };
+    const info = localIdeaInfo({ traveler: rita, trip, ideaId: "i1", flights, airports });
+    assert.deepEqual(info, { local: true, auto: false, byHand: true, city: "Rome", code: "FCO" });
+    // A tick on one idea says nothing about another.
+    assert.equal(isLocalToIdea({ traveler: rita, trip, ideaId: "i2", flights, airports }), false);
+  }],
+
+  ["isLocalToIdea: neither a matching airport nor a tick is not local", () => {
+    const flights = [lisbonHome({ travelerId: "t1" })];
+    const trip = { choices: { t2: { ideaId: "i1" } } };
+    const denver = { ...alex, homeAirport: "DEN" };
+    assert.equal(isLocalToIdea({ traveler: denver, trip, ideaId: "i1", flights, airports }), false);
+    // No home airport set at all can't match anything either.
+    assert.equal(isLocalToIdea({ traveler: sam, trip, ideaId: "i1", flights, airports }), false);
+    // And no idea chosen is nobody's home.
+    assert.equal(isLocalToIdea({ traveler: rita, trip, ideaId: null, flights, airports }), false);
+  }],
+
+  ["localRoute: the group's dates stand in for the flights a local traveler doesn't need", () => {
+    const flights = [lisbonHome({ travelerId: "t1" }), lisbonHome({ id: "h2", travelerId: "t2", outboundDate: "2026-10-03", landsDate: "2026-10-03", returnDate: "2026-10-12" })];
+    const trip = { startDate: "2026-09-30", endDate: "2026-10-20", choices: { t4: { ideaId: "i1" } } };
+    const route = localRoute({ traveler: rita, trip, ideaId: "i1", flights, airports });
+    assert.deepEqual(route.arrival, { code: "LIS", date: "2026-10-01" }); // the earliest of the others
+    assert.deepEqual(route.departure, { code: null, date: "2026-10-15" }); // the latest of the others
+    // With nobody else on the idea, the trip's own dates stand in instead —
+    // and with no flights at all, nothing says where the idea goes, so being
+    // local there is something she has to tick by hand.
+    const byHand = { ...trip, choices: { t4: { ideaId: "i1", localIdeaIds: ["i1"] } } };
+    const alone = localRoute({ traveler: rita, trip: byHand, ideaId: "i1", flights: [], airports });
+    assert.deepEqual(alone.arrival, { code: "LIS", date: "2026-09-30" });
+    assert.deepEqual(alone.departure, { code: null, date: "2026-10-20" });
+    // Anyone who isn't local has no stand-in: they read their own flights.
+    assert.equal(localRoute({ traveler: sam, trip, ideaId: "i1", flights, airports }), null);
+  }],
+
+  ["stopsByTraveler: a local traveler gets the same stops as the others, with no flight warnings", () => {
+    const travelers = [sam, rita];
+    const flights = [lisbonHome({ travelerId: "t1" }), ...lisbonHops];
+    const trip = { choices: { t1: { ideaId: "i1", optionId: "o1" }, t4: { ideaId: "i1", optionId: "o1" } } };
+    const perTraveler = stopsByTraveler({ travelers, trip, options, flights, airports });
+    const summary = (stops) => stops.map((s) => [s.city, s.from, s.to]);
+    assert.deepEqual(summary(perTraveler[1].stops), summary(perTraveler[0].stops));
+    assert.deepEqual(summary(perTraveler[1].stops), [
+      ["Lisbon", "2026-10-01", "2026-10-02"],
+      ["Porto", "2026-10-02", "2026-10-14"],
+      ["Lisbon", "2026-10-14", "2026-10-15"],
+    ]);
+    assert.deepEqual(perTraveler[1].stops.flatMap((s) => s.warnings), []);
+    // So the merged route has them in the city alongside everyone else.
+    const merged = mergedStops({ travelers, trip, options, flights, airports });
+    assert.deepEqual(merged.map((s) => s.travelerIds), [["t1", "t4"], ["t1", "t4"], ["t1", "t4"]]);
+    assert.deepEqual(merged[0].nights, [{ date: "2026-10-01", travelerIds: ["t1", "t4"] }]);
+  }],
+
+  ["stopsByTraveler: a local traveler with no option yet still has the trip's dates", () => {
+    const travelers = [sam, rita];
+    const trip = { startDate: "2026-10-01", endDate: "2026-10-05", choices: { t4: { ideaId: "i1", localIdeaIds: ["i1"] } } };
+    const perTraveler = stopsByTraveler({ travelers, trip, options, flights: [], airports });
+    // Sam has chosen nothing, so he adds nothing — unchanged by T47.
+    assert.deepEqual(perTraveler[0].stops, []);
+    assert.deepEqual(perTraveler[1].stops.map((s) => [s.city, s.from, s.to, s.nights]), [["Lisbon", "2026-10-01", "2026-10-05", 4]]);
+  }],
+
+  ["stopsByTraveler: a hop into the local traveler's own city still makes a stop", () => {
+    // Rita lives in Lisbon and the option comes back there on the 14th: that
+    // return visit is a stop of its own, for her to take a stay there or not.
+    const travelers = [sam, rita];
+    const flights = [lisbonHome({ travelerId: "t1" }), ...lisbonHops];
+    const trip = { choices: { t1: { ideaId: "i1", optionId: "o1" }, t4: { ideaId: "i1", optionId: "o1" } } };
+    const stops = stopsByTraveler({ travelers, trip, options, flights, airports })[1].stops;
+    assert.deepEqual(stops.map((s) => s.cityKey), ["Lisbon, PT", "Porto, PT", "Lisbon, PT"]);
+    assert.deepEqual(stops.map((s) => s.nights), [1, 12, 1]);
   }],
 
   ["stopsByTraveler: a traveler with no chosen option adds nothing", () => {
@@ -305,6 +397,23 @@ export const tests = [
     assert.deepEqual(forAlex.missing, []);
   }],
 
+  ["travelerBreakdown: a local traveler pays nothing to get there and is missing nothing", () => {
+    const travelers = [sam, rita];
+    const flights = [
+      lisbonHome({ id: "h1", travelerId: "t1", label: "Sam's flight" }),
+      // A flight Rita saved before she was local: it stays, but it doesn't count.
+      lisbonHome({ id: "h4", travelerId: "t4", label: "Rita's old flight", prices: price(50000) }),
+      ...lisbonHops,
+    ];
+    const trip = { choices: { t1: { ideaId: "i1", optionId: "o1" }, t4: { ideaId: "i1", optionId: "o1" } } };
+    const ctx = ctxFor(trip, travelers, flights);
+    const result = travelerBreakdown({ travelerId: "t4", ctx, flights, stays: [], costs: [] });
+    assert.equal(result.homeCents, 0);
+    assert.equal(result.hopCents, 12000); // the hops are hers like anyone's
+    assert.equal(result.complete, true);
+    assert.deepEqual(result.missing, []);
+  }],
+
   ["travelerBreakdown: an override on a cost beats the automatic split", () => {
     const travelers = [sam, alex];
     const flights = flightsFor(travelers);
@@ -351,6 +460,17 @@ export const tests = [
     const result = tripBudget({ trip: { chosenOptionId: "o1" }, travelers, options, flights, stays: [], costs: [], airports });
     assert.equal(result.complete, true);
     assert.equal(result.combinedCents, 47000);
+  }],
+
+  ["tripBudget: the group total is complete with no flight for the traveler who lives there", () => {
+    const travelers = [sam, rita];
+    const flights = [lisbonHome({ id: "h1", travelerId: "t1", label: "Sam's flight", prices: price(42000) })];
+    const trip = { choices: { t1: { ideaId: "i1", optionId: "o1" }, t4: { ideaId: "i1", optionId: "o1" } } };
+    const result = tripBudget({ trip, travelers, options, flights, stays: [], costs: [], airports });
+    assert.equal(result.complete, true);
+    assert.deepEqual(result.missing, []);
+    assert.equal(result.travelerTotals[1].totalCents, 0);
+    assert.equal(result.combinedCents, 42000);
   }],
 
   ["tripBudget: choosing no stay is still complete", () => {

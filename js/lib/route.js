@@ -110,6 +110,23 @@ function departureOf(homeFlights) {
   return null;
 }
 
+/**
+ * The first date anyone lands and the last date anyone leaves, across a set of
+ * picked home flights. Used to put someone who needs no flight of their own
+ * (§7.6) in the city for as long as the others are there.
+ */
+export function ideaWindow(homeFlights) {
+  let from = null;
+  let to = null;
+  for (const flight of (homeFlights || []).filter(isPicked)) {
+    const arrival = arrivalOf([flight]);
+    if (arrival && arrival.date && (!from || arrival.date < from)) from = arrival.date;
+    const departure = departureOf([flight]);
+    if (departure && departure.date && (!to || departure.date > to)) to = departure.date;
+  }
+  return { from, to };
+}
+
 /** The city you fly into and the city you fly home from, for one idea's home flights. */
 export function ideaEndpoints(homeFlights) {
   const flights = homeFlights || [];
@@ -155,17 +172,23 @@ function closeStop(stop, to) {
  * Every stop for one traveler (V4 §4.4): where they sleep and for how many nights,
  * worked out from their picked home flights plus the option's hops. Never typed.
  * Each stop carries its own plain-language warnings.
+ *
+ * `arrival` and `departure` ({ code, date }) stand in for the home flights when
+ * a traveler has none to read — someone who lives in the idea's city (§7.6).
+ * They say where and when the route starts and ends, but they are not flights,
+ * so they never raise a flight's warning, and a departure with no code is
+ * never the wrong city to be flying home from.
  */
-export function stopsFor({ homeFlights, hopFlights, airports }) {
+export function stopsFor({ homeFlights, hopFlights, airports, arrival = null, departure = null }) {
   const hops = movements(hopFlights);
-  const arrival = arrivalOf(homeFlights);
-  const departure = departureOf(homeFlights);
-  const start = arrival || (hops.length ? { code: hops[0].from, date: null } : null);
+  const landing = arrival || arrivalOf(homeFlights);
+  const leaving = departure || departureOf(homeFlights);
+  const start = landing || (hops.length ? { code: hops[0].from, date: null } : null);
   if (!start) return [];
 
   const stops = [];
   let open = newStop(start.code, start.date, airports);
-  if (arrival && !arrival.date) open.warnings.push(NO_DATE);
+  if (!arrival && landing && !landing.date) open.warnings.push(NO_DATE);
 
   for (const hop of hops) {
     if (differentCity(hop.from, open.code, airports)) {
@@ -177,12 +200,12 @@ export function stopsFor({ homeFlights, hopFlights, airports }) {
     open = newStop(hop.to, hop.date, airports);
   }
 
-  if (departure) {
-    if (differentCity(departure.code, open.code, airports)) {
-      open.warnings.push(`Your flight home leaves from ${cityLabel(departure.code, airports)}, but you're in ${open.city}.`);
+  if (leaving) {
+    if (differentCity(leaving.code, open.code, airports)) {
+      open.warnings.push(`Your flight home leaves from ${cityLabel(leaving.code, airports)}, but you're in ${open.city}.`);
     }
-    if (!departure.date) open.warnings.push(NO_DATE);
-    closeStop(open, departure.date);
+    if (!departure && !leaving.date) open.warnings.push(NO_DATE);
+    closeStop(open, leaving.date);
   }
   stops.push(open);
   return stops;

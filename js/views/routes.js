@@ -8,6 +8,7 @@ import {
   setChoice,
   setForTravelers,
   setFlightPicked,
+  setLocalIdea,
   addPastedFlight,
   updateFlight,
   deleteFlight,
@@ -16,7 +17,7 @@ import {
 import { el, confirmDialog, friendlyError, renderWhenIdle } from "../ui.js";
 import { loadAirports } from "../lookup.js";
 import { totalFor, optionAutoName, directionsToClear } from "../lib/route.js";
-import { choiceFor, budgetContext, travelerBreakdown } from "../lib/choices.js";
+import { choiceFor, budgetContext, travelerBreakdown, localIdeaInfo, localRoute } from "../lib/choices.js";
 import { editFlightFormDialog } from "./flightForm.js";
 import { pasteFlightDialog, moveFlightDialog, renderEarlierFlights } from "./pasteFlight.js";
 import { renderOptionCard, homeFlightsCardBody } from "./routeRail.js";
@@ -258,6 +259,18 @@ export function renderRoutesPage(container, tripId, myUid) {
     return run(() => setChoice(tripId, traveler.id, optionHere ? { ideaId: null, optionId: null } : { ideaId: null }));
   }
 
+  /** The traveler on screen ticks (or unticks) **I live here** for this idea
+   * (§7.6) — theirs only. Returns a message for the toggle to show inline
+   * instead of the banner, since the toggle is where the tap happened. */
+  async function onToggleLocal(idea, traveler, on) {
+    try {
+      await setLocalIdea(tripId, traveler.id, idea.id, on);
+      return null;
+    } catch (err) {
+      return friendlyError(err);
+    }
+  }
+
   function renderHomeFlightsCard() {
     const traveler = travelers().find((t) => t.id === selectedTravelerId);
     const idea = ideas.find((i) => i.id === selectedIdeaId);
@@ -273,6 +286,8 @@ export function renderRoutesPage(container, tripId, myUid) {
         tripId,
         myUid,
         usersById,
+        localInfo: localIdeaInfo({ traveler, trip, ideaId: idea.id, flights, airports }),
+        onToggleLocal: (on) => onToggleLocal(idea, traveler, on),
         onEdit: (flight) => onEditFlight(flight, traveler),
         onDelete: onDeleteFlight,
         onTogglePick: toggleUseThisFlight,
@@ -298,6 +313,9 @@ export function renderRoutesPage(container, tripId, myUid) {
     }
 
     const ctx = budgetContext({ trip, travelers: travelers(), options, flights, airports });
+    // Null unless the traveler on screen lives in this idea's city, when their
+    // rail runs on the group's dates instead of flights they don't need (§7.6).
+    const local = localRoute({ traveler, trip, ideaId: idea.id, flights, airports });
     const totalsCents = ideaOptions.map((o) => totalFor({ homeFlights: [], hopFlights: hopFlightsFor(o.id) }).cents);
     const cheapestCents = ideaOptions.length > 1 ? Math.min(...totalsCents) : null;
 
@@ -319,6 +337,7 @@ export function renderRoutesPage(container, tripId, myUid) {
           othersChosen: travelers().filter((t) => t.id !== traveler.id && ctx.choices[t.id].optionId === option.id),
           forEditingId,
           isOpen: openOptionIds.has(option.id),
+          local,
           isChosen: ctx.choices[traveler.id].optionId === option.id,
           isCheapest: cheapestCents !== null && totalsCents[i] === cheapestCents,
           onToggle: () => {

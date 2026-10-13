@@ -417,6 +417,17 @@ export function setChoice(tripId, travelerId, { ideaId, optionId }) {
   return updateTripFields(tripId, fields);
 }
 
+/**
+ * Ticks (or unticks) "I live here" for one traveler on one idea (§7.6), so no
+ * flight from home is needed. One `arrayUnion` / `arrayRemove` on the field
+ * path, so two people editing at once never overwrite each other.
+ */
+export function setLocalIdea(tripId, travelerId, ideaId, on) {
+  return updateTripFields(tripId, {
+    [`choices.${travelerId}.localIdeaIds`]: on ? arrayUnion(ideaId) : arrayRemove(ideaId),
+  });
+}
+
 /** Sets who a flight, stay or cost is for, or `null` to work it out (§11). */
 export function setForTravelers(tripId, subcollection, id, ids) {
   return updateSubDoc(tripId, subcollection, id, { forTravelerIds: ids === undefined ? null : ids });

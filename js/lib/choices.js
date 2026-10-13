@@ -9,7 +9,7 @@ import { split } from "./money.js";
 import { latestEntry } from "./totals.js";
 import { nightsBetween } from "./dates.js";
 import { stayNights } from "./coverage.js";
-import { stopsFor } from "./route.js";
+import { stopsFor, ideaEndpoints, ideaWindow } from "./route.js";
 
 // Sorts after every real "YYYY-MM-DD", so undated stops land at the end.
 const UNDATED = "￿";
@@ -55,6 +55,62 @@ export function resolveChoices(trip, travelers, options) {
   const map = {};
   for (const traveler of travelers || []) map[traveler.id] = choiceFor(trip, traveler.id, options);
   return map;
+}
+
+/** Every home flight anyone has saved under one idea. */
+function ideaHomeFlights(flights, ideaId) {
+  if (!ideaId) return [];
+  return (flights || []).filter((f) => f.role === "home" && f.ideaId === ideaId);
+}
+
+/** The ideas a traveler has ticked "I live here" on (§5.3). */
+function handPickedLocalIdeas(trip, travelerId) {
+  const entry = trip && trip.choices ? trip.choices[travelerId] : null;
+  const list = entry && entry.localIdeaIds;
+  return Array.isArray(list) ? list : [];
+}
+
+/**
+ * Does this traveler live in the idea's city, so they need no flight from home
+ * (§7.6)? `auto` is true when their home airport is in the city the idea flies
+ * into — read from anyone's home flights on it, and not something they can
+ * switch off — and `byHand` when they ticked **I live here**. `city` and `code`
+ * name the city they're in, for the screen and for their stops.
+ */
+export function localIdeaInfo({ traveler, trip, ideaId, flights, airports }) {
+  if (!traveler || !airports) return { local: false, auto: false, byHand: false, city: "", code: "" };
+  const { inCode } = ideaEndpoints(ideaHomeFlights(flights, ideaId));
+  const home = String(traveler.homeAirport || "").trim().toUpperCase();
+  const auto = Boolean(ideaId && inCode && home && airports.cityKey(inCode) === airports.cityKey(home));
+  const byHand = Boolean(ideaId) && handPickedLocalIdeas(trip, traveler.id).includes(ideaId);
+  // The idea's own arrival city when we know it — for someone local, that is
+  // their city — otherwise whatever their home fields say.
+  const code = inCode || home;
+  const city = (code && String(airports.cityName(code) || "")) || traveler.homeCity || "";
+  return { local: auto || byHand, auto, byHand, city, code };
+}
+
+/** True when a traveler needs no flight from home for this idea (§7.6). */
+export function isLocalToIdea(args) {
+  return localIdeaInfo(args).local;
+}
+
+/**
+ * How a local traveler's route starts and ends (§7.6), standing in for the
+ * flights they don't need: their city, from the earliest the others on this
+ * idea land to the latest they leave, or else the trip's own dates. Null for
+ * anyone who isn't local, who reads their own flights as before.
+ */
+export function localRoute({ traveler, trip, ideaId, flights, airports }) {
+  const info = localIdeaInfo({ traveler, trip, ideaId, flights, airports });
+  if (!info.local) return null;
+  const others = ideaHomeFlights(flights, ideaId).filter((f) => f.travelerId !== traveler.id);
+  const { from, to } = ideaWindow(others);
+  return {
+    info,
+    arrival: { code: info.code, date: from || (trip && trip.startDate) || null },
+    departure: { code: null, date: to || (trip && trip.endDate) || null },
+  };
 }
 
 /** Each night a traveler sleeps somewhere, as "YYYY-MM-DD" check-in dates. */
@@ -106,7 +162,9 @@ export function forTravelers(item, kind, ctx) {
 /**
  * Each traveler's own stops as `[{ travelerId, stops }]`: their chosen idea's
  * picked home flights plus their chosen option's hops, through `stopsFor`.
- * A traveler who hasn't chosen an option contributes nothing (§11).
+ * A traveler who hasn't chosen an option contributes nothing (§11) — unless
+ * they live in the idea's city, where the group's dates give them stops with
+ * no flights at all (§7.6).
  */
 export function stopsByTraveler({ travelers, trip, options, flights, airports }) {
   const list = travelers || [];
@@ -114,11 +172,19 @@ export function stopsByTraveler({ travelers, trip, options, flights, airports })
   return list.map((traveler) => {
     const choice = choices[traveler.id];
     const option = choice.optionId ? (options || []).find((o) => o.id === choice.optionId) : null;
-    if (!option || !airports) return { travelerId: traveler.id, stops: [] };
-    const homeFlights = (flights || []).filter(
-      (f) => f.role === "home" && f.picked !== false && f.ideaId === choice.ideaId && f.travelerId === traveler.id
+    if (!airports) return { travelerId: traveler.id, stops: [] };
+    const hopFlights = option ? (flights || []).filter((f) => f.role === "hop" && f.optionId === option.id) : [];
+
+    const local = localRoute({ traveler, trip, ideaId: choice.ideaId, flights, airports });
+    if (local) {
+      const stops = stopsFor({ homeFlights: [], hopFlights, airports, arrival: local.arrival, departure: local.departure });
+      return { travelerId: traveler.id, stops };
+    }
+
+    if (!option) return { travelerId: traveler.id, stops: [] };
+    const homeFlights = ideaHomeFlights(flights, choice.ideaId).filter(
+      (f) => f.picked !== false && f.travelerId === traveler.id
     );
-    const hopFlights = (flights || []).filter((f) => f.role === "hop" && f.optionId === option.id);
     return { travelerId: traveler.id, stops: stopsFor({ homeFlights, hopFlights, airports }) };
   });
 }
@@ -246,12 +312,20 @@ export function mergedStops(args) {
   return mergeStops(stopsByTraveler(args));
 }
 
-/** Everything the budget and `forTravelers` need, worked out once per render. */
+/** Everything the budget and `forTravelers` need, worked out once per render.
+ * `local` says, per traveler, whether their chosen idea is one they live in —
+ * so no flight from home is counted or missing for them (§7.6). */
 export function budgetContext({ trip, travelers, options, flights, airports }) {
   const list = travelers || [];
+  const choices = resolveChoices(trip, list, options);
+  const local = {};
+  for (const traveler of list) {
+    local[traveler.id] = isLocalToIdea({ traveler, trip, ideaId: choices[traveler.id].ideaId, flights, airports });
+  }
   return {
     travelers: list,
-    choices: resolveChoices(trip, list, options),
+    choices,
+    local,
     perTravelerStops: stopsByTraveler({ travelers: list, trip, options, flights, airports }),
   };
 }
@@ -277,11 +351,18 @@ export function travelerBreakdown({ travelerId, ctx, flights, stays, costs }) {
     return latest.amountCents;
   }
 
+  // Someone who lives in their idea's city needs no flight from home, so
+  // nothing counts for them there and nothing is missing — including any
+  // flight they saved before they were local, which stays put, uncounted (§7.6).
+  const local = Boolean(ctx.local && ctx.local[travelerId]);
+
   // The price of a home flight or a hop is per person, so it isn't split.
-  const homeFlights = (flights || []).filter(
-    (f) => f.role === "home" && f.picked !== false && f.ideaId === choice.ideaId && forTravelers(f, "home", ctx).includes(travelerId)
-  );
-  if (homeFlights.length === 0) missing.push(`No flight chosen for ${name}`);
+  const homeFlights = local
+    ? []
+    : (flights || []).filter(
+        (f) => f.role === "home" && f.picked !== false && f.ideaId === choice.ideaId && forTravelers(f, "home", ctx).includes(travelerId)
+      );
+  if (!local && homeFlights.length === 0) missing.push(`No flight chosen for ${name}`);
   const homeCents = homeFlights.reduce(
     (sum, f) => sum + priceOf(f, `No price logged for ${name}'s flight "${f.label || "flight"}"`),
     0
