@@ -1,5 +1,8 @@
 // Pure: turning a chosen route's stops into days (T27, V4 §8). No DOM, no Firebase.
 import { stayNights } from "./coverage.js";
+import { distanceKm } from "./stops.js";
+
+const HOME_STAY_MAX_KM = 50;
 
 /** Every "YYYY-MM-DD" date from `start` to `end`, inclusive. */
 export function datesBetween(start, end) {
@@ -36,18 +39,25 @@ export function daysFromStops(stops) {
 }
 
 /**
- * The chosen, located stay whose nights include `date` (T39, §7.8): a dated
- * day inside a stay's check-in/check-out range shows that stay as home base.
- * A departure day (the morning after the last night) still counts, since you
- * slept there the night before. `null` with no date, or no match.
+ * The chosen, located stay whose nights include `date` (T39, §7.8, T50): a
+ * dated day inside a stay's check-in/check-out range shows that stay as home
+ * base. A departure day (the morning after the last night) still counts
+ * (tonight's bed wins over a checkout-only match when both exist), since you
+ * slept there the night before. With `cityKey` and `cities` (a list of
+ * `{ stopKey|cityKey, lat, lng }`, e.g. from a merged route), a stay more
+ * than ~50km from that city's stop is ignored — a travel day's home base is
+ * never the previous city's hotel. `null` with no date, or no match.
  */
-export function stayForDate(date, chosenStays) {
+export function stayForDate(date, chosenStays, cityKey, cities) {
   if (!date) return null;
-  for (const stay of chosenStays || []) {
-    if (!stay || stay.lat == null || stay.lng == null) continue;
-    if (stayNights(stay).includes(date) || date === stay.checkOut) return stay;
-  }
-  return null;
+  const cityCoord = cityKey
+    ? (cities || []).find((c) => c && (c.stopKey === cityKey || c.cityKey === cityKey) && c.lat != null && c.lng != null)
+    : null;
+  const candidates = (chosenStays || []).filter((stay) => {
+    if (!stay || stay.lat == null || stay.lng == null) return false;
+    return !cityCoord || distanceKm(stay.lat, stay.lng, cityCoord.lat, cityCoord.lng) <= HOME_STAY_MAX_KM;
+  });
+  return candidates.find((stay) => stayNights(stay).includes(date)) || candidates.find((stay) => date === stay.checkOut) || null;
 }
 
 /** The entries in `wanted` whose date isn't already an existing day's date, so

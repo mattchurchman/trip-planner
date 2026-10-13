@@ -135,4 +135,28 @@ export const tests = [
     const second = { id: "s2", checkIn: "2026-06-02", checkOut: "2026-06-05", lat: 2, lng: 2 };
     assert.equal(stayForDate("2026-06-02", [first, second]), first);
   }],
+
+  ["stayForDate: on a travel day, the new city's stay wins over the old city's checkout-day match", () => {
+    // Rome hotel checks out the same day the Florence hotel's first night begins (T50).
+    const romeHotel = { id: "s1", checkIn: "2026-05-14", checkOut: "2026-05-18", lat: 41.9, lng: 12.5 };
+    const florenceHotel = { id: "s2", checkIn: "2026-05-18", checkOut: "2026-05-22", lat: 43.77, lng: 11.25 };
+    const cities = [
+      { stopKey: "Rome, IT", lat: 41.9, lng: 12.5 },
+      { stopKey: "Florence, IT", lat: 43.77, lng: 11.25 },
+    ];
+    assert.equal(stayForDate("2026-05-18", [romeHotel, florenceHotel], "Florence, IT", cities), florenceHotel);
+    assert.equal(stayForDate("2026-05-18", [romeHotel, florenceHotel], "Rome, IT", cities), romeHotel);
+  }],
+
+  ["stayForDate: a single-city trip's stay matches every day, cityKey given or not", () => {
+    const hotel = { id: "s1", checkIn: "2026-07-01", checkOut: "2026-07-05", lat: 48.85, lng: 2.35 };
+    const cities = [{ stopKey: "Paris, FR", lat: 48.85, lng: 2.35 }];
+    assert.equal(stayForDate("2026-07-03", [hotel], "Paris, FR", cities), hotel);
+    assert.equal(stayForDate("2026-07-03", [hotel]), hotel);
+  }],
+
+  ["stayForDate: no chosen stays at all, cityKey given", () => {
+    const cities = [{ stopKey: "Paris, FR", lat: 48.85, lng: 2.35 }];
+    assert.equal(stayForDate("2026-07-03", [], "Paris, FR", cities), null);
+  }],
 ];

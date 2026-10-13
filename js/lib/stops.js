@@ -7,7 +7,8 @@ function toRad(deg) {
   return (deg * Math.PI) / 180;
 }
 
-function haversineKm(lat1, lng1, lat2, lng2) {
+/** Great-circle distance between two points, in kilometers. */
+export function distanceKm(lat1, lng1, lat2, lng2) {
   const dLat = toRad(lat2 - lat1);
   const dLng = toRad(lng2 - lng1);
   const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
@@ -26,7 +27,7 @@ export function nearestStop(lat, lng, cities, maxKm = 150) {
   let bestKm = Infinity;
   for (const city of cities || []) {
     if (!city || !city.stopKey || city.lat == null || city.lng == null) continue;
-    const km = haversineKm(lat, lng, city.lat, city.lng);
+    const km = distanceKm(lat, lng, city.lat, city.lng);
     if (km < bestKm) {
       bestKm = km;
       bestKey = city.stopKey;
@@ -76,7 +77,7 @@ export function stopForStay(stay, mergedStops, cities) {
       const coords = new Map((cities || []).map((c) => [keyOf(c), c]));
       const km = (stop) => {
         const c = coords.get(keyOf(stop));
-        return c && c.lat != null && c.lng != null ? haversineKm(stay.lat, stay.lng, c.lat, c.lng) : Infinity;
+        return c && c.lat != null && c.lng != null ? distanceKm(stay.lat, stay.lng, c.lat, c.lng) : Infinity;
       };
       return keyOf(containing.reduce((best, stop) => (km(stop) < km(best) ? stop : best)));
     }
