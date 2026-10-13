@@ -44,21 +44,57 @@ function movement(prices, currency) {
   return { text: "No change", className: "price-same" };
 }
 
+/** "Checked today" / "Checked 1 day ago" / "Checked 3 days ago", for the age line (§5). */
+function checkedAgoLabel(age) {
+  if (age === 0) return "Checked today";
+  return `Checked ${age} day${age === 1 ? "" : "s"} ago`;
+}
+
+/**
+ * The price chip for a card header's right side (§5, §7.8): a tappable pill
+ * with the amount, a refresh glyph and the word "Check" ("+ Add price" with
+ * no price yet), 44px tall so it reads as a control, not plain text.
+ * `onOpen` is called when the chip is tapped.
+ */
+function priceChip({ latest, currency, perNightCents, onOpen }) {
+  if (!latest) {
+    const btn = el("button", {
+      type: "button",
+      className: "price-chip price-chip-btn",
+      attrs: { "aria-label": "Add price" },
+    }, ["+ Add price"]);
+    btn.addEventListener("click", onOpen);
+    return btn;
+  }
+
+  // Stays store the TOTAL for the whole stay (§5.4); when a per-night figure
+  // is given, label the primary line "total" so it isn't misread as nightly.
+  const latestText = perNightCents != null ? `${formatMoney(latest.amountCents, currency)} total` : formatMoney(latest.amountCents, currency);
+  const btn = el("button", {
+    type: "button",
+    className: "price-chip price-chip-btn",
+    attrs: { "aria-label": `Check price, last ${latestText}` },
+  }, [
+    el("span", { className: "price-chip-amount", textContent: latestText }),
+    el("span", { className: "price-chip-icon", "aria-hidden": "true", textContent: "↻" }),
+    el("span", { className: "price-chip-label", textContent: "Check" }),
+  ]);
+  btn.addEventListener("click", onOpen);
+  return btn;
+}
+
 /**
  * The price summary for a card header's right side (§5, §7.8): the price
- * itself as a button, a small age label with a stale dot past 3 days, the
- * change from the previous check with when it was checked (who and the
- * exact time sit in a `title` tooltip, not the visible text), a New low
- * pill, and a sparkline once there are 2+ entries. "No price yet" with none.
- * `onOpen` is called when the price button is tapped.
+ * chip (§5), an age line beneath it ("Checked today", or "Check price" with
+ * a stale dot past 3 days), the change from the previous check with when it
+ * was checked (who and the exact time sit in a `title` tooltip, not the
+ * visible text), a New low pill, and a sparkline once there are 2+ entries.
+ * `onOpen` is called when the chip is tapped.
  */
 function priceSummary({ prices, currency, perNightCents = null, usersById = {}, now, onOpen }) {
   const latest = latestEntry(prices);
-  if (!latest) {
-    const btn = el("button", { type: "button", className: "btn-link price-latest price-latest-btn", textContent: "Add price" });
-    btn.addEventListener("click", onOpen);
-    return el("div", { className: "price-summary" }, [btn]);
-  }
+  const chip = priceChip({ latest, currency, perNightCents, onOpen });
+  if (!latest) return el("div", { className: "price-summary" }, [chip]);
 
   const age = priceAgeDays(prices, now);
   const stale = isStale(prices, now);
@@ -66,19 +102,12 @@ function priceSummary({ prices, currency, perNightCents = null, usersById = {}, 
   const byName = (usersById[latest.byUid] && usersById[latest.byUid].displayName) || "someone";
   const exactTime = latest.checkedAt ? new Date(latest.checkedAt).toLocaleString() : "";
 
-  // Stays store the TOTAL for the whole stay (§5.4); when a per-night figure
-  // is given, label the primary line "total" so it isn't misread as nightly.
-  const latestText = perNightCents != null ? `${formatMoney(latest.amountCents, currency)} total` : formatMoney(latest.amountCents, currency);
-  const priceBtn = el("button", { type: "button", className: "btn-link price-latest price-latest-btn", textContent: latestText });
-  priceBtn.addEventListener("click", onOpen);
-
   const ageLine = el("div", { className: "price-age-line" }, [
-    priceBtn,
-    el("span", { className: "price-age muted", textContent: `${age}d` }),
+    el("span", { className: "price-age muted", textContent: stale ? "Check price" : checkedAgoLabel(age) }),
     stale ? el("span", { className: "price-stale-dot", title: "Checked more than 3 days ago", "aria-label": "May be out of date" }) : null,
   ].filter(Boolean));
 
-  const rows = [ageLine];
+  const rows = [chip, ageLine];
   if (perNightCents != null) {
     rows.push(el("p", { className: "price-per-night muted", textContent: `${formatMoney(perNightCents, currency)} / night` }));
   }
@@ -137,11 +166,11 @@ function amountFields({ tripId, subcollection, docId, latest, myUid, onSaved, on
   ]);
 }
 
-/** The "Still $64?" row (§5): Same logs a fresh entry at the same amount; Changed swaps in `amountFields`. */
+/** The "Opened the link... Is it still $64?" row (§5): Same logs a fresh entry at the same amount; Changed swaps in `amountFields`. */
 function askRow({ tripId, subcollection, docId, latest, currency, myUid, onSame, onChanged }) {
   const errorHolder = el("div", { className: "field-error-holder" });
-  const sameBtn = el("button", { type: "button", className: "btn btn-small btn-primary", textContent: "Same" });
-  const changedBtn = el("button", { type: "button", className: "btn btn-small btn-secondary", textContent: "Changed" });
+  const sameBtn = el("button", { type: "button", className: "btn btn-primary", textContent: "Same" });
+  const changedBtn = el("button", { type: "button", className: "btn btn-secondary", textContent: "Changed" });
 
   sameBtn.addEventListener("click", async () => {
     errorHolder.replaceChildren();
@@ -165,9 +194,8 @@ function askRow({ tripId, subcollection, docId, latest, currency, myUid, onSame,
 
   return el("div", {}, [
     el("div", { className: "price-ask-row" }, [
-      el("p", { className: "price-ask", textContent: `Still ${formatMoney(latest.amountCents, currency)}?` }),
-      sameBtn,
-      changedBtn,
+      el("p", { className: "price-ask", textContent: `Opened the link in a new tab. Is it still ${formatMoney(latest.amountCents, currency)}?` }),
+      el("div", { className: "price-ask-actions" }, [sameBtn, changedBtn]),
     ]),
     errorHolder,
   ]);
@@ -262,11 +290,15 @@ export function priceCheck({ tripId, subcollection, docId, prices, link, currenc
             onCancel: latest ? () => { saved.mode = "ask"; rowState.set(stateKey, saved); renderRowBody(); } : closeRow,
           });
     const history = historySection({ tripId, subcollection, docId, prices, currency, stateKey, saved });
-    row.replaceChildren(
-      el("p", { className: "muted price-hint" }, ["Check the price on the site first, then save what you saw."]),
-      body,
-      ...(history ? [history] : [])
-    );
+    const hint =
+      latest && saved.mode === "ask"
+        ? null
+        : el("p", { className: "muted price-hint" }, ["Check the price on the site first, then save what you saw."]);
+    row.replaceChildren(...(hint ? [hint] : []), body, ...(history ? [history] : []));
+    if (latest && saved.mode === "changed") {
+      const amountInput = row.querySelector(".price-update-fields input[type=text]");
+      if (amountInput) amountInput.focus();
+    }
   }
   renderRowBody();
 

@@ -1550,29 +1550,43 @@ textarea:focus {
   text-align: right;
 }
 
+/* The price chip (T45): the whole control reads as tappable, not plain text. */
+.price-chip-btn {
+  border: 1px solid var(--line);
+  background: var(--sunk);
+  border-radius: var(--radius-pill);
+  padding: var(--space-1) var(--space-3);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: inherit;
+  cursor: pointer;
+}
+
+.price-chip-btn:hover:not(:disabled) {
+  border-color: var(--teal);
+}
+
+.price-chip-amount {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.price-chip-icon {
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+.price-chip-label {
+  font-size: 0.85em;
+  color: var(--muted);
+}
+
 .price-age-line {
   display: flex;
   align-items: baseline;
   gap: 6px;
-}
-
-.price-latest {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 600;
-}
-
-.price-latest-btn {
-  background: none;
-  border: none;
-  padding: var(--space-1) 0;
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  color: inherit;
-  text-decoration: underline;
-  text-decoration-color: var(--line);
-  cursor: pointer;
 }
 
 .price-age {
@@ -1639,14 +1653,23 @@ textarea:focus {
 
 .price-ask-row {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: var(--space-2);
-  flex-wrap: wrap;
 }
 
 .price-ask {
   margin: 0;
   font-weight: 600;
+}
+
+.price-ask-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.price-ask-actions .btn {
+  flex: 1;
+  min-height: 44px;
 }
 
 .price-update-fields {

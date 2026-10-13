@@ -21,6 +21,9 @@ How Trip Planner talks. Every agent follows this once T07 is done. The owner can
 | Unplanned | Not in a day yet | Days tab |
 | Log price | Save price | Price panel |
 | No price logged yet. | No price yet. Check the site, then save what you saw. | Price panel |
+| Still $X? | Opened the link in a new tab. Is it still $X? | Price panel |
+| Add price | + Add price (chip) | Price panel |
+| 3d (age label) | Checked today / Checked 3 days ago, or Check price once stale | Price panel |
 | Shared costs | Split costs | Flights & stays |
 | Add shared cost | Add a split cost | Flights & stays |
 | Partial total | Total so far (missing some prices) | Totals card |
