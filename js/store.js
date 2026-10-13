@@ -178,8 +178,6 @@ function placeDocFields(fields) {
     lng: fields.lng ?? null,
     googleMapsUrl: fields.googleMapsUrl || null,
     link: fields.link || null,
-    eventStart: fields.eventStart || null,
-    eventEnd: fields.eventEnd || null,
     // Nearest stop on the chosen route (T25, V4 §6), or null for "Elsewhere".
     stopKey: fields.stopKey ?? null,
     // The My Maps layer this place was imported from (T26, V4 §6), or "".

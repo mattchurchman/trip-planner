@@ -2,9 +2,8 @@ import { updatePlace, deletePlace, voteOnPlace } from "../store.js";
 import { el, confirmDialog, friendlyError, rankControl, renderWhenIdle } from "../ui.js";
 import { renderComments } from "./comments.js";
 import { editPlaceDialog, buildSetLocationInline, buildAddPlacePanel } from "./placeForm.js";
-import { sortByRank, notRankedByMe, voteSummary, toMillis } from "../lib/votes.js";
+import { sortByRank, notRankedByMe, voteCounts, toMillis } from "../lib/votes.js";
 import { safeUrl, googleMapsOpenUrl } from "../lib/links.js";
-import { rangesOverlap } from "../lib/dates.js";
 import { CATEGORIES, categoryColor } from "../lib/categories.js";
 
 function openMapsUrlFor(place, selectedCity) {
@@ -12,7 +11,7 @@ function openMapsUrlFor(place, selectedCity) {
   return saved || googleMapsOpenUrl(place.name, selectedCity || "");
 }
 
-function applyFiltersAndSort(places, { filters, sortMode, trip, myUid }) {
+function applyFiltersAndSort(places, { filters, sortMode, myUid }) {
   let filtered = places.filter((p) => {
     if (filters.categories.size > 0 && !filters.categories.has(p.category)) return false;
     if (filters.neighborhood && p.neighborhood !== filters.neighborhood) return false;
@@ -20,7 +19,6 @@ function applyFiltersAndSort(places, { filters, sortMode, trip, myUid }) {
       const haystack = `${p.name} ${p.note}`.toLowerCase();
       if (!haystack.includes(filters.search.toLowerCase())) return false;
     }
-    if (filters.eventsOnly && !rangesOverlap(p.eventStart, p.eventEnd, trip.startDate, trip.endDate)) return false;
     return true;
   });
   if (filters.notRankedOnly) filtered = notRankedByMe(filtered, myUid);
@@ -53,7 +51,8 @@ export function createPlacesSection({ tripId, myUid, onError, mapClickState, onF
   let placeCommentUnsubscribes = [];
   let addPanelBuilt = false;
   let addPanel = null;
-  const filters = { categories: new Set(), neighborhood: "", search: "", notRankedOnly: false, eventsOnly: false };
+  const filters = { categories: new Set(), neighborhood: "", search: "", notRankedOnly: false };
+  const openPlaceIds = new Set();
   let sortMode = "rank";
   let lastNeighborhoodsKey = "";
 
@@ -112,12 +111,6 @@ export function createPlacesSection({ tripId, myUid, onError, mapClickState, onF
     renderList();
   });
 
-  const eventsCheckbox = el("input", { type: "checkbox" });
-  eventsCheckbox.addEventListener("change", () => {
-    filters.eventsOnly = eventsCheckbox.checked;
-    renderList();
-  });
-
   const sortSelect = el(
     "select",
     {},
@@ -144,7 +137,6 @@ export function createPlacesSection({ tripId, myUid, onError, mapClickState, onF
       filterLabel("Neighborhood", neighborhoodSelect),
       filterLabel("Search", searchInput),
       el("label", { className: "checkbox-label" }, [notRankedCheckbox, " I haven't ranked yet"]),
-      el("label", { className: "checkbox-label" }, [eventsCheckbox, " Events during trip dates"]),
       filterLabel("Sort by", sortSelect),
     ])
   );
@@ -175,14 +167,32 @@ export function createPlacesSection({ tripId, myUid, onError, mapClickState, onF
     }
   }
 
+  /** Compact "♥2 👍1" style summary (§7.7); the viewer's own vote is highlighted. */
+  function compactVoteSummary(votes) {
+    const counts = voteCounts(votes);
+    const myChoice = (votes || {})[myUid];
+    const icons = { love: "♥", like: "👍", pass: "👎" };
+    const items = ["love", "like", "pass"]
+      .filter((choice) => counts[choice] > 0)
+      .map((choice) =>
+        el("span", {
+          className: `vote-compact-item${choice === myChoice ? " vote-compact-mine" : ""}`,
+          textContent: `${icons[choice]}${counts[choice]}`,
+        })
+      );
+    if (items.length === 0) return el("span", { className: "vote-compact muted", textContent: "Not ranked" });
+    return el("span", { className: "vote-compact" }, items);
+  }
+
   function renderPlaceRow(place) {
     const errorHolder = el("div", { className: "field-error-holder" });
     const hasLocation = place.lat != null && place.lng != null;
 
-    const details = [];
-    if (place.note) details.push(el("p", { textContent: place.note }));
+    const bodyDetails = [];
+    if (place.neighborhood) bodyDetails.push(el("p", { className: "muted", textContent: place.neighborhood }));
+    if (place.note) bodyDetails.push(el("p", { textContent: place.note }));
     const safeLink = place.link ? safeUrl(place.link) : null;
-    if (safeLink) details.push(el("a", { href: safeLink, target: "_blank", rel: "noopener noreferrer", textContent: "Link" }));
+    if (safeLink) bodyDetails.push(el("a", { href: safeLink, target: "_blank", rel: "noopener noreferrer", textContent: "Link" }));
 
     const rank = rankControl({
       votes: place.votes || {},
@@ -194,6 +204,9 @@ export function createPlacesSection({ tripId, myUid, onError, mapClickState, onF
         ),
     });
 
+    const showOnMapBtn = hasLocation
+      ? el("button", { type: "button", className: "btn btn-small", textContent: "Show on map", onclick: () => onFocusOnMap(place) })
+      : null;
     const openBtn = el("a", {
       className: "btn btn-small",
       href: openMapsUrlFor(place, selectedCity),
@@ -223,49 +236,44 @@ export function createPlacesSection({ tripId, myUid, onError, mapClickState, onF
     });
     placeCommentUnsubscribes.push(commentsUnsub);
 
-    // Keyboard users can't reach the row's click-to-pan, so the name itself is the
-    // control when there's a pin to pan to (§4: reachable by keyboard).
-    const nameEl = hasLocation
-      ? el("button", {
-          type: "button",
-          className: "place-name-btn",
-          textContent: place.name,
-          attrs: { "aria-label": `${place.name} — show on map` },
-          onclick: () => onFocusOnMap(place),
-        })
-      : el("strong", { textContent: place.name });
+    const row = el("details", {
+      className: "card place-row",
+      open: openPlaceIds.has(place.id),
+      attrs: { "data-place-id": place.id },
+      ontoggle: () => {
+        if (row.open) openPlaceIds.add(place.id);
+        else openPlaceIds.delete(place.id);
+      },
+    });
 
-    const row = el(
-      "article",
-      { className: "card place-row", attrs: { "data-place-id": place.id } },
+    const summary = el("summary", { className: "place-row-summary" }, [
+      el("span", { className: "category-chip", textContent: place.category, style: `background:${categoryColor(place.category)}` }),
+      el("span", { className: "place-row-name", textContent: place.name }),
+      compactVoteSummary(place.votes || {}),
+    ]);
+
+    const body = el(
+      "div",
+      { className: "place-row-body" },
       [
-        el("div", { className: "place-row-title" }, [
-          el("span", { className: "category-chip", textContent: place.category, style: `background:${categoryColor(place.category)}` }),
-          nameEl,
-        ]),
-        el("p", { className: "muted", textContent: place.neighborhood || "" }),
-        ...details,
+        ...bodyDetails,
         hasLocation ? null : el("p", { className: "field-error", textContent: "No map pin" }),
         buildSetLocationInline({ place, city: selectedCity, tripId, mapClickState, onError, cities }),
         rank,
-        el("div", { className: "place-actions" }, [openBtn, editBtn, deleteBtn]),
+        el("div", { className: "place-actions" }, [showOnMapBtn, openBtn, editBtn, deleteBtn].filter(Boolean)),
         errorHolder,
         commentsEl,
       ].filter(Boolean)
     );
 
-    row.addEventListener("click", (event) => {
-      if (event.target.closest("button, a, input, textarea, select")) return;
-      if (hasLocation) onFocusOnMap(place);
-    });
-
+    row.append(summary, body);
     return row;
   }
 
   /** Current filtered set. Recomputed on demand so a deferred row rebuild
    * (renderWhenIdle) still renders the newest data rather than a stale snapshot. */
   function currentFiltered() {
-    return applyFiltersAndSort(places, { filters, sortMode, trip, myUid });
+    return applyFiltersAndSort(places, { filters, sortMode, myUid });
   }
 
   function renderRows() {
@@ -330,8 +338,10 @@ export function createPlacesSection({ tripId, myUid, onError, mapClickState, onF
       renderList();
     },
     focusCard(placeId) {
+      openPlaceIds.add(placeId);
       const row = listEl.querySelector(`[data-place-id="${placeId}"]`);
       if (!row) return;
+      row.open = true;
       row.scrollIntoView({ behavior: "smooth", block: "center" });
       row.classList.add("place-row-highlight");
       setTimeout(() => row.classList.remove("place-row-highlight"), 1500);

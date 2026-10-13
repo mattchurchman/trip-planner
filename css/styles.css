@@ -1137,9 +1137,8 @@ textarea:focus {
 }
 
 .place-row {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  padding: 0;
+  overflow: hidden;
   scroll-margin-top: var(--space-4);
 }
 
@@ -1147,31 +1146,47 @@ textarea:focus {
   outline: 2px solid var(--teal);
 }
 
-.place-row-title {
+.place-row-summary {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-}
-
-.place-name-btn {
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
-  font-weight: 700;
-  color: inherit;
+  min-height: 44px;
+  padding: 6px var(--space-4);
   cursor: pointer;
-  text-align: left;
+  list-style: none;
 }
 
-.place-name-btn:hover {
-  color: var(--teal);
+.place-row-summary::-webkit-details-marker {
+  display: none;
 }
 
-.place-name-btn:focus-visible {
-  outline: 2px solid var(--teal);
-  outline-offset: 2px;
-  border-radius: var(--radius);
+.place-row-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.vote-compact {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
+.vote-compact-mine {
+  font-weight: 700;
+  border-bottom: 2px solid var(--teal);
+}
+
+.place-row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 var(--space-4) var(--space-4);
 }
 
 .category-chip {
@@ -1182,6 +1197,8 @@ textarea:focus {
   font-weight: 600;
   letter-spacing: 0.01em;
   box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .place-actions {

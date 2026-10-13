@@ -218,8 +218,6 @@ export function editPlaceDialog(place) {
     const neighborhoodInput = el("input", { type: "text", value: place.neighborhood });
     const noteInput = el("textarea", { rows: 2, value: place.note });
     const linkInput = el("input", { type: "text", value: place.link || "" });
-    const eventStartInput = el("input", { type: "date", value: place.eventStart || "" });
-    const eventEndInput = el("input", { type: "date", value: place.eventEnd || "" });
     const errorHolder = el("div", { className: "field-error-holder" });
     const cancelBtn = el("button", { type: "button", className: "btn btn-secondary", textContent: "Cancel" });
     const okBtn = el("button", { type: "submit", className: "btn btn-primary", textContent: "Save" });
@@ -230,7 +228,6 @@ export function editPlaceDialog(place) {
       field("Neighborhood", neighborhoodInput),
       field("Note", noteInput),
       field("Link", linkInput),
-      el("div", { className: "field-row" }, [field("Event start", eventStartInput), field("Event end", eventEndInput)]),
       errorHolder,
       el("div", { className: "dialog-actions" }, [cancelBtn, okBtn]),
     ]);
@@ -248,8 +245,6 @@ export function editPlaceDialog(place) {
         neighborhood: neighborhoodInput.value.trim(),
         note: noteInput.value.trim(),
         link: linkInput.value.trim() || null,
-        eventStart: eventStartInput.value || null,
-        eventEnd: eventEndInput.value || null,
       });
     });
     return { form, focusEl: nameInput };
@@ -312,8 +307,6 @@ export function buildAddPlacePanel({ tripId, myUid, mapClickState, addPanelHolde
   const neighborhoodInput = el("input", { type: "text" });
   const noteInput = el("textarea", { rows: 2 });
   const linkInput = el("input", { type: "text" });
-  const eventStartInput = el("input", { type: "date" });
-  const eventEndInput = el("input", { type: "date" });
   const errorHolder = el("div", { className: "field-error-holder" });
   const submitBtn = el("button", { type: "button", className: "btn btn-primary", textContent: "Add place" });
 
@@ -362,8 +355,6 @@ export function buildAddPlacePanel({ tripId, myUid, mapClickState, addPanelHolde
           neighborhood: neighborhoodInput.value.trim(),
           note: noteInput.value.trim(),
           link: linkInput.value.trim() || null,
-          eventStart: eventStartInput.value || null,
-          eventEnd: eventEndInput.value || null,
           lat,
           lng,
           googleMapsUrl,
@@ -377,8 +368,6 @@ export function buildAddPlacePanel({ tripId, myUid, mapClickState, addPanelHolde
       neighborhoodInput.value = "";
       noteInput.value = "";
       linkInput.value = "";
-      eventStartInput.value = "";
-      eventEndInput.value = "";
       nameAutoFilled = true;
       locationPicker.reset();
       onAdded();
@@ -398,7 +387,6 @@ export function buildAddPlacePanel({ tripId, myUid, mapClickState, addPanelHolde
       field("Neighborhood", neighborhoodInput),
       field("Note", noteInput),
       field("Link", linkInput),
-      el("div", { className: "field-row" }, [field("Event start", eventStartInput), field("Event end", eventEndInput)]),
       locationPicker.otherWaysElement,
       errorHolder,
       submitBtn,

@@ -14,7 +14,6 @@ import { chosenStayIds } from "../lib/selection.js";
 import { el, confirmDialog, friendlyError, field, dialogShell } from "../ui.js";
 import { renderExportSection } from "./exportSection.js";
 import { sortByRank, voteSummary, voteCounts } from "../lib/votes.js";
-import { rangesOverlap } from "../lib/dates.js";
 import { walkingRouteLinks } from "../lib/links.js";
 import { datesBetween, daysFromStops, missingDays, stayForDate } from "../lib/dayplan.js";
 import { mergedStops } from "../lib/choices.js";
@@ -261,11 +260,9 @@ export function renderDaysPage(container, tripId, myUid) {
   }
 
   function unplannedRow(place, daysInCity) {
-    const happening = days.some((d) => d.date && rangesOverlap(place.eventStart, place.eventEnd, d.date, d.date));
     return el("li", { className: "unplanned-row" }, [
       el("span", { textContent: place.name }),
       el("span", { className: "muted", textContent: voteSummary(place.votes || {}) || "Not ranked yet" }),
-      happening ? el("span", { className: "badge-new-low", textContent: "Happening this day" }) : null,
       buildAddToDaySelect(place, daysInCity),
     ].filter(Boolean));
   }

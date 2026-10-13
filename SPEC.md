@@ -322,8 +322,8 @@ note: string
 lat: number | null, lng: number | null
 googleMapsUrl: string | null         // the link the user pasted, if any
 link: string | null                  // website, tour booking page, event page
-eventStart: string | null            // "YYYY-MM-DD"; for events and seasonal things
-eventEnd: string | null
+eventStart: string | null            // retired T49; no longer read or written, old values left alone
+eventEnd: string | null              // retired T49; no longer read or written, old values left alone
 stopKey: string | null               // nearest route city within 150 km, set on save;
                                       // null shows under "Elsewhere" (§7.7)
 layer: string                        // the My Maps layer it was imported from, or ""
@@ -543,12 +543,12 @@ One Leaflet map with place pins and stay price pins together, and one list below
 
 **Places**
 
-- Filters: category (multi-select chips), neighborhood (dropdown built from existing values), text search on name and note, **I haven't ranked yet**, and events during the trip dates. Sort: Group favorites (default), Newest, Neighborhood, Category.
-- Each place is an `L.circleMarker` in its category color. Loved pins are larger with a ring, Pass-only pins are dimmed. Clicking a list row pans to its marker; clicking a marker scrolls to and highlights its row.
+- Filters: category (multi-select chips), neighborhood (dropdown built from existing values), text search on name and note, **I haven't ranked yet**. Sort: Group favorites (default), Newest, Neighborhood, Category.
+- **Each place is one compact row** (T49): category, name and a vote summary (e.g. "♥2 👍1", the viewer's own vote highlighted). Tapping a row opens it to show neighborhood, note, link, the Love/Like/Pass buttons, comments, Show on map, Edit and Delete; one open at a time is fine. A live update never closes a row someone has open. Clicking a marker scrolls to and opens its row.
 - **Add place**, in this order, because a Google Maps link alone captures an exact name, coordinates and a reusable link:
   1. **Find it on Google Maps.** A search box and a **Find on Google Maps ↗** button (§9.2), plus **Paste** to fill the link box from the clipboard.
   2. **Paste the Google Maps link.** Parsed on paste or input (§9.3); found coordinates fill the location and, if empty, the name, then "✓ Pin found".
-  3. **Details:** name (required), category (required), neighborhood, note, website or booking link, event start and end.
+  3. **Details:** name (required), category (required), neighborhood, note, website or booking link.
   4. **Other ways to add a location** (collapsed): Search (Nominatim, §9.4) and Place on map (the next map click sets the coordinates).
 - `stopKey` is set on save to the nearest route city within 150 km (`stops.js`), or `null` for "Elsewhere".
 - Every place has **Set location** / **Edit location** using the same three methods — a pasted link's coordinates aren't always the real pin, so there must always be a way to correct one without deleting the place. A place may be saved with no location; it shows "No map pin" and is left out of the map and exports.
@@ -574,7 +574,6 @@ One Leaflet map with place pins and stay price pins together, and one list below
 - **Home base (T39):** a dated day inside a chosen, located stay's nights (`stayForDate`, `dayplan.js`; a departure day still counts, since you slept there the night before) shows that stay on the map with the stay pill style plus a house mark, popup naming it. Undated days never show one.
 - Each day card shows its date or label, title, focus, notes and its places in `dayOrder`, with **▲** / **▼** to reorder (each with an `aria-label` naming the place and direction) and **Remove** to send a place back to the pool. No drag-and-drop. Deleting a day returns its places to the pool.
 - The **Not planned** pool lists the selected day's city's places with no `dayId`, Loved first.
-- Events whose `eventStart`–`eventEnd` range overlaps a dated day show "Happening this day".
 - **Open walking route** builds Google Maps directions through the day's located places in order; with a home base (T39, above), the route starts and ends at the stay instead of the first and last place (§9.2).
 - **Export** (§10): **Take it to Google Maps** downloads the day-by-day map file, and the plain places CSV and KML are there too. The box says how many places have no pin and will be left out, and links to the help page's import steps.
 
