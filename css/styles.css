@@ -1181,13 +1181,14 @@ textarea:focus {
   margin: 0;
 }
 
-/* Map tab layout (T25): list (either Places or Stays) beside the one shared
-   map from 760px, map on top and static below it (same breakpoint as the
-   rest of the app). */
+/* Map tab layout (T25, T52): mobile-first — map on top at ~40dvh, the list
+   (Places or Stays) below it. From 760px the map moves beside the list,
+   sticky, at its old fixed height. */
 .map-tab-layout {
   display: flex;
+  flex-direction: column;
   gap: var(--space-4);
-  align-items: flex-start;
+  align-items: stretch;
 }
 
 .map-tab-list {
@@ -1201,15 +1202,61 @@ textarea:focus {
 .map-tab-map {
   flex: 1;
   min-width: 0;
-  height: 500px;
+  width: 100%;
+  height: 40dvh;
   border-radius: var(--radius-card);
   border: 1px solid var(--line);
-  position: sticky;
-  top: var(--space-4);
+  order: -1;
 }
 
+@media (min-width: 760px) {
+  .map-tab-layout {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .map-tab-map {
+    height: 500px;
+    position: sticky;
+    top: var(--space-4);
+    order: 0;
+  }
+}
+
+/* Mobile-first (T52): the stop chips scroll sideways in their own track,
+   same pattern as .seg, so a long stop list never grows the page. From
+   760px they wrap like any other chip row. */
 .stop-chips {
   margin-bottom: var(--space-3);
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.stop-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.stop-chips .chip {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+@media (min-width: 760px) {
+  .stop-chips {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    scroll-snap-type: none;
+  }
+
+  .stop-chips .chip {
+    min-height: auto;
+  }
 }
 
 .map-tab-toolbar {
@@ -1302,19 +1349,6 @@ textarea:focus {
   display: flex;
   gap: var(--space-2);
   flex-wrap: wrap;
-}
-
-@media (max-width: 760px) {
-  .map-tab-layout {
-    flex-direction: column;
-  }
-
-  .map-tab-map {
-    width: 100%;
-    height: 300px;
-    position: static;
-    order: -1;
-  }
 }
 
 /* Step labels in the Add flight option / Add stay dialogs (§7.7) read as a
@@ -1556,6 +1590,35 @@ textarea:focus {
 
 .stop-group-header h3 {
   margin: 0;
+}
+
+/* Hotel search links (T31, T52): small pill buttons that wrap, instead of
+   bare <a> text running together. */
+.discover-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
+}
+
+.discover-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--teal);
+  font-weight: 500;
+  font-size: 0.85em;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.discover-link:hover {
+  border-color: var(--teal);
+  box-shadow: var(--shadow-sm);
 }
 
 .coverage {
@@ -1981,10 +2044,18 @@ textarea:focus {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  flex-wrap: wrap;
 }
 
 .day-place-row > span:first-child {
   flex: 1;
+  min-width: 0;
+}
+
+/* Up/down/remove (T52): thumb-sized even though they're link-styled. */
+.day-place-row button {
+  min-height: 44px;
+  min-width: 44px;
 }
 
 .day-routes {
@@ -2038,6 +2109,20 @@ textarea:focus {
 .unplanned-row > span:first-child {
   flex: 1;
   min-width: 120px;
+}
+
+/* "Add to day…" (T52): its own full-width line on phones so it's never a
+   cramped, hard-to-tap sliver next to the place name. */
+.unplanned-row select {
+  width: 100%;
+  min-height: 44px;
+}
+
+@media (min-width: 760px) {
+  .unplanned-row select {
+    width: auto;
+    min-height: auto;
+  }
 }
 
 .export-section {
