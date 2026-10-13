@@ -23,15 +23,17 @@ function externalLinkRow(url, label) {
  * route order: the stay's own `stopKey` while it still matches a stop,
  * otherwise the stop its check-in dates or pin point to (`stayStopKey`). Stays
  * that match nothing land in "No stop yet". A route that returns to the same
- * city twice shares one group, keyed by its first visit.
+ * city gets a group per visit (T46, §11), each with its own dates — the stop's
+ * `stopKey` keys the group, not its city.
  */
 function groupByStop(stays, stops) {
   const groups = [];
   const byKey = new Map();
   for (const stop of stops) {
-    if (!stop.cityKey || byKey.has(stop.cityKey)) continue;
+    const key = stop.stopKey || stop.cityKey;
+    if (!key || byKey.has(key)) continue;
     const group = { stop, stays: [] };
-    byKey.set(stop.cityKey, group);
+    byKey.set(key, group);
     groups.push(group);
   }
   const noStop = [];
@@ -98,7 +100,7 @@ export function createStaysSection({ tripId, myUid, onError, onFocusOnMap }) {
    * route is chosen, same as everywhere else here. */
   function cityForStay(stay) {
     const key = stayStopKey(stay, currentStops || [], currentStops || []);
-    const stop = key ? (currentStops || []).find((s) => s.cityKey === key) : null;
+    const stop = key ? (currentStops || []).find((s) => (s.stopKey || s.cityKey) === key) : null;
     return stop ? stop.city : null;
   }
 
@@ -311,7 +313,7 @@ export function createStaysSection({ tripId, myUid, onError, onFocusOnMap }) {
 
     const addBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Add stay" });
     addBtn.disabled = currentStays.length >= 10;
-    addBtn.addEventListener("click", () => handleAddStay({ checkIn: stop.from, checkOut: stop.to, stopKey: stop.cityKey, city: stop.city }));
+    addBtn.addEventListener("click", () => handleAddStay({ checkIn: stop.from, checkOut: stop.to, stopKey: stop.stopKey || stop.cityKey, city: stop.city }));
 
     const header = el("div", { className: "stop-group-header" }, [
       el("h3", {}, [stop.city || stop.code || "Unknown", dateRange ? el("span", { className: "muted", textContent: ` · ${dateRange}` }) : null].filter(Boolean)),

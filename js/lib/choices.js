@@ -123,18 +123,90 @@ export function stopsByTraveler({ travelers, trip, options, flights, airports })
   });
 }
 
+/** Does a visit starting on `from` carry on from a stop that ends on `end`?
+ * A null `end` is an open-ended stop (no flight home yet), which swallows
+ * everything after it. Ends are inclusive, so arriving the day someone else
+ * leaves is the same stop. */
+function carriesOn(end, from) {
+  return end === null || from <= end;
+}
+
+/** The later of two stop ends, where null (open-ended) beats any date. */
+function laterEnd(a, b) {
+  if (a === null || b === null) return null;
+  return a > b ? a : b;
+}
+
 /**
- * Everyone's stops merged into one route (§11): one entry per `cityKey`, in
+ * One city's visits split into separate stops (§11): visits merge only while
+ * their dates overlap or touch — two travelers in the city at once, or one
+ * arriving as another leaves — so a city you come back to later in the trip
+ * becomes a stop of its own. Undated visits join the city's first stop, or
+ * make one of their own when every visit is undated.
+ */
+function visitGroups(visits) {
+  const dated = visits
+    .filter((v) => v.stop.from)
+    .sort((a, b) => (a.stop.from === b.stop.from ? a.order - b.order : a.stop.from < b.stop.from ? -1 : 1));
+  const groups = [];
+  const ends = [];
+  for (const visit of dated) {
+    const last = groups.length - 1;
+    if (last >= 0 && carriesOn(ends[last], visit.stop.from)) {
+      groups[last].push(visit);
+      ends[last] = laterEnd(ends[last], visit.stop.to || null);
+    } else {
+      groups.push([visit]);
+      ends.push(visit.stop.to || null);
+    }
+  }
+  const undated = visits.filter((v) => !v.stop.from);
+  if (undated.length > 0) {
+    if (groups.length > 0) groups[0].push(...undated);
+    else groups.push(undated);
+  }
+  return groups;
+}
+
+/** One merged stop from one city's group of visits, in the order the visits
+ * were collected (travelers in `travelers` order, each traveler's stops in
+ * route order) so `travelerIds` reads the same way everywhere. */
+function mergedStop(cityKey, stopKey, group) {
+  const merged = { stopKey, cityKey, city: "", code: "", from: null, to: null, travelerIds: [], order: Infinity, nightsByDate: new Map() };
+  for (const visit of [...group].sort((a, b) => a.order - b.order)) {
+    const { stop, travelerId } = visit;
+    if (!merged.city && stop.city) merged.city = stop.city;
+    if (!merged.code && stop.code) merged.code = stop.code;
+    if (stop.from && (!merged.from || stop.from < merged.from)) merged.from = stop.from;
+    if (stop.to && (!merged.to || stop.to > merged.to)) merged.to = stop.to;
+    if (travelerId && !merged.travelerIds.includes(travelerId)) merged.travelerIds.push(travelerId);
+    if (visit.order < merged.order) merged.order = visit.order;
+    for (const date of nightDatesOf([stop])) {
+      if (!merged.nightsByDate.has(date)) merged.nightsByDate.set(date, []);
+      const who = merged.nightsByDate.get(date);
+      if (travelerId && !who.includes(travelerId)) who.push(travelerId);
+    }
+  }
+  return merged;
+}
+
+/**
+ * Everyone's stops merged into one route (§11): one entry per visit to a city
+ * — visits merge only when their dates overlap or touch (`visitGroups`) — in
  * order of first arrival (undated last), with `from` the earliest and `to` the
  * latest, `travelerIds` for the stop as a whole and `nights: [{ date,
  * travelerIds }]` for who sleeps there each night.
+ *
+ * Each stop also carries a `stopKey`: the `cityKey` for a city's first visit,
+ * then `cityKey#2`, `cityKey#3` for later ones, so a stay saved against the
+ * first visit keeps matching while a return visit is its own group.
  *
  * Note `nights` is a list here, where a single traveler's stop from `stopsFor`
  * carries a night *count* — a merged stop has a different night per person.
  * Per-traveler warnings stay on the Routes rail and aren't merged.
  */
 export function mergeStops(perTravelerStops) {
-  const byKey = new Map();
+  const byCity = new Map();
   let seen = 0;
 
   for (const entry of perTravelerStops || []) {
@@ -142,25 +214,19 @@ export function mergeStops(perTravelerStops) {
     for (const stop of (entry && entry.stops) || []) {
       const key = stop.cityKey || stop.code || "";
       if (!key) continue;
-      let merged = byKey.get(key);
-      if (!merged) {
-        merged = { cityKey: stop.cityKey || key, city: stop.city || "", code: stop.code || "", from: null, to: null, travelerIds: [], order: seen++, nightsByDate: new Map() };
-        byKey.set(key, merged);
-      }
-      if (!merged.city && stop.city) merged.city = stop.city;
-      if (!merged.code && stop.code) merged.code = stop.code;
-      if (stop.from && (!merged.from || stop.from < merged.from)) merged.from = stop.from;
-      if (stop.to && (!merged.to || stop.to > merged.to)) merged.to = stop.to;
-      if (travelerId && !merged.travelerIds.includes(travelerId)) merged.travelerIds.push(travelerId);
-      for (const date of nightDatesOf([stop])) {
-        if (!merged.nightsByDate.has(date)) merged.nightsByDate.set(date, []);
-        const who = merged.nightsByDate.get(date);
-        if (travelerId && !who.includes(travelerId)) who.push(travelerId);
-      }
+      if (!byCity.has(key)) byCity.set(key, []);
+      byCity.get(key).push({ stop, travelerId, order: seen++ });
     }
   }
 
-  return [...byKey.values()]
+  const merged = [];
+  for (const [cityKey, visits] of byCity) {
+    visitGroups(visits).forEach((group, index) => {
+      merged.push(mergedStop(cityKey, index === 0 ? cityKey : `${cityKey}#${index + 1}`, group));
+    });
+  }
+
+  return merged
     .sort((a, b) => {
       const left = a.from || UNDATED;
       const right = b.from || UNDATED;

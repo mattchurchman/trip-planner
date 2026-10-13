@@ -18,6 +18,8 @@ const airports = createAirportIndex({
   FCO: ["Rome", "IT", 41.8, 12.25],
   FLR: ["Florence", "IT", 43.81, 11.2],
   BCN: ["Barcelona", "ES", 41.3, 2.08],
+  LIS: ["Lisbon", "PT", 38.77, -9.13],
+  OPO: ["Porto", "PT", 41.24, -8.68],
 });
 
 const price = (cents) => [{ id: `p${cents}`, amountCents: cents, checkedAt: "2026-04-01T00:00:00.000Z" }];
@@ -60,6 +62,19 @@ function hop(id, fromAirport, toAirport, outboundDate, extra = {}) {
 const hops = [hop("f1", "FCO", "FLR", "2026-05-18"), hop("f2", "FLR", "BCN", "2026-05-22")];
 
 const bothChose = { choices: { t1: { ideaId: "i1", optionId: "o1" }, t2: { ideaId: "i1", optionId: "o1" } } };
+
+// A trip that doubles back (T46): land in Lisbon 1 Oct, hop to Porto on the
+// 2nd, hop back to Lisbon on the 14th, fly home from Lisbon on the 15th.
+const lisbonHome = (fields) =>
+  home({ toAirport: "LIS", outboundDate: "2026-10-01", landsDate: "2026-10-01", returnDate: "2026-10-15", ...fields });
+const lisbonHops = [hop("g1", "LIS", "OPO", "2026-10-02"), hop("g2", "OPO", "LIS", "2026-10-14")];
+const soloChose = { choices: { t1: { ideaId: "i1", optionId: "o1" } } };
+
+/** A merged stop as `[city, stopKey, from, to]`, the shape T46 is about. */
+const visitSummary = (stops) => stops.map((s) => [s.city, s.stopKey, s.from, s.to]);
+
+/** One traveler's stop, for the merge tests that don't need flights. */
+const visit = (cityKey, city, from, to) => ({ cityKey, city, code: "", from, to, nights: null, warnings: [] });
 
 function flightsFor(travelers) {
   return [...travelers.map((t, i) => home({ id: `h${i + 1}`, travelerId: t.id, label: `${t.name}'s flight` })), ...hops];
@@ -170,6 +185,71 @@ export const tests = [
     assert.equal(barcelona.to, "2026-05-26");
     assert.equal(barcelona.nights.length, 4);
     assert.ok(barcelona.nights.every((n) => n.travelerIds.join(",") === "t1"));
+  }],
+
+  ["mergeStops: the city you fly into ends at the first hop, and coming back is a stop of its own", () => {
+    const flights = [lisbonHome({ travelerId: "t1" }), ...lisbonHops];
+    const merged = mergedStops({ travelers: [sam], trip: soloChose, options, flights, airports });
+    assert.deepEqual(visitSummary(merged), [
+      ["Lisbon", "Lisbon, PT", "2026-10-01", "2026-10-02"],
+      ["Porto", "Porto, PT", "2026-10-02", "2026-10-14"],
+      ["Lisbon", "Lisbon, PT#2", "2026-10-14", "2026-10-15"],
+    ]);
+    // One night in Lisbon on the way in, 12 in Porto, one more on the way out.
+    assert.deepEqual(merged.map((s) => s.nights.length), [1, 12, 1]);
+    assert.deepEqual(merged[0].nights, [{ date: "2026-10-01", travelerIds: ["t1"] }]);
+    assert.deepEqual(merged[2].nights, [{ date: "2026-10-14", travelerIds: ["t1"] }]);
+    // Both Lisbon stops are still the same city, so days and chips agree.
+    assert.deepEqual(merged.map((s) => s.cityKey), ["Lisbon, PT", "Porto, PT", "Lisbon, PT"]);
+  }],
+
+  ["mergeStops: a return visit belongs only to the traveler who makes it", () => {
+    // Sam does the whole loop; Alex is on an option with just the first hop and
+    // flies home from Porto, so Alex never comes back to Lisbon.
+    const travelers = [sam, alex];
+    const twoOptions = [...options, { id: "o3", ideaId: "i1", name: "Porto only" }];
+    const flights = [
+      lisbonHome({ id: "h1", travelerId: "t1", label: "Sam's flight" }),
+      lisbonHome({ id: "h2", travelerId: "t2", label: "Alex's flight out", direction: "out", returnDate: null }),
+      home({ id: "h3", travelerId: "t2", label: "Alex's flight home", direction: "back", fromAirport: "OPO", toAirport: "DEN", outboundDate: "2026-10-14", landsDate: null, returnDate: null }),
+      ...lisbonHops,
+      hop("g3", "LIS", "OPO", "2026-10-02", { optionId: "o3" }),
+    ];
+    const trip = { choices: { t1: { ideaId: "i1", optionId: "o1" }, t2: { ideaId: "i1", optionId: "o3" } } };
+    const merged = mergedStops({ travelers, trip, options: twoOptions, flights, airports });
+    assert.deepEqual(visitSummary(merged), [
+      ["Lisbon", "Lisbon, PT", "2026-10-01", "2026-10-02"],
+      ["Porto", "Porto, PT", "2026-10-02", "2026-10-14"],
+      ["Lisbon", "Lisbon, PT#2", "2026-10-14", "2026-10-15"],
+    ]);
+    assert.deepEqual(merged.map((s) => s.travelerIds), [["t1", "t2"], ["t1", "t2"], ["t1"]]);
+    assert.deepEqual(merged[0].nights, [{ date: "2026-10-01", travelerIds: ["t1", "t2"] }]);
+    assert.deepEqual(merged[2].nights, [{ date: "2026-10-14", travelerIds: ["t1"] }]);
+  }],
+
+  ["mergeStops: visits that overlap or touch in time stay one stop", () => {
+    // Sam is in Rome the 1st to the 4th and again the 20th; Alex arrives the
+    // day Sam leaves, so that first stretch is one stop for the two of them.
+    const merged = mergeStops([
+      { travelerId: "t1", stops: [visit("Rome, IT", "Rome", "2026-05-01", "2026-05-04"), visit("Rome, IT", "Rome", "2026-05-20", "2026-05-22")] },
+      { travelerId: "t2", stops: [visit("Rome, IT", "Rome", "2026-05-04", "2026-05-08")] },
+    ]);
+    assert.deepEqual(visitSummary(merged), [
+      ["Rome", "Rome, IT", "2026-05-01", "2026-05-08"],
+      ["Rome", "Rome, IT#2", "2026-05-20", "2026-05-22"],
+    ]);
+    assert.deepEqual(merged.map((s) => s.travelerIds), [["t1", "t2"], ["t1"]]);
+    assert.deepEqual(merged[0].nights.map((n) => n.travelerIds.join("+")), ["t1", "t1", "t1", "t2", "t2", "t2", "t2"]);
+  }],
+
+  ["mergeStops: an undated visit joins the city's first stop", () => {
+    const merged = mergeStops([
+      { travelerId: "t1", stops: [visit("Rome, IT", "Rome", "2026-05-01", "2026-05-04"), visit("Rome, IT", "Rome", "2026-05-20", "2026-05-22")] },
+      { travelerId: "t2", stops: [visit("Rome, IT", "Rome", null, null)] },
+    ]);
+    assert.deepEqual(merged.map((s) => s.stopKey), ["Rome, IT", "Rome, IT#2"]);
+    assert.deepEqual(merged[0].travelerIds, ["t1", "t2"]);
+    assert.equal(merged[0].from, "2026-05-01");
   }],
 
   ["mergeStops: an undated stop sorts last and contributes no nights", () => {

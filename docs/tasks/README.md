@@ -71,7 +71,7 @@ If a task fails twice, say "Revert the last commit" and rerun it in a fresh sess
 | T43 | [Travelers as cards with a Save sheet](T43-traveler-cards.md) | Sonnet | medium | T41 | Done (2026-10-12) |
 | T44 | [Routes: + Idea works; slim total bar](T44-routes-idea-button-and-total.md) | Sonnet | low | T41 | Done (2026-10-12) |
 | T45 | [Price check you can see](T45-price-check-visible.md) | Sonnet | medium | T41 | Done (2026-10-12) |
-| T46 | [Night math: idea city ends at the first hop](T46-night-math.md) | Opus | high | T40 | To do |
+| T46 | [Night math: idea city ends at the first hop](T46-night-math.md) | Opus | high | T40 | Done (2026-10-12) |
 | T47 | ["I live here": no home flight needed](T47-i-live-here.md) | Opus | high | T46 | To do |
 | T48 | [Stays show every stop before any stay](T48-stays-show-stops.md) | Sonnet | medium | T46 | To do |
 | T49 | [Map places: compact rows; no event dates](T49-compact-places.md) | Sonnet | medium | T41 | To do |

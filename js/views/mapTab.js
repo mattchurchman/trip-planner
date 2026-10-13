@@ -4,7 +4,7 @@ import { importFromMyMapsDialog } from "./importPlaces.js";
 import { loadAirports } from "../lookup.js";
 import { stopsFor } from "../lib/route.js";
 import { mergedStops, budgetContext } from "../lib/choices.js";
-import { nearestStop, stopChips, stayStopKey } from "../lib/stops.js";
+import { nearestStop, stopChips, stayStopKey, cityKeyOf } from "../lib/stops.js";
 import { categoryColor } from "../lib/categories.js";
 import { voteCounts } from "../lib/votes.js";
 import { stayNumbers } from "../lib/optionSort.js";
@@ -18,12 +18,14 @@ import { createStaysSection } from "./stays.js";
 const ELSEWHERE = "elsewhere";
 
 /** `stopsFor`'s stops, each carrying its airport's coordinates and a `stopKey`
- * (its `cityKey`) for `nearestStop`/`stopChips` (V4 §6, §8). */
+ * for `nearestStop`/`stopChips` (V4 §6, §8): a merged stop's own key (a return
+ * visit's is `cityKey#2`, §11), or its `cityKey` for a stop straight out of
+ * `stopsFor`. */
 function withCoords(stops, airports) {
   return stops.map((stop) => {
     const info = stop.code ? airports.info(stop.code) : null;
     const located = info && typeof info === "object";
-    return { ...stop, stopKey: stop.cityKey, lat: located ? info.lat : null, lng: located ? info.lng : null };
+    return { ...stop, stopKey: stop.stopKey || stop.cityKey, lat: located ? info.lat : null, lng: located ? info.lng : null };
   });
 }
 
@@ -203,10 +205,13 @@ export function renderMapPage(container, tripId, myUid) {
     return stayStopKey(stay, routeStops, cities);
   }
 
+  /** Chips are one per city, so a stay or place on a return visit
+   * ("Lisbon, PT#2", §11) filters under that city like any other. */
   function matchesChip(stopKey) {
     if (selectedChip == null) return true;
-    if (selectedChip === ELSEWHERE) return !stopKey || !isKnownCity(stopKey);
-    return stopKey === selectedChip;
+    const key = cityKeyOf(stopKey);
+    if (selectedChip === ELSEWHERE) return !key || !isKnownCity(key);
+    return key === selectedChip;
   }
 
   /** The city name place-search links should use (T31, §7.7, §9.2): the stop

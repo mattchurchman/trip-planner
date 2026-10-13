@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { nearestStop, stopChips, stopForStay, stayStopKey } from "../js/lib/stops.js";
+import { nearestStop, stopChips, stopForStay, stayStopKey, cityKeyOf } from "../js/lib/stops.js";
 
 const PARIS = { stopKey: "Paris, France", lat: 48.8566, lng: 2.3522 };
 const LONDON = { stopKey: "London, United Kingdom", lat: 51.5072, lng: -0.1276 };
@@ -11,7 +11,21 @@ const ROUTE = [
   { ...LONDON, cityKey: "London, United Kingdom", from: "2026-06-05", to: "2026-06-08" },
 ];
 
+// The same route, but back in Paris for the last two nights (T46): the second
+// visit is its own stop, keyed "#2".
+const RETURN_ROUTE = [
+  { ...PARIS, city: "Paris", stopKey: "Paris, France", cityKey: "Paris, France", from: "2026-06-01", to: "2026-06-03" },
+  { ...LONDON, city: "London", stopKey: "London, United Kingdom", cityKey: "London, United Kingdom", from: "2026-06-03", to: "2026-06-08" },
+  { ...PARIS, city: "Paris", stopKey: "Paris, France#2", cityKey: "Paris, France", from: "2026-06-08", to: "2026-06-10" },
+];
+
 export const tests = [
+  ["cityKeyOf: a return visit is still the same city", () => {
+    assert.equal(cityKeyOf("Paris, France#2"), "Paris, France");
+    assert.equal(cityKeyOf("Paris, France"), "Paris, France");
+    assert.equal(cityKeyOf(null), null);
+  }],
+
   ["nearestStop picks the closest city", () => {
     assert.equal(nearestStop(48.86, 2.35, [PARIS, LONDON, TOKYO]), "Paris, France");
   }],
@@ -81,5 +95,39 @@ export const tests = [
   }],
   ["stayStopKey: an empty stopKey is worked out too", () => {
     assert.equal(stayStopKey({ stopKey: null, checkIn: "2026-06-06", checkOut: "2026-06-07" }, ROUTE, ROUTE), "London, United Kingdom");
+  }],
+
+  ["stopForStay: a check-in after the trip doubles back belongs to the second visit", () => {
+    const stay = { checkIn: "2026-06-09", checkOut: "2026-06-10", lat: 48.86, lng: 2.35 };
+    assert.equal(stopForStay(stay, RETURN_ROUTE, RETURN_ROUTE), "Paris, France#2");
+  }],
+
+  ["stayStopKey: a stay saved under a city moves to the visit its check-in falls in", () => {
+    // Saved against Paris (the first visit) before the return leg existed.
+    const stay = { stopKey: "Paris, France", checkIn: "2026-06-09", checkOut: "2026-06-10" };
+    assert.equal(stayStopKey(stay, RETURN_ROUTE, RETURN_ROUTE), "Paris, France#2");
+    // A stay whose dates are in the first visit stays where it is.
+    const early = { stopKey: "Paris, France", checkIn: "2026-06-01", checkOut: "2026-06-03" };
+    assert.equal(stayStopKey(early, RETURN_ROUTE, RETURN_ROUTE), "Paris, France");
+  }],
+
+  ["stayStopKey: with no dates to go on, the saved first visit stands", () => {
+    const stay = { stopKey: "Paris, France", lat: 48.86, lng: 2.35 };
+    assert.equal(stayStopKey(stay, RETURN_ROUTE, RETURN_ROUTE), "Paris, France");
+    // Dates in neither Paris visit (they're in London) also leave it alone.
+    const between = { stopKey: "Paris, France", checkIn: "2026-06-05", checkOut: "2026-06-06" };
+    assert.equal(stayStopKey(between, RETURN_ROUTE, RETURN_ROUTE), "Paris, France");
+  }],
+
+  ["stayStopKey: a second visit's own key is kept once it's saved", () => {
+    const stay = { stopKey: "Paris, France#2", checkIn: "2026-06-09", checkOut: "2026-06-10" };
+    assert.equal(stayStopKey(stay, RETURN_ROUTE, RETURN_ROUTE), "Paris, France#2");
+  }],
+
+  ["stopChips: a return visit shares its city's chip", () => {
+    assert.deepEqual(stopChips(RETURN_ROUTE, []), [
+      { stopKey: "Paris, France", city: "Paris" },
+      { stopKey: "London, United Kingdom", city: "London" },
+    ]);
   }],
 ];

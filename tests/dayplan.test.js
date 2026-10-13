@@ -68,6 +68,22 @@ export const tests = [
     assert.equal(days.find((d) => d.date === "2026-01-03").cityKey, "C");
   }],
 
+  ["daysFromStops: a city you come back to only claims the days of each visit", () => {
+    // The merged route of a Lisbon trip that doubles back (T46): no day is
+    // filed under Lisbon while the group is in Porto.
+    const stops = [
+      { stopKey: "Lisbon, PT", cityKey: "Lisbon, PT", city: "Lisbon", from: "2026-10-01", to: "2026-10-02" },
+      { stopKey: "Porto, PT", cityKey: "Porto, PT", city: "Porto", from: "2026-10-02", to: "2026-10-14" },
+      { stopKey: "Lisbon, PT#2", cityKey: "Lisbon, PT", city: "Lisbon", from: "2026-10-14", to: "2026-10-15" },
+    ];
+    const days = daysFromStops(stops);
+    assert.equal(days.length, 15);
+    assert.deepEqual(days.filter((d) => d.title === "Lisbon").map((d) => d.date), ["2026-10-01", "2026-10-14", "2026-10-15"]);
+    assert.equal(days.filter((d) => d.title === "Porto").length, 12);
+    // Days are filed by city, so both Lisbon stretches land under one city.
+    assert.equal(days.find((d) => d.date === "2026-10-14").cityKey, "Lisbon, PT");
+  }],
+
   ["daysFromStops: skips a stop with no dates instead of crashing", () => {
     const stops = [{ cityKey: "A", city: "A", from: null, to: null }];
     assert.deepEqual(daysFromStops(stops), []);
