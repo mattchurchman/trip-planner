@@ -562,6 +562,11 @@ textarea:focus {
   color: var(--muted);
 }
 
+.empty-state-small {
+  margin: var(--space-1) 0;
+  font-size: 0.9em;
+}
+
 .field-error {
   color: var(--bad);
   font-size: 0.9em;

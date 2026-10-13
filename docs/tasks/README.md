@@ -73,7 +73,7 @@ If a task fails twice, say "Revert the last commit" and rerun it in a fresh sess
 | T45 | [Price check you can see](T45-price-check-visible.md) | Sonnet | medium | T41 | Done (2026-10-12) |
 | T46 | [Night math: idea city ends at the first hop](T46-night-math.md) | Opus | high | T40 | Done (2026-10-12) |
 | T47 | ["I live here": no home flight needed](T47-i-live-here.md) | Opus | high | T46 | Done (2026-10-12) |
-| T48 | [Stays show every stop before any stay](T48-stays-show-stops.md) | Sonnet | medium | T46 | To do |
+| T48 | [Stays show every stop before any stay](T48-stays-show-stops.md) | Sonnet | medium | T46 | Done (2026-10-12) |
 | T49 | [Map places: compact rows; no event dates](T49-compact-places.md) | Sonnet | medium | T41 | To do |
 | T50 | [Days: dated names; walking routes stay in the day](T50-days-names-and-walks.md) | Sonnet | medium | T46 | To do |
 | T51 | [Phone pass: Trips, Overview, Routes](T51-phone-overview-routes.md) | Sonnet | high | T41–T47 | To do |

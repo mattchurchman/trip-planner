@@ -332,10 +332,14 @@ export function createStaysSection({ tripId, myUid, onError, onFocusOnMap }) {
         ])
       : null;
 
+    const noStaysHint =
+      sortedStays.length === 0 ? el("p", { className: "empty-state empty-state-small", textContent: `No stays yet for ${stop.city || stop.code || "this stop"}.` }) : null;
+
     return el("section", { className: "stop-group" }, [
       header,
       discover,
       renderCoverage(stop, chosenHere, trip),
+      noStaysHint,
       el("div", { className: "stays-list" }, sortedStays.map((s) => renderStayCard(s, trip, usersById, numbers[s.id]))),
     ].filter(Boolean));
   }
@@ -356,7 +360,7 @@ export function createStaysSection({ tripId, myUid, onError, onFocusOnMap }) {
     addStayBtn.disabled = stays.length >= 10;
     routeHintEl.hidden = stops !== null;
 
-    if (stays.length === 0) {
+    if (stays.length === 0 && stops === null) {
       staysListEl.replaceChildren(el("p", { className: "empty-state", textContent: "No stays yet. Search above, then paste a link to add one." }));
       return;
     }
