@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="9 6 50 50" role="img" aria-label="Trip Planner">
+  <path d="M15 49C24 49 24 40 30.5 40S39 38.5 44.6 34.6" fill="none" stroke="#1F4D3A" stroke-width="3.4" stroke-linecap="round" stroke-dasharray="0.01 6.6"/>
+  <circle cx="15" cy="49" r="4.2" fill="#1F4D3A"/>
+  <circle cx="30.5" cy="40" r="3" fill="#1F4D3A"/>
+  <path d="M45 9.5a10 10 0 0 0-10 10c0 6.8 10 15.5 10 15.5s10-8.7 10-15.5a10 10 0 0 0-10-10z" fill="#E9A23B"/>
+  <circle cx="45" cy="19.5" r="3.8" fill="#F6F2E9"/>
+</svg>

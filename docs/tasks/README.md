@@ -84,6 +84,50 @@ If a task fails twice, say "Revert the last commit" and rerun it in a fresh sess
 
 **Natural stopping points:** after T42 (no zoom, paste works), after T48 (all the reported bugs fixed), after T53.
 
+## Round 7 — "Waypoint": new look, readable screens, shared My Maps link (spec 4.3)
+
+Design: `docs/R7.md` (wins over `SPEC.md` §4 for the look until T66 folds it in). Logo, icons and textures are ready-made in `docs/brand/`. To check screens signed in, tasks use `docs/demo/` (only when their **Tests** say so).
+
+| # | Task | Model | Effort | Depends on | Status |
+|---|---|---|---|---|---|
+| T54 | [Waypoint colors, fonts and six type sizes](T54-tokens-and-type.md) | Sonnet | medium | T53 | To do |
+| T55 | [New logo, app icon and favicon](T55-logo-and-icons.md) | Haiku | low | T54 | To do |
+| T56 | [One icon set, no emoji](T56-icon-set.md) | Sonnet | medium | T54 | To do |
+| T57 | [Shared pieces: buttons, cards, rows, chips, top bar](T57-shared-pieces.md) | Sonnet | high | T56 | To do |
+| T58 | [Delete and Edit move into ⋯ menus](T58-overflow-menus.md) | Sonnet | medium | T57 | To do |
+| T59 | [The trip's shared Google My Maps link](T59-mymaps-link.md) | Sonnet | medium | T58 | To do |
+| T60 | [Trips list: readable cards](T60-trips-list.md) | Sonnet | medium | T58 | To do |
+| T61 | [Overview: summary first, settings behind a tap](T61-overview.md) | Sonnet | high | T59 | To do |
+| T62 | [Routes: tidy flight cards and switches](T62-routes.md) | Sonnet | high | T58 | To do |
+| T63 | [Map: shared map bar, filters in a sheet, sticky map](T63-map-tab.md) | Sonnet | medium | T59 | To do |
+| T64 | [Days: day chooser and a numbered timeline](T64-days.md) | Sonnet | high | T63 | To do |
+| T65 | [Sign-in, help and 404 in the new look](T65-signin-help.md) | Haiku | medium | T64 | To do |
+| T66 | [Final review and SPEC 4.3](T66-review-round7.md) | Opus | medium | T54–T65 | To do |
+
+**Order.** Top to bottom, one at a time — nearly all of them share `css/styles.css`. T55 and T56 both need only T54, but run them in order anyway.
+
+**Natural stopping points:** after T55 (new colors, fonts and logo everywhere), after T59 (shared My Maps link works), after T64 (every screen reshaped), after T66.
+
+**Saving tokens and session limits.** Each task is sized for one fresh session on the model named. Before every task: **clear the context** (`/clear` or a new session), **select the model and effort** from the table, and send only the kickoff line — the agent reads what it needs from the repo. Copy-paste lines:
+
+```
+Read AGENTS.md, then do task T54. Model: Sonnet. Effort: medium. You may push to master when tests pass.
+Read AGENTS.md, then do task T55. Model: Haiku. Effort: low. You may push to master when tests pass.
+Read AGENTS.md, then do task T56. Model: Sonnet. Effort: medium. You may push to master when tests pass.
+Read AGENTS.md, then do task T57. Model: Sonnet. Effort: high. You may push to master when tests pass.
+Read AGENTS.md, then do task T58. Model: Sonnet. Effort: medium. You may push to master when tests pass.
+Read AGENTS.md, then do task T59. Model: Sonnet. Effort: medium. You may push to master when tests pass.
+Read AGENTS.md, then do task T60. Model: Sonnet. Effort: medium. You may push to master when tests pass.
+Read AGENTS.md, then do task T61. Model: Sonnet. Effort: high. You may push to master when tests pass.
+Read AGENTS.md, then do task T62. Model: Sonnet. Effort: high. You may push to master when tests pass.
+Read AGENTS.md, then do task T63. Model: Sonnet. Effort: medium. You may push to master when tests pass.
+Read AGENTS.md, then do task T64. Model: Sonnet. Effort: high. You may push to master when tests pass.
+Read AGENTS.md, then do task T65. Model: Haiku. Effort: medium. You may push to master when tests pass.
+Read AGENTS.md, then do task T66. Model: Opus. Effort: medium. You may push to master when tests pass.
+```
+
+Fixes found during an **Owner check** stay in that task's session (they're small and the context is warm). Anything bigger becomes a new task.
+
 **Order.** Top to bottom is the safe path. Two tasks can be done early or alongside others because they touch nothing else: **T17** (any time before T18) and **T22** (any time after T16). Everything else changes shared screens, so run those one at a time.
 
 **Natural stopping points** where the app is fully usable: after T15 (sign-in fixed), after T21 (Routes complete), after T25 (Map complete), after T30.
