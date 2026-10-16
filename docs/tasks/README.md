@@ -101,7 +101,7 @@ Design: `docs/R7.md` (wins over `SPEC.md` §4 for the look until T66 folds it in
 | T62 | [Routes: tidy flight cards and switches](T62-routes.md) | Sonnet | high | T58 | Done (2026-10-16) |
 | T63 | [Map: shared map bar, filters in a sheet, sticky map](T63-map-tab.md) | Sonnet | medium | T59 | Done (2026-10-16) |
 | T64 | [Days: day chooser and a numbered timeline](T64-days.md) | Sonnet | high | T63 | Done (2026-10-16) |
-| T65 | [Sign-in, help and 404 in the new look](T65-signin-help.md) | Haiku | medium | T64 | To do |
+| T65 | [Sign-in, help and 404 in the new look](T65-signin-help.md) | Haiku | medium | T64 | Done (2026-10-16) |
 | T66 | [Final review and SPEC 4.3](T66-review-round7.md) | Opus | medium | T54–T65 | To do |
 
 **Order.** Top to bottom, one at a time — nearly all of them share `css/styles.css`. T55 and T56 both need only T54, but run them in order anyway.
