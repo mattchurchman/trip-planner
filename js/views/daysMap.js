@@ -1,4 +1,4 @@
-import { el, friendlyError } from "../ui.js";
+import { el, icon, friendlyError } from "../ui.js";
 import { voteSummary } from "../lib/votes.js";
 
 // Cycled by a day's position among its city's days (T27, V4 §8) — distinct
@@ -23,12 +23,12 @@ function plainMarker(place, color, opacity) {
 }
 
 /** The chosen stay for the selected day (T39, §7.8): the stay pill style
- * (`.stay-pin`/`.stay-pin-chosen` from the Map tab) plus a house mark, so the
+ * (`.stay-pin`/`.stay-pin-chosen` from the Map tab) plus a stay mark, so the
  * day's home base stands out among the day's own numbered/plain pins. Its
  * popup names it, unlike the plain tooltip on place pins. */
 function homeMarker(stay) {
   const pillEl = el("div", { className: "stay-pin stay-pin-chosen day-home-pin" }, [
-    el("span", { textContent: "🏠" }),
+    icon("stay", { size: 14 }),
     el("span", { textContent: stay.name || "Stay" }),
   ]);
   const icon = window.L.divIcon({ html: pillEl, className: "stay-pin-icon", iconSize: null });

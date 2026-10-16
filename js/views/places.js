@@ -1,5 +1,5 @@
 import { updatePlace, deletePlace, voteOnPlace } from "../store.js";
-import { el, confirmDialog, friendlyError, rankControl, renderWhenIdle } from "../ui.js";
+import { el, icon, confirmDialog, friendlyError, rankControl, renderWhenIdle } from "../ui.js";
 import { renderComments } from "./comments.js";
 import { editPlaceDialog, buildSetLocationInline, buildAddPlacePanel } from "./placeForm.js";
 import { sortByRank, notRankedByMe, voteCounts, toMillis } from "../lib/votes.js";
@@ -167,18 +167,16 @@ export function createPlacesSection({ tripId, myUid, onError, mapClickState, onF
     }
   }
 
-  /** Compact "♥2 👍1" style summary (§7.7); the viewer's own vote is highlighted. */
+  /** Compact love/like/pass icon summary (§7.7, R7 §5); the viewer's own vote is highlighted. */
   function compactVoteSummary(votes) {
     const counts = voteCounts(votes);
     const myChoice = (votes || {})[myUid];
-    const icons = { love: "♥", like: "👍", pass: "👎" };
     const items = ["love", "like", "pass"]
       .filter((choice) => counts[choice] > 0)
       .map((choice) =>
         el("span", {
           className: `vote-compact-item${choice === myChoice ? " vote-compact-mine" : ""}`,
-          textContent: `${icons[choice]}${counts[choice]}`,
-        })
+        }, [icon(choice, { size: 15 }), el("span", { textContent: String(counts[choice]) })])
       );
     if (items.length === 0) return el("span", { className: "vote-compact muted", textContent: "Not ranked" });
     return el("span", { className: "vote-compact" }, items);

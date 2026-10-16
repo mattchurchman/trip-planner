@@ -1,6 +1,7 @@
 // Shared DOM helpers. No Firebase imports here.
 import { voteSummary } from "./lib/votes.js";
-import { looksLikeLink } from "./lib/links.js";
+import { looksLikeLink, safeUrl } from "./lib/links.js";
+import { ICONS } from "./lib/icons.js";
 
 /** Creates an element. props supports className, textContent, onX handlers,
  * an `attrs` object for raw attributes, and any other DOM property. */
@@ -36,6 +37,32 @@ export function svgEl(tag, attrs = {}, children = []) {
     if (child != null) node.appendChild(child);
   }
   return node;
+}
+
+/** Builds one icon from the shared set (R7 §5). Unknown names log a warning and render nothing. */
+export function icon(name, { size = 20, label } = {}) {
+  const paths = ICONS[name];
+  if (!paths) {
+    console.warn(`Unknown icon: ${name}`);
+    return el("span", { className: "icon-missing" });
+  }
+  const attrs = { viewBox: "0 0 24 24", width: size, height: size, fill: "none", stroke: "currentColor", "stroke-width": "1.75", "stroke-linecap": "round", "stroke-linejoin": "round" };
+  if (label) {
+    attrs.role = "img";
+    attrs["aria-label"] = label;
+  } else {
+    attrs["aria-hidden"] = "true";
+  }
+  return svgEl("svg", attrs, paths.map((d) => svgEl("path", { d })));
+}
+
+/** An external link that appends the `external` icon (R7 §5) instead of relying on the CSS "↗". */
+export function externalLink(href, text) {
+  const safe = safeUrl(href);
+  if (!safe) return null;
+  const arrow = icon("external", { size: 14 });
+  arrow.classList.add("ext-icon");
+  return el("a", { href: safe, target: "_blank", rel: "noopener noreferrer" }, [text, arrow]);
 }
 
 /** Toggles a button between its normal label and a pending label, disabling it while pending. */
@@ -288,10 +315,9 @@ export function rankControl({ votes = {}, myUid, usersById = {}, onVote }) {
       const btn = el("button", {
         type: "button",
         className: `btn btn-small rank-btn rank-${choice}${pressed ? " rank-btn-pressed" : ""}`,
-        textContent: choice[0].toUpperCase() + choice.slice(1),
         title: RANK_TOOLTIPS[choice],
         attrs: { "aria-pressed": pressed ? "true" : "false" },
-      });
+      }, [icon(choice, { size: 16 }), el("span", { textContent: choice[0].toUpperCase() + choice.slice(1) })]);
       btn.addEventListener("click", () => onVote(pressed ? null : choice));
       return btn;
     })

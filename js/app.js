@@ -1,6 +1,6 @@
 import { auth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, signOut, onAuthStateChanged, isConfigured } from "./firebase.js";
 import { checkAllowlist, ensureUserDoc, watchTrip } from "./store.js";
-import { el, svgEl, friendlyError } from "./ui.js";
+import { el, icon, friendlyError } from "./ui.js";
 import { tripStage } from "./lib/stage.js";
 import { renderTripsView } from "./views/trips.js";
 import { renderOverviewPage } from "./views/overview.js";
@@ -10,10 +10,10 @@ import { renderDaysPage } from "./views/days.js";
 import { renderSignIn, renderEmailConfirmation } from "./views/signin.js";
 
 const TABS = [
-  { key: "overview", label: "Overview", icon: "M4 11l8-7 8 7v9h-5v-6H9v6H4z", render: renderOverviewPage },
-  { key: "routes", label: "Routes", icon: "M1 18l7-7 5 5 9-9M16 7h7v7", render: renderRoutesPage },
-  { key: "map", label: "Map", icon: "M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z", render: renderMapPage },
-  { key: "days", label: "Days", icon: "M5 5h14v15H5zM5 10h14M9 3v4M15 3v4", render: renderDaysPage },
+  { key: "overview", label: "Overview", icon: "overview", render: renderOverviewPage },
+  { key: "routes", label: "Routes", icon: "routes", render: renderRoutesPage },
+  { key: "map", label: "Map", icon: "map", render: renderMapPage },
+  { key: "days", label: "Days", icon: "days", render: renderDaysPage },
 ];
 // Old links from before T25 (§8) still land somewhere useful.
 const LEGACY_TAB_REDIRECTS = { places: "map", travel: "map" };
@@ -147,14 +147,13 @@ function renderTopBar(user) {
 }
 
 function tabLink(tab, tripId, tabKey) {
-  const icon = svgEl("svg", { class: "tab-icon", viewBox: "0 0 24 24", "aria-hidden": "true" }, [
-    svgEl("path", { d: tab.icon }),
-  ]);
+  const tabIcon = icon(tab.icon, { size: 20 });
+  tabIcon.classList.add("tab-icon");
   return el("a", {
     className: `tab${tab.key === tabKey ? " tab-active" : ""}`,
     href: `#/trip/${tripId}/${tab.key}`,
     attrs: tab.key === tabKey ? { "aria-current": "page" } : {},
-  }, [icon, el("span", { textContent: tab.label })]);
+  }, [tabIcon, el("span", { textContent: tab.label })]);
 }
 
 function renderTripShell(main, tripId, myUid, tabKey) {

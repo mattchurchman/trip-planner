@@ -138,12 +138,18 @@ a:not(.btn):not(.app-brand):not(.trip-card-link):hover {
   text-decoration: underline;
 }
 
-a[target="_blank"]:not(.icon-btn)::after {
+a[target="_blank"]:not(.icon-btn):not(:has(.ext-icon))::after {
   content: "↗";
   display: inline-block;
   margin-left: 3px;
   font-weight: 400;
   transform: translateY(-1px);
+}
+
+.ext-icon {
+  flex: none;
+  margin-left: 3px;
+  vertical-align: -2px;
 }
 
 button,
@@ -969,6 +975,12 @@ textarea:focus {
   gap: 6px;
 }
 
+.rank-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
 .rank-btn-pressed {
   background: var(--teal-soft);
   color: var(--teal);
@@ -1333,8 +1345,15 @@ textarea:focus {
   white-space: nowrap;
 }
 
+.vote-compact-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
 .vote-compact-mine {
   font-weight: 700;
+  color: var(--teal);
   border-bottom: 2px solid var(--teal);
 }
 
@@ -2014,7 +2033,7 @@ textarea:focus {
 }
 
 /* The selected day's chosen stay on the Days map (T39, §7.8): the stay pill
-   style with a house mark so it reads as home base, not another stop. */
+   style with a stay-icon mark so it reads as home base, not another stop. */
 .day-home-pin {
   gap: 4px;
 }
