@@ -214,6 +214,8 @@ input {
   box-shadow: var(--shadow-sm);
 }
 
+/* After T58, .btn-danger is only used inside confirmation dialogs — every
+   standing Delete/Remove button on a screen moved into a ⋯ menu instead. */
 .btn-danger {
   background: var(--surface);
   color: var(--bad);
@@ -651,6 +653,51 @@ button.list-row:hover {
   border-color: var(--teal);
   background: var(--teal-soft);
   text-decoration: none;
+}
+
+/* The ⋯ menu's popover (R7 §6): a bottom sheet on phone via the shared
+   .app-dialog rules, repositioned to a small anchored popover from 760px by
+   menuButton() in js/ui.js (inline style wins over the centered desktop
+   .app-dialog rule below). The combined selector outranks the plain
+   .app-dialog rules below, which share its specificity but come later in
+   the file. */
+.app-dialog.menu-popover {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2);
+}
+
+@media (min-width: 760px) {
+  .app-dialog.menu-popover {
+    max-width: 260px;
+    width: max-content;
+    min-width: 180px;
+  }
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: none;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--ink);
+  font-size: var(--fs-item);
+  text-align: left;
+}
+
+.menu-item:hover,
+.menu-item:focus-visible {
+  background: var(--teal-soft);
+}
+
+.menu-item-danger {
+  color: var(--bad);
 }
 
 .app-main {

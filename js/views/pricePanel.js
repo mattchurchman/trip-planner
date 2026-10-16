@@ -1,5 +1,5 @@
 import { logPriceEntry, deletePriceEntry } from "../store.js";
-import { el, svgEl, setPending, confirmDialog, friendlyError } from "../ui.js";
+import { el, svgEl, setPending, confirmDialog, friendlyError, menuButton } from "../ui.js";
 import { parseMoney, formatMoney } from "../lib/money.js";
 import { latestEntry, priceDelta, isNewLow, sortByTimeAsc, priceAgeDays, isStale } from "../lib/totals.js";
 import { relativeTime } from "../lib/dates.js";
@@ -223,19 +223,28 @@ function historySection({ tripId, subcollection, docId, prices, currency, stateK
       .sort((a, b) => (a.checkedAt < b.checkedAt ? 1 : a.checkedAt > b.checkedAt ? -1 : 0))
       .map((entry) => {
         const when = entry.checkedAt ? new Date(entry.checkedAt).toLocaleString() : "";
-        const deleteBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Delete" });
-        deleteBtn.addEventListener("click", async () => {
-          const confirmed = await confirmDialog(`Delete this price entry (${formatMoney(entry.amountCents, currency)})?`, "Delete");
-          if (!confirmed) return;
-          try {
-            await deletePriceEntry(tripId, subcollection, docId, entry);
-          } catch (err) {
-            errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
-          }
-        });
+        const menu = menuButton(
+          [
+            {
+              label: "Delete",
+              icon: "trash",
+              danger: true,
+              onSelect: async () => {
+                const confirmed = await confirmDialog(`Delete this price entry (${formatMoney(entry.amountCents, currency)})?`, "Delete");
+                if (!confirmed) return;
+                try {
+                  await deletePriceEntry(tripId, subcollection, docId, entry);
+                } catch (err) {
+                  errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
+                }
+              },
+            },
+          ],
+          { label: "More actions for this price entry" }
+        );
         return el("li", { className: "price-history-item" }, [
           el("span", { textContent: `${formatMoney(entry.amountCents, currency)} — ${when}${entry.note ? " — " + entry.note : ""}` }),
-          deleteBtn,
+          menu,
         ]);
       })
   );

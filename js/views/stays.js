@@ -1,5 +1,5 @@
 import { addStay, updateStay, deleteStay, duplicateStay, chooseStay, unchooseStay, setForTravelers } from "../store.js";
-import { el, confirmDialog, friendlyError, renderWhenIdle } from "../ui.js";
+import { el, confirmDialog, friendlyError, renderWhenIdle, menuButton } from "../ui.js";
 import { renderComments } from "./comments.js";
 import { nightsBetween } from "../lib/dates.js";
 import { formatLegDate } from "../lib/itineraryFormat.js";
@@ -166,30 +166,41 @@ export function createStaysSection({ tripId, myUid, onError, onFocusOnMap }) {
       })
     );
 
-    const editBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Edit" });
-    editBtn.addEventListener("click", () => openEditStayDialog(stay, trip));
-    const duplicateBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Duplicate" });
-    duplicateBtn.addEventListener("click", async () => {
-      try {
-        const ref = await duplicateStay(tripId, stay, myUid);
-        openEditStayDialog({ ...stay, id: ref.id, prices: [], out: false, votes: {} }, trip);
-      } catch (err) {
-        errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
-      }
-    });
-    const deleteBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Delete" });
-    deleteBtn.addEventListener("click", async () => {
-      const confirmed = await confirmDialog(`Delete ${stay.name}?`, "Delete");
-      if (!confirmed) return;
-      try {
-        await deleteStay(tripId, stay.id);
-        if (isStayChosen(trip, stay.id)) {
-          await unchooseStay(tripId, trip, stay.id);
-        }
-      } catch (err) {
-        errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
-      }
-    });
+    const menu = menuButton(
+      [
+        { label: "Edit", icon: "edit", onSelect: () => openEditStayDialog(stay, trip) },
+        {
+          label: "Duplicate",
+          icon: "plus",
+          onSelect: async () => {
+            try {
+              const ref = await duplicateStay(tripId, stay, myUid);
+              openEditStayDialog({ ...stay, id: ref.id, prices: [], out: false, votes: {} }, trip);
+            } catch (err) {
+              errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
+            }
+          },
+        },
+        {
+          label: "Delete",
+          icon: "trash",
+          danger: true,
+          onSelect: async () => {
+            const confirmed = await confirmDialog(`Delete ${stay.name}?`, "Delete");
+            if (!confirmed) return;
+            try {
+              await deleteStay(tripId, stay.id);
+              if (isStayChosen(trip, stay.id)) {
+                await unchooseStay(tripId, trip, stay.id);
+              }
+            } catch (err) {
+              errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
+            }
+          },
+        },
+      ],
+      { label: `More actions for ${stay.name}` }
+    );
 
     const headerLeft = el("div", { className: "option-header-left" }, [
       el("h3", {}, [el("span", { className: "stay-number", textContent: circledNumber(number) }), ` ${stay.name}`]),
@@ -256,7 +267,7 @@ export function createStaysSection({ tripId, myUid, onError, onFocusOnMap }) {
       locationLine,
       note,
       forLine,
-      el("div", { className: "stay-actions" }, [chooseBtn, outBtn, openLink, editBtn, duplicateBtn, deleteBtn].filter(Boolean)),
+      el("div", { className: "stay-actions" }, [chooseBtn, outBtn, openLink, menu].filter(Boolean)),
       errorHolder,
       commentsEl,
     ].filter(Boolean));

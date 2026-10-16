@@ -99,6 +99,76 @@ export function friendlyError(err) {
   return (err && err.message) || "Something went wrong. Try again in a moment.";
 }
 
+/**
+ * A ⋯ icon button that opens a small action menu (R7 §6): a popover anchored
+ * under the button from 760px, a bottom sheet below that. `items` is an
+ * array of `{ label, icon, onSelect, danger? }`; falsy entries are skipped
+ * so callers can gate an item inline (e.g. "creator only"). `label` names
+ * what the menu acts on, for the trigger's `aria-label`.
+ */
+export function menuButton(items, { label = "More actions" } = {}) {
+  const trigger = el("button", {
+    type: "button",
+    className: "icon-btn menu-trigger",
+    attrs: { "aria-label": label, "aria-haspopup": "menu" },
+  }, [icon("more", { size: 20 })]);
+
+  trigger.addEventListener("click", (event) => {
+    event.stopPropagation();
+    openActionMenu(trigger, items.filter(Boolean));
+  });
+
+  return trigger;
+}
+
+function openActionMenu(trigger, items) {
+  const dialog = el("dialog", { className: "app-dialog menu-popover", attrs: { role: "menu" } });
+  const itemButtons = items.map(({ label, icon: iconName, onSelect, danger }) => {
+    const itemBtn = el(
+      "button",
+      { type: "button", className: `menu-item${danger ? " menu-item-danger" : ""}`, attrs: { role: "menuitem" } },
+      [icon(iconName, { size: 18 }), el("span", { textContent: label })]
+    );
+    itemBtn.addEventListener("click", () => {
+      dialog.close();
+      onSelect();
+    });
+    return itemBtn;
+  });
+  dialog.append(...itemButtons);
+  document.body.appendChild(dialog);
+
+  dialog.addEventListener("click", (event) => {
+    if (event.target === dialog) dialog.close();
+  });
+  dialog.addEventListener("keydown", (event) => {
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+    event.preventDefault();
+    const at = itemButtons.indexOf(document.activeElement);
+    const step = event.key === "ArrowDown" ? 1 : -1;
+    itemButtons[(at + step + itemButtons.length) % itemButtons.length]?.focus();
+  });
+  dialog.addEventListener("close", () => {
+    dialog.remove();
+    trigger.focus();
+  });
+
+  dialog.showModal();
+  if (window.innerWidth >= 760) {
+    const triggerRect = trigger.getBoundingClientRect();
+    const menuRect = dialog.getBoundingClientRect();
+    const left = Math.min(triggerRect.left, window.innerWidth - menuRect.width - 16);
+    const top = Math.min(triggerRect.bottom + 8, window.innerHeight - menuRect.height - 16);
+    dialog.style.position = "fixed";
+    dialog.style.margin = "0";
+    dialog.style.top = `${Math.max(16, top)}px`;
+    dialog.style.left = `${Math.max(16, left)}px`;
+  }
+  // preventScroll: focusing a just-repositioned fixed element can otherwise
+  // trigger the browser's own scroll-into-view, undoing the position above.
+  itemButtons[0]?.focus({ preventScroll: true });
+}
+
 /** Shows a native, accessible confirm dialog. `confirmLabel` names the action
  * itself ("Delete", "Remove", "Publish") rather than a generic "Confirm", per
  * the wording guide's "say what a button does, as a verb." Resolves true/false. */

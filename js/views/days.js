@@ -11,7 +11,7 @@ import {
   watchStays,
 } from "../store.js";
 import { chosenStayIds } from "../lib/selection.js";
-import { el, confirmDialog, friendlyError, field, dialogShell } from "../ui.js";
+import { el, confirmDialog, friendlyError, field, dialogShell, menuButton } from "../ui.js";
 import { renderExportSection } from "./exportSection.js";
 import { sortByRank, voteSummary, voteCounts } from "../lib/votes.js";
 import { walkingRouteLinks } from "../lib/links.js";
@@ -173,32 +173,43 @@ export function renderDaysPage(container, tripId, myUid) {
       renderDays();
     });
 
-    const editBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Edit" });
-    editBtn.addEventListener("click", async () => {
-      const result = await dayFormDialog(day);
-      if (!result) return;
-      try {
-        await updateDay(tripId, day.id, result);
-      } catch (err) {
-        errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
-      }
-    });
-
-    const deleteBtn = el("button", { type: "button", className: "btn btn-small btn-danger", textContent: "Delete" });
-    deleteBtn.addEventListener("click", async () => {
-      const confirmed = await confirmDialog(`Delete ${dayLabel(day)}? Its places go back to Not planned.`, "Delete");
-      if (!confirmed) return;
-      try {
-        await deleteDayAndUnassignPlaces(
-          tripId,
-          day.id,
-          dayPlaces.map((p) => p.id)
-        );
-        if (selectedDayId === day.id) selectedDayId = null;
-      } catch (err) {
-        errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
-      }
-    });
+    const menu = menuButton(
+      [
+        {
+          label: "Edit",
+          icon: "edit",
+          onSelect: async () => {
+            const result = await dayFormDialog(day);
+            if (!result) return;
+            try {
+              await updateDay(tripId, day.id, result);
+            } catch (err) {
+              errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
+            }
+          },
+        },
+        {
+          label: "Delete",
+          icon: "trash",
+          danger: true,
+          onSelect: async () => {
+            const confirmed = await confirmDialog(`Delete ${dayLabel(day)}? Its places go back to Not planned.`, "Delete");
+            if (!confirmed) return;
+            try {
+              await deleteDayAndUnassignPlaces(
+                tripId,
+                day.id,
+                dayPlaces.map((p) => p.id)
+              );
+              if (selectedDayId === day.id) selectedDayId = null;
+            } catch (err) {
+              errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
+            }
+          },
+        },
+      ],
+      { label: `More actions for ${dayLabel(day)}` }
+    );
 
     const placeRows = dayPlaces.map((place, index) => {
       const upBtn = el("button", {
@@ -241,7 +252,7 @@ export function renderDaysPage(container, tripId, myUid) {
     return el("article", { className: "card day-card" }, [
       el("div", { className: "day-card-header" }, [
         el("h3", { textContent: dayLabel(day) }),
-        el("div", { className: "day-card-actions" }, [selectBtn, editBtn, deleteBtn]),
+        el("div", { className: "day-card-actions" }, [selectBtn, menu]),
       ]),
       day.focus ? el("p", { className: "muted", textContent: day.focus }) : null,
       day.notes ? el("p", { textContent: day.notes }) : null,

@@ -1,5 +1,5 @@
 import { watchTrips, createTrip, deleteTrip } from "../store.js";
-import { el, setPending, confirmDialog, promptDialog, friendlyError } from "../ui.js";
+import { el, setPending, confirmDialog, promptDialog, friendlyError, menuButton } from "../ui.js";
 import { relativeTime } from "../lib/dates.js";
 import { tripStage } from "../lib/stage.js";
 
@@ -53,19 +53,18 @@ export function renderTripsView(container, user) {
     ]);
 
     if (trip.createdBy === user.uid) {
-      const deleteBtn = el("button", { className: "btn btn-danger btn-small", textContent: "Delete" });
-      deleteBtn.addEventListener("click", async () => {
+      async function handleDelete() {
         const confirmed = await confirmDialog(`Delete "${trip.name}"? This can't be undone.`, "Delete");
         if (!confirmed) return;
-        setPending(deleteBtn, true, "Deleting…");
         try {
           await deleteTrip(trip.id);
         } catch (err) {
           errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
-          setPending(deleteBtn, false);
         }
-      });
-      card.appendChild(deleteBtn);
+      }
+      card.appendChild(
+        menuButton([{ label: "Delete", icon: "trash", onSelect: handleDelete, danger: true }], { label: `More actions for ${trip.name}` })
+      );
     }
 
     return card;

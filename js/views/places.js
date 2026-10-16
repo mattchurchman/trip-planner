@@ -1,5 +1,5 @@
 import { updatePlace, deletePlace, voteOnPlace } from "../store.js";
-import { el, icon, confirmDialog, friendlyError, rankControl, renderWhenIdle } from "../ui.js";
+import { el, icon, confirmDialog, friendlyError, rankControl, renderWhenIdle, menuButton } from "../ui.js";
 import { renderComments } from "./comments.js";
 import { editPlaceDialog, buildSetLocationInline, buildAddPlacePanel } from "./placeForm.js";
 import { sortByRank, notRankedByMe, voteCounts, toMillis } from "../lib/votes.js";
@@ -212,18 +212,30 @@ export function createPlacesSection({ tripId, myUid, onError, mapClickState, onF
       rel: "noopener noreferrer",
       textContent: "Open in Google Maps",
     });
-    const editBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Edit" });
-    editBtn.addEventListener("click", () => openEditDialog(place));
-    const deleteBtn = el("button", { type: "button", className: "btn btn-small btn-danger", textContent: "Delete" });
-    deleteBtn.addEventListener("click", async () => {
-      const confirmed = await confirmDialog(`Delete ${place.name}?`, "Delete");
-      if (!confirmed) return;
-      try {
-        await deletePlace(tripId, place.id);
-      } catch (err) {
-        errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
-      }
-    });
+    const locationInline = buildSetLocationInline({ place, city: selectedCity, tripId, mapClickState, onError, cities });
+    const locationToggleBtn = locationInline.querySelector("button");
+    if (locationToggleBtn) locationToggleBtn.hidden = true;
+    const menu = menuButton(
+      [
+        { label: "Edit", icon: "edit", onSelect: () => openEditDialog(place) },
+        { label: hasLocation ? "Edit location" : "Set location", icon: "place", onSelect: () => locationToggleBtn?.click() },
+        {
+          label: "Delete",
+          icon: "trash",
+          danger: true,
+          onSelect: async () => {
+            const confirmed = await confirmDialog(`Delete ${place.name}?`, "Delete");
+            if (!confirmed) return;
+            try {
+              await deletePlace(tripId, place.id);
+            } catch (err) {
+              errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
+            }
+          },
+        },
+      ],
+      { label: `More actions for ${place.name}` }
+    );
 
     const { element: commentsEl, unsubscribe: commentsUnsub } = renderComments({
       tripId,
@@ -256,9 +268,9 @@ export function createPlacesSection({ tripId, myUid, onError, mapClickState, onF
       [
         ...bodyDetails,
         hasLocation ? null : el("p", { className: "field-error", textContent: "No map pin" }),
-        buildSetLocationInline({ place, city: selectedCity, tripId, mapClickState, onError, cities }),
+        locationInline,
         rank,
-        el("div", { className: "place-actions" }, [showOnMapBtn, openBtn, editBtn, deleteBtn].filter(Boolean)),
+        el("div", { className: "place-actions" }, [showOnMapBtn, openBtn, menu].filter(Boolean)),
         errorHolder,
         commentsEl,
       ].filter(Boolean)

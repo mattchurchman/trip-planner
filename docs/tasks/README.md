@@ -94,7 +94,7 @@ Design: `docs/R7.md` (wins over `SPEC.md` §4 for the look until T66 folds it in
 | T55 | [New logo, app icon and favicon](T55-logo-and-icons.md) | Haiku | low | T54 | Done (2026-10-15) |
 | T56 | [One icon set, no emoji](T56-icon-set.md) | Sonnet | medium | T54 | Done (2026-10-15) |
 | T57 | [Shared pieces: buttons, cards, rows, chips, top bar](T57-shared-pieces.md) | Sonnet | high | T56 | Done (2026-10-15) |
-| T58 | [Delete and Edit move into ⋯ menus](T58-overflow-menus.md) | Sonnet | medium | T57 | To do |
+| T58 | [Delete and Edit move into ⋯ menus](T58-overflow-menus.md) | Sonnet | medium | T57 | Done (2026-10-16) |
 | T59 | [The trip's shared Google My Maps link](T59-mymaps-link.md) | Sonnet | medium | T58 | To do |
 | T60 | [Trips list: readable cards](T60-trips-list.md) | Sonnet | medium | T58 | To do |
 | T61 | [Overview: summary first, settings behind a tap](T61-overview.md) | Sonnet | high | T59 | To do |

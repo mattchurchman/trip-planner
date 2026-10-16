@@ -2,7 +2,7 @@
 // the add / rename / delete dialogs for ideas and options. Split out of
 // routes.js, which keeps the flights, the option cards and the watchers.
 import { addIdea, updateIdea, deleteIdea, addOption, updateOption, deleteOption } from "../store.js";
-import { el, confirmDialog, promptDialog } from "../ui.js";
+import { el, confirmDialog, promptDialog, menuButton } from "../ui.js";
 import { formatMoney } from "../lib/money.js";
 
 /** Prompts for a name (defaulting to `defaultName`), falling back to it if
@@ -102,11 +102,14 @@ export function renderIdeaSwitch(switchEl, actionsEl, { ideas, selectedIdeaId, c
     attrs: { "aria-pressed": String(isChosen) },
   });
   chooseBtn.addEventListener("click", () => onChoose(currentIdea));
-  const renameBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Rename idea" });
-  renameBtn.addEventListener("click", () => onRename(currentIdea));
-  const deleteBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Delete idea" });
-  deleteBtn.addEventListener("click", () => onDelete(currentIdea));
-  actionsEl.replaceChildren(chooseBtn, renameBtn, deleteBtn);
+  const menu = menuButton(
+    [
+      { label: "Rename idea", icon: "edit", onSelect: () => onRename(currentIdea) },
+      { label: "Delete idea", icon: "trash", danger: true, onSelect: () => onDelete(currentIdea) },
+    ],
+    { label: `More actions for ${currentIdea.name}` }
+  );
+  actionsEl.replaceChildren(chooseBtn, menu);
 }
 
 // Whether the compact phone bar's breakdown is expanded, remembered for the

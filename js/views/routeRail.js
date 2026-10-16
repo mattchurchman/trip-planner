@@ -2,7 +2,7 @@
 // routes.js because the rail — working out stops from flights, then drawing
 // them as a track of nodes with the hop flights hanging off it — is its own
 // chunk of layout, reused nowhere else.
-import { el, setPending } from "../ui.js";
+import { el, setPending, menuButton } from "../ui.js";
 import { formatMoney } from "../lib/money.js";
 import { nightsLabel } from "../lib/dates.js";
 import { formatLegDate } from "../lib/itineraryFormat.js";
@@ -44,10 +44,13 @@ export function renderFlightRow(flight, { tripId, myUid, currency, usersById, on
     myUid,
   });
 
-  const editBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Edit" });
-  editBtn.addEventListener("click", onEdit);
-  const deleteBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Delete" });
-  deleteBtn.addEventListener("click", onDelete);
+  const menu = menuButton(
+    [
+      { label: "Edit", icon: "edit", onSelect: onEdit },
+      { label: "Delete", icon: "trash", danger: true, onSelect: onDelete },
+    ],
+    { label: flight.label ? `More actions for ${flight.label}` : "More actions for this flight" }
+  );
 
   const header = el("div", { className: "flight-card-header" }, [
     el("div", { className: "option-header-left" }, [flight.label ? el("span", { textContent: flight.label }) : null].filter(Boolean)),
@@ -59,7 +62,7 @@ export function renderFlightRow(flight, { tripId, myUid, currency, usersById, on
     row,
     itinerary,
     extra,
-    el("div", { className: "flight-actions" }, [...leadingActions, editBtn, deleteBtn]),
+    el("div", { className: "flight-actions" }, [...leadingActions, menu]),
   ]);
 }
 
@@ -298,15 +301,18 @@ export function renderOptionCard({
   pasteFlightBtn.addEventListener("click", onPasteFlight);
   const chooseBtn = el("button", { type: "button", className: "btn btn-primary", textContent: isChosen ? "Unchoose" : "Choose this option" });
   chooseBtn.addEventListener("click", onChoose);
-  const renameBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Rename" });
-  renameBtn.addEventListener("click", onRename);
-  const deleteBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Delete" });
-  deleteBtn.addEventListener("click", onDelete);
+  const optionMenu = menuButton(
+    [
+      { label: "Rename", icon: "edit", onSelect: onRename },
+      { label: "Delete", icon: "trash", danger: true, onSelect: onDelete },
+    ],
+    { label: "More actions for this option" }
+  );
 
   card.append(
     el("div", { className: "route-option-body" }, [
       rail,
-      el("div", { className: "route-option-foot" }, [chooseBtn, pasteFlightBtn, renameBtn, deleteBtn]),
+      el("div", { className: "route-option-foot" }, [chooseBtn, pasteFlightBtn, optionMenu]),
     ])
   );
   return card;

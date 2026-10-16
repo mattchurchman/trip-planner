@@ -1,7 +1,7 @@
 // The Split costs list on Overview (V4 §9): the things everyone shares, like
 // a rental car or groceries. Split out of overview.js.
 import { addCost, updateCost, deleteCost } from "../store.js";
-import { el, field, dialogShell, confirmDialog } from "../ui.js";
+import { el, field, dialogShell, confirmDialog, menuButton } from "../ui.js";
 import { parseMoney, formatMoney } from "../lib/money.js";
 
 /** Add / Edit a split cost. Resolves `{ label, amountCents, note,
@@ -102,18 +102,28 @@ export function renderSplitCosts(sectionEl, { tripId, trip, costs, onError }) {
   }
 
   const rows = costs.map((cost) => {
-    const editBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Edit" });
-    editBtn.addEventListener("click", () =>
-      run(async () => {
-        const result = await costFormDialog(cost, trip.travelers || []);
-        if (result) await updateCost(tripId, cost.id, result);
-      })
-    );
-    const deleteBtn = el("button", { type: "button", className: "btn btn-small btn-danger", textContent: "Delete" });
-    deleteBtn.addEventListener("click", () =>
-      run(async () => {
-        if (await confirmDialog(`Delete "${cost.label}"?`, "Delete")) await deleteCost(tripId, cost.id);
-      })
+    const menu = menuButton(
+      [
+        {
+          label: "Edit",
+          icon: "edit",
+          onSelect: () =>
+            run(async () => {
+              const result = await costFormDialog(cost, trip.travelers || []);
+              if (result) await updateCost(tripId, cost.id, result);
+            }),
+        },
+        {
+          label: "Delete",
+          icon: "trash",
+          danger: true,
+          onSelect: () =>
+            run(async () => {
+              if (await confirmDialog(`Delete "${cost.label}"?`, "Delete")) await deleteCost(tripId, cost.id);
+            }),
+        },
+      ],
+      { label: `More actions for ${cost.label}` }
     );
     const travelers = trip.travelers || [];
     const forIds = Array.isArray(cost.forTravelerIds) ? travelers.filter((t) => cost.forTravelerIds.includes(t.id)) : null;
@@ -126,8 +136,7 @@ export function renderSplitCosts(sectionEl, { tripId, trip, costs, onError }) {
         el("span", { textContent: formatMoney(cost.amountCents, trip.currency) }),
         forText ? el("span", { className: "muted", textContent: forText }) : null,
         cost.note ? el("span", { className: "muted", textContent: cost.note }) : null,
-        editBtn,
-        deleteBtn,
+        menu,
       ].filter(Boolean)
     );
   });

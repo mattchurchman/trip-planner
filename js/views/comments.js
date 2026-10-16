@@ -1,5 +1,5 @@
 import { watchComments, addComment, deleteComment } from "../store.js";
-import { el, setPending, confirmDialog, friendlyError } from "../ui.js";
+import { el, setPending, confirmDialog, friendlyError, menuButton } from "../ui.js";
 import { relativeTime } from "../lib/dates.js";
 
 // An unsent draft and whether the thread was open, kept per target so that a
@@ -84,17 +84,27 @@ export function renderComments({ tripId, targetType, targetId, myUid, usersById 
           el("p", { className: "comment-meta", textContent: `${authorName(comment.addedBy)} · ${when}` }),
         ]);
         if (comment.addedBy === myUid) {
-          const deleteBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Delete" });
-          deleteBtn.addEventListener("click", async () => {
-            const confirmed = await confirmDialog("Delete this comment?", "Delete");
-            if (!confirmed) return;
-            try {
-              await deleteComment(tripId, comment.id);
-            } catch (err) {
-              errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
-            }
-          });
-          item.appendChild(deleteBtn);
+          item.appendChild(
+            menuButton(
+              [
+                {
+                  label: "Delete",
+                  icon: "trash",
+                  danger: true,
+                  onSelect: async () => {
+                    const confirmed = await confirmDialog("Delete this comment?", "Delete");
+                    if (!confirmed) return;
+                    try {
+                      await deleteComment(tripId, comment.id);
+                    } catch (err) {
+                      errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
+                    }
+                  },
+                },
+              ],
+              { label: "More actions for this comment" }
+            )
+          );
         }
         return item;
       })
