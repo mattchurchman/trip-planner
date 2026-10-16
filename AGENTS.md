@@ -42,10 +42,9 @@ Before you continue:
 
 ## 2. Where the truth lives
 
-- `SPEC.md` (version 4.0) is the design. It is the only source of truth: T30 folded `docs/V4.md` into it.
-- `docs/V4.md` is history now. Don't build from it; where it differs from `SPEC.md`, **SPEC wins**.
-- `docs/mock/routes-mock.html` is the owner-approved Routes layout. Match its structure.
-- **Round 7 (T54–T66):** `docs/R7.md` is the agreed design. For the look (colors, type, icons, components, screen layout) it wins over `SPEC.md` §4 and the mock until T66 folds it into SPEC 4.3. Ready-made logo, icon and texture files are in `docs/brand/`: copy them, never redraw.
+- `SPEC.md` (version 4.3) is the design — the look as well as the behavior. It is the only source of truth: T30 folded `docs/V4.md` into it and T66 folded `docs/R7.md` in.
+- `docs/V4.md`, `docs/R7.md` and `docs/mock/routes-mock.html` are history now. Don't build from them; where any of them differs from `SPEC.md`, **SPEC wins**.
+- Ready-made logo, icon and texture files are in `docs/brand/`: copy them, never redraw (`SPEC.md` §3.3).
 - `docs/tasks/WORDING.md` governs words on screen.
 - `PHASES.md` is history. Don't build from it.
 
@@ -71,7 +70,7 @@ The data model and security rules are exact. If you think one must change beyond
 - Live updates must never wipe a form someone is typing in (`SPEC.md` §8).
 - Every button does something real and shows pending, success, or a specific error.
 - Keep files under about 400 lines (`js/store.js` and `css/styles.css` excepted).
-- Style only with the design tokens (`docs/R7.md` §2 during Round 7, `SPEC.md` §4 after). No raw colors except category colors. Font sizes only from the `--fs-*` tokens.
+- Style only with the design tokens (`SPEC.md` §4). No raw colors except the category colors in `js/lib/categories.js` and the six avatar colors in `js/ui.js`. Font sizes only from the `--fs-*` tokens.
 - Reuse existing UI pieces (`dialogShell()`, `field()`, `.btn` classes, `<details>`). Don't invent a second way to do something the app already does.
 - Phone first. Every screen works at 375 px wide with 44 px tap targets, and at 1280 px.
 
@@ -87,7 +86,7 @@ The data model and security rules are exact. If you think one must change beyond
 - Summarize failing output (test name and first error line), don't paste logs.
 - Keep the final message to the template above.
 - To see a screen signed in, use `docs/demo/serve.sh` (sample trip, no sign-in) — only when the task's **Tests** ask, and take no more screenshots than they list.
-- Read big files by line range or `grep -n`, as each task's **Read** list says. Don't open `SPEC.md`, `docs/R7.md` or `css/styles.css` whole.
+- Read big files by line range or `grep -n`, as each task's **Read** list says. Don't open `SPEC.md` or `css/styles.css` whole.
 
 ## 7. If the owner reports a bug
 

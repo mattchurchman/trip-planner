@@ -12,7 +12,7 @@ This guide is for you, the owner. The coding model reads the other files:
 | `AGENTS.md` | Every coding model | The working rules it must follow (`CLAUDE.md` and `GEMINI.md` just point at it) |
 | `SPEC.md` | The coding model (and you) | Exactly what the app does and how data is stored |
 | `docs/tasks/README.md` | You and the model | The task board: what's next, which model to use, the one line that starts it |
-| `PHASES.md`, `docs/V4.md` | History | The original build steps and the round-3 design, both now folded into `SPEC.md` |
+| `PHASES.md`, `docs/V4.md`, `docs/R7.md` | History | The original build steps, the round-3 design and the round-7 "Waypoint" look, all now folded into `SPEC.md` |
 
 All the instructions live inside the repository, so any capable coding model can pick up the work. You don't need to paste long prompts. Each session starts with one sentence.
 
@@ -164,6 +164,12 @@ A few habits that keep this working:
 | A stay sits under "No stop yet" | Its check-in falls outside every city's dates and its pin isn't near one. Fix the dates or set its location and it moves itself |
 | A total says "at least" | Something counted in it has no price. The budget card on Overview lists exactly what's missing — a missing price is never counted as $0 |
 | Routes shows a warning on a stop | It's telling you the flights don't line up — for example the next one leaves from a different city. Fix the flight, or ignore it if you know why |
+| You can't find **Delete** or **Edit** | They moved into the ⋯ button on the card or row they belong to (round 7). Deleting still asks you first |
+| The place filters have gone from the Map tab | They're behind the **Filters** button now; it shows a count when any are on |
+| **Export** has gone from the Days tab | It's the ⤓ button in the top bar while you're on Days |
+| "That's a short link" when adding the My Maps link | A `maps.app.goo.gl` link can't be read. Open it, then copy the whole address out of the browser's address bar and paste that |
+| "That doesn't look like a Google My Maps link" | The address has to contain `google.com/maps/d/`. A normal Google Maps place link isn't a My Maps map |
+| **Get KML** downloads nothing, or an error page | The My Maps map has to be shared so anyone with the link can view it. Change that in My Maps → Share |
 | The map is blank | Open the browser console, copy the red error, and give it to the model |
 
 ---

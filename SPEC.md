@@ -1,8 +1,8 @@
 # Trip Planner — Specification
 
-Spec version: **4.2** (October 2026)
+Spec version: **4.3** (October 2026)
 
-This is the source of truth for what the app is and how it works. `docs/V4.md` (the agreed design for round 3) is folded into this file and is now history. The original build phases are in `PHASES.md` (all built); current work is in `docs/tasks/`. The working rules for every coding agent are in `AGENTS.md`, and the words on screen are governed by `docs/tasks/WORDING.md`. If code and this spec disagree, the spec wins unless the owner approves a change and this file is updated in the same commit.
+This is the source of truth for what the app is and how it works. `docs/V4.md` (the agreed design for round 3) and `docs/R7.md` (the "Waypoint" look, round 7) are both folded into this file and are now history. The original build phases are in `PHASES.md` (all built); current work is in `docs/tasks/`. The working rules for every coding agent are in `AGENTS.md`, and the words on screen are governed by `docs/tasks/WORDING.md`. If code and this spec disagree, the spec wins unless the owner approves a change and this file is updated in the same commit.
 
 ---
 
@@ -51,7 +51,7 @@ Four tabs, in the order a group uses them: **Overview → Routes → Map → Day
 | Map | Leaflet **1.9.4** from `https://unpkg.com/leaflet@1.9.4/dist/` with OpenStreetMap standard tiles `https://tile.openstreetmap.org/{z}/{x}/{y}.png` and the attribution `© OpenStreetMap contributors` |
 | Place search | Nominatim (§9.4), only when the user presses a Search button |
 | Airports | `js/data/airports.json`, bundled (§9.8). No lookup service |
-| Fonts | Google Fonts, one `<link>`: Bricolage Grotesque (headings), Instrument Sans (body), JetBrains Mono (codes, prices, dates) |
+| Fonts | Google Fonts, one `<link>` in every page's `<head>`: Gabarito (display: headings, card titles, the lockup) and Figtree (body). No third font — prices and codes use the body font with tabular figures (§4) |
 | Tests | `node tests/run-tests.js` using Node's built-in `assert`; no test libraries |
 
 ### 3.1 File layout
@@ -65,14 +65,18 @@ package.json          {"type": "module", "private": true}  (no dependencies)
 firebase.json         Firebase Hosting config: serves the repo root, ignores docs/tests/markdown
 firestore.rules       security rules (owner pastes into the Firebase console)
 css/styles.css
-img/logo.svg          app logo (top bar, sign-in card)
-img/favicon.svg       browser-tab icon (same artwork as logo.svg)
-img/icons/            home-screen icons, including icon-180.png for Apple touch
+img/logo.svg          the top-bar lockup mark, 28 px
+img/app-icon.svg      the larger mark on the sign-in card, 72 px
+img/favicon.svg       browser-tab icon (the mark simplified for 16-32 px)
+img/icons/            home-screen icons (icon-180.png for Apple touch, -192, -512), full bleed
+img/topo-on-forest.svg, img/topo-on-paper.svg
+                      the topographic texture (§4); sources for all of these live in docs/brand/
 js/firebase-config.js the owner's Firebase web config (public values; safe to commit)
 js/firebase.js        initializes Firebase, re-exports the functions the app uses
 js/app.js             auth gate, router, top bar, tab bar
 js/store.js           all Firestore reads, writes and listeners
-js/ui.js              shared DOM helpers (el(), field(), dialogShell(), rank control, toast, download)
+js/ui.js              shared DOM helpers (el(), field(), row(), dialogShell(), icon(), menuButton(),
+                      routeRibbon(), avatars, rank control, toast, download)
 js/lookup.js          the only file that calls outside services with fetch(): Nominatim (§9.4),
                       plus loading the bundled airport file
 js/data/airports.json IATA code -> city, country, lat, lng (§9.8)
@@ -88,13 +92,16 @@ js/lib/ — pure logic, no DOM and no Firebase, each with tests in tests/
   dayplan.js          dates of a route, and the days to create from it (§7.8)
   exporters.js        CSV and KML generation (§10)
   flightlink.js       read flights, stops, airlines and price from Google Flights URLs (§9.6)
+  icons.js            the icon set: name -> SVG path data, drawn by icon() in ui.js (§4)
   itineraryFormat.js  leg date and flight label formatting
   kmlimport.js        read layers and pins from a My Maps KML export (§9.7)
   links.js            external link builders and URL safety
   mapsurl.js          read coordinates and names from Google Maps URLs (§9.3)
   money.js            parse, format, split
+  mymaps.js           read the group's shared Google My Maps link (§9.10)
   optionSort.js       stay sort order, stay numbering, the cheapest-first comparator
   protobuf.js         tiny reader for the binary data inside Google Flights links (§9.6)
+  ribbon.js           the route ribbon's stops for the Overview summary card (§7.5)
   route.js            THE route rules: movements, stops, nights, totals, names, placement (§7.6)
   selection.js        read the chosen stays, including the pre-2.0 shapes (§5.3)
   stage.js            the automatic trip stage badge (§11)
@@ -107,9 +114,10 @@ js/lib/ — pure logic, no DOM and no Firebase, each with tests in tests/
 js/views/
   signin.js           sign-in and email-confirmation screens (§7.1)
   trips.js            trips list (§7.2)
-  overview.js         Overview tab: trip window, route summary, budget, album, comments (§7.5)
+  overview.js         Overview tab: summary card, budget, comments (§7.5)
   travelers.js        the Travelers card on Overview (§7.5)
   splitCosts.js       the Split costs list on Overview (§7.5)
+  sharedLinks.js      the Shared links card on Overview: Album and Our My Maps (§7.5, §9.10)
   routes.js           Routes tab: flights, options, watchers (§7.6)
   routeIdeas.js       Routes: traveler/idea switches and the idea/option dialogs (§7.6)
   routeRail.js        Routes: the option card, its rail of stops, the home-flights card (§7.6)
@@ -122,7 +130,8 @@ js/views/
   importPlaces.js     the Import from My Maps dialog (§7.7, §9.7)
   stays.js            the Stays list of the Map tab, grouped by stop (§7.7)
   stayForm.js         add/edit stay dialog (§7.7)
-  days.js             Days tab (§7.8)
+  days.js             Days tab: the day chooser and the selected day (§7.8)
+  dayTimeline.js      the selected day's numbered timeline and the "not planned" sheet (§7.8)
   daysMap.js          the Days tab's map of numbered, day-colored pins (§7.8)
   exportSection.js    the Export section on Days (§7.8, §10)
   pricePanel.js       the price control shared by flights and stays (§7.9)
@@ -141,60 +150,114 @@ Files under `js/lib/` must not touch the DOM or import Firebase, so Node can tes
 
 ### 3.3 Home-screen app
 
-`manifest.webmanifest` declares `display: standalone`, the name "Trip Planner" and the icons in `img/icons/`. Every HTML page sets `viewport-fit=cover`, `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`, `apple-mobile-web-app-title`, and `apple-touch-icon` → `img/icons/icon-180.png`. Fixed bars pad with `env(safe-area-inset-*)` so nothing hides under the iPhone's home indicator.
+`manifest.webmanifest` declares `display: standalone`, the name "Trip Planner", the icons in `img/icons/`, `"theme_color": "#1F4D3A"` and `"background_color": "#F6F2E9"`. Every HTML page sets `viewport-fit=cover`, `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`, `apple-mobile-web-app-title`, `apple-touch-icon` → `img/icons/icon-180.png`, and two `<meta name="theme-color">` tags with `media` (`#F6F2E9` light, `#121815` dark). The home-screen icons are full bleed; the phone rounds the corners. Fixed bars pad with `env(safe-area-inset-*)` so nothing hides under the iPhone's home indicator.
+
+The ready-made brand artwork lives in `docs/brand/` and is copied, never redrawn: `favicon.svg` → `img/favicon.svg`, `logo-small.svg` → `img/logo.svg`, `app-icon.svg` → `img/app-icon.svg`, `icons/icon-180|192|512.png` → `img/icons/`, `topo-on-forest.svg` and `topo-on-paper.svg` → `img/`. `logo-mark.svg`, `logo-small-inverse.svg` and `app-icon-fullbleed.svg` stay in `docs/brand/` as the sources for the PNGs.
 
 ## 4. Look and feel
 
-The owner-approved reference is `docs/mock/routes-mock.html`; its `<style>` block is the token source. Calm, high contrast, phone first.
+The look is **"Waypoint"** (round 7): forest green on warm paper, calm, high contrast, phone first. `css/styles.css` is the only place these values are written down. The old reference `docs/mock/routes-mock.html` and `docs/R7.md` are both history; this section wins.
 
-**Color tokens.** Defined once on `:root` in `css/styles.css` and used only through the tokens (category colors below are the one exception). Dark values are redefined under `@media (prefers-color-scheme: dark)`.
+Principles, in order:
+
+1. **One line of header.** The trip's name, dates and stage sit in the top bar on trip tabs; a big heading only where a page has nothing else to say (trips list, sign-in).
+2. **Summary first, settings behind a tap.** Editable fields live in sheets opened from **Edit** or ⋯, not on the page.
+3. **Rows, not boxes in boxes.** A list is one card with divided rows. A card never sits inside a card.
+4. **Destructive actions live in ⋯ menus** with their existing confirmation, never as a standing red button.
+5. **Forest is the only action color; marigold only marks things** (chosen, cheapest, stale, the logo pin).
+6. **The dotted path is the brand**: the logo's path reappears as the route ribbon, the walking order on Days, and step connectors.
+
+**Color tokens.** Defined once on `:root` in `css/styles.css` and used only through the tokens (category colors and the avatar colors below are the only exceptions). The same three blocks hold the dark values: `@media (prefers-color-scheme: dark)` guarded by `:root:not([data-theme="light"])`, and `:root[data-theme="dark"]`.
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| `--bg` | `#f4f6f5` | `#0d1514` | page background |
-| `--surface` | `#ffffff` | `#16211f` | cards, dialogs, bars |
-| `--sunk` | `#e9eeec` | `#1e2c2a` | inset areas: segmented controls, empty states |
-| `--line` | `#d5dedb` | `#2c3d3a` | card and input borders |
-| `--ink` | `#12211f` | `#e8f0ee` | body text |
-| `--muted` | `#566864` | `#9db0ac` | secondary text, labels |
-| `--teal` | `#0f5f59` | `#5cc7bd` | the action color: primary buttons, links, focus rings, active tab |
-| `--teal-soft` | `#d9ecea` | `#173a37` | background behind teal badges and pressed controls |
-| `--on-teal` | `#ffffff` | `#06211f` | text on a solid teal fill |
-| `--sun` | `#c2570c` | `#f2a25c` | small highlights only: cheapest, stale price, warnings |
-| `--sun-soft` | `#fde8d6` | `#3c2613` | background behind sun highlights |
-| `--good` / `--bad` | `#17703f` / `#b3261e` | `#6fd39a` / `#ff8a80` | price movement and errors only |
-| `--on-color` | `#ffffff` | — | text on a solid `--good`/`--bad` fill |
+| `--bg` | `#F6F2E9` | `#121815` | page ground ("paper") |
+| `--surface` | `#FFFCF6` | `#1A221E` | cards, sheets, bars |
+| `--sunk` | `#ECE5D6` | `#222C27` | segmented tracks, inset rows, empty states |
+| `--line` | `#DED5C3` | `#2C3832` | borders, row dividers |
+| `--ink` | `#1B2620` | `#E9EFE9` | text |
+| `--muted` | `#5C665F` | `#9DAAA2` | secondary text, labels |
+| `--forest` | `#1F4D3A` | `#8FD0AE` | the action color: primary buttons, links, focus ring, active tab |
+| `--forest-soft` | `#DDE9DF` | `#1D3A2D` | behind forest text: active tab pill, countdown chip |
+| `--on-forest` | `#F6F2E9` | `#0E2219` | text on solid forest |
+| `--accent` | `#E9A23B` | `#F2B65A` | marigold **fills** only: Chosen badge, logo pin, new-low pill |
+| `--on-accent` | `#2B1A02` | `#2B1A02` | text on solid marigold |
+| `--accent-soft` | `#FBEBD0` | `#3A2A12` | behind accent text: Cheapest, stale |
+| `--accent-ink` | `#8F5A0E` | `#F2B65A` | marigold **text** (never `--accent` for text on light) |
+| `--good` | `#2F7A4F` | `#7FD3A0` | price went down |
+| `--bad` | `#B4442E` | `#FF8A75` | errors, price went up, destructive menu items |
+| `--on-color` | `#FFFFFF` | `#FFFFFF` | text on solid good/bad |
 
-Also: spacing `--space-1`…`--space-7` (4, 8, 12, 16, 24, 32, 48 px), `--r: 16px` with `--radius-card`, `--radius` (10 px) and `--radius-pill` (999 px), the `--shadow-sm/-md/-lift` shadows, and `--ease: 160ms ease`.
+Every text pair above is at least 4.9:1. `--accent` on `--surface` is decoration only, never text.
+
+**Aliases** kept so nothing breaks: `--teal: var(--forest)`, `--teal-soft: var(--forest-soft)`, `--on-teal: var(--on-forest)`, `--sun: var(--accent-ink)`, `--sun-soft: var(--accent-soft)`. New code uses the new names; the aliases stay.
+
+Also: spacing `--space-1`…`--space-7` (4, 8, 12, 16, 24, 32, 48 px), `--r: 18px` (cards), `--radius: 12px` (buttons, inputs), `--radius-sm: 8px` (chips inside rows), `--radius-pill: 999px`, shadows tinted with ink `rgba(27, 38, 32, …)`, and `--ease: 160ms ease`. Cards use a border, not a shadow, at rest.
 
 **Dark mode** follows the phone or computer setting (`prefers-color-scheme`). There is no toggle in the app.
 
-**Type.** One Google Fonts `<link>` with `display=swap`: Bricolage Grotesque (headings, 600/700), Instrument Sans (body, 400/500/600), JetBrains Mono (airport codes, prices and column dates, with tabular numbers). Field labels are small uppercase with letter-spacing, in `--muted`. Use exactly one `h1` per page and don't skip heading levels; every section heading sits on one row with its main action (stacked on phones).
+**Type.** One Google Fonts `<link>` with `display=swap` in every page's `<head>`, loading **Gabarito** (600/700) and **Figtree** (400/500/600/700): `--display: "Gabarito", "Avenir Next", "Segoe UI", sans-serif` and `--body: "Figtree", "Helvetica Neue", Arial, sans-serif`. There is no mono font — `.mono` keeps its name but is the body font with `font-variant-numeric: tabular-nums` and weight 600, so prices and airport codes still line up.
 
-**Navigation.** Under 760 px, a fixed bottom tab bar with an icon and label per tab, plus a slim top bar holding the logo and "Trip Planner", the round **?** Help button and the account menu, with the open trip's name wrapped onto its own line below them (smaller, muted, ellipsized) so the app name is never squeezed out (T41). From 760 px, the tabs move into the top bar, the trip name is hidden there, and the bottom bar is gone.
+**Six sizes, no others.** Every `font-size` in the stylesheet is one of these tokens; the only exception is `input`/`select`/`textarea`, which keep `max(16px, 1rem)` so iOS doesn't zoom.
 
-**Components.** Reuse what exists: `dialogShell()`, `field()`, `linkField()` (the one link box with its **Paste** button, used by the flight, stay and place dialogs — it re-reads on paste, on typing and after the button or an auto-fill sets the value, so a link never needs pasting twice, T42), the `.btn` classes (plain, primary, quiet, small, danger), `.icon-btn` (a round 32px button sized and bordered like `.avatar`, for the top bar's Help "?"), the segmented control (`.seg`), chips, kind pills, badges, the option card, the rail (stops as dots with hop flights inset), and the toast. Don't invent a second way to do something the app already does.
+| Token | Size / line-height | Font | Use |
+|---|---|---|---|
+| `--fs-title` | 26 / 1.15, weight 700, `letter-spacing: -0.02em` | display | the one `h1` (trips list, sign-in, the Days day title) |
+| `--fs-section` | 19 / 1.25, weight 600 | display | `h2` section headings |
+| `--fs-item` | 16 / 1.3, weight 600 | body | card titles, row names, `h3` |
+| `--fs-body` | 15 / 1.5 | body | body text, buttons |
+| `--fs-small` | 13 / 1.4 | body | secondary lines, captions |
+| `--fs-label` | 11 / 1.3, weight 700, uppercase, `letter-spacing: 0.1em` | body | field labels, tiny section labels |
 
-**Rules.** Teal is the only action color. Sun is for small highlights. `--good`/`--bad` are only for price movement and errors. Tap targets are at least 44 px, every control has a visible label and focus ring, and `prefers-reduced-motion` turns transitions off. Price movement is shown in words and arrows ("▼ $42 lower") as well as color. Every screen works at 375 px and at 1280 px, with no horizontal scrolling. `input`, `select` and `textarea` are at least `16px` font size everywhere (iOS zooms on focus below that); pinch zoom is never disabled.
+A big number (the Overview total) may use `--fs-title` with tabular figures. Nothing anywhere is larger than 32 px. Use exactly one `h1` per page and don't skip heading levels; every section heading sits on one row with its main action (stacked on phones).
 
-**Category colors** live in `js/lib/categories.js`; every other file imports them from there. Menus and filters use this order:
+**Icons.** One helper, `icon(name, { size = 20, label } = {})` in `js/ui.js`, builds an inline SVG: `viewBox="0 0 24 24"`, `fill="none"`, `stroke="currentColor"`, `stroke-width="1.75"`, round caps and joins, `aria-hidden="true"` unless a `label` is given (then `role="img"` with that `aria-label`). The path data is the single source in **`js/lib/icons.js`** (`export const ICONS = { name: ["d1", …] }`, circles written as path arcs), with a test that every name is a non-empty array of strings. The set: `overview`, `routes`, `map`, `days`, `flight`, `stay`, `place`, `love`, `like`, `pass`, `travelers`, `price`, `more`, `plus`, `edit`, `trash`, `link`, `external`, `download`, `walk`, `food`, `coffee`, `help`, `close`, `chevron`. Add an icon only by adding it to `icons.js`.
+
+Category → icon, for the icon tiles: Food `food`, Coffee & cafés `coffee`, Neighborhood walk and Walking tour `walk`, everything else `place`. **No emoji anywhere**: votes are the `love`/`like`/`pass` icons, the Days map's home base is the `stay` icon, and the "↗" after external links is the `external` icon at 14 px (the CSS `::after` rule stays only as a fallback for links built without `icon()`). Text check marks in labels ("Chosen ✓") may stay.
+
+**Navigation.** Under 760 px, a fixed bottom tab bar with an icon (from the set above) and a label per tab, plus the top bar below. From 760 px the tabs move into the top bar and the bottom bar is gone. The active tab is a `--forest-soft` pill behind its icon.
+
+**Top bar (all trip tabs).** Under 760 px: the lockup mark (28 px), then a two-line title — the trip name (`--fs-item`, display font) over "Apr 10 – 22 · 3 travelers" (`--fs-small`, muted) — then the round **?** Help button and the avatar. From 760 px: the full lockup with "Trip Planner", the tabs, then the trip name and dates on the right before Help and the avatar. **There is no per-tab `h1` trip name or stage pill**; the stage chip lives on the Overview summary card.
+
+**Lockup:** the mark plus "Trip Planner" in `--display` 700, 18 px, `letter-spacing: -0.02em`, 10 px gap. The mark is never recolored.
+
+**Components.** Reuse what exists; don't invent a second way to do something the app already does.
+
+- **Buttons** (`.btn`): 44 px min height, `--radius`, 15 px / 600. Primary: `--forest` fill, `--on-forest` text. Secondary (plain `.btn`): `--surface`, 1 px `--line`, `--ink` text, hover border `--forest`. Quiet (`.btn-quiet`): no border, `--forest` text. Small (`.btn-small`): 36 px tall, 14 px, still a 44 px hit area. **`.btn-danger` is only used inside confirmation dialogs.** Icon button (`.icon-btn`): 40 px square, `--radius`, bordered, always with an `aria-label`.
+- **Cards:** `--surface`, 1 px `--line`, `--r`, padding 16 px (20 px from 760 px), no shadow at rest. Never a card inside a card — inner groups become rows divided by 1 px `--line`.
+- **Rows** (`.row`): min-height 48 px, padding 10–12 px by 16 px, flex with a 12 px gap: optional leading (avatar, number, icon tile), a text block (`--fs-item` name plus a `--fs-small` muted line), and trailing content (a value or ⋯).
+- **Overflow menu** (`menuButton(items, { label })` in `js/ui.js`): an `.icon-btn` with the `more` icon and an `aria-label` naming what it acts on ("More actions for <name>"), opening a popover — a `<dialog>` under the button on desktop, a bottom sheet under 760 px — of items `{ label, icon, onSelect, danger }`. Danger items are `--bad` text and still run the existing confirmation. Esc or an outside tap closes it and focus returns to the button.
+- **Chips:** pill, 32 px, `--surface` plus `--line`; selected is a `--forest` fill with `--on-forest` text. Category chips show a colored dot before the label.
+- **Badges/pills:** 22 px, `--radius-pill`, 12 px / 600. Chosen: `--accent` with `--on-accent`. Cheapest and stale: `--accent-soft` with `--accent-ink`. Countdown: `--forest-soft` with `--forest`.
+- **Segmented control** (`.seg`): a `--sunk` track with a `--surface` thumb; under 760 px it scrolls sideways inside its own track (never cut off, never overflowing the page) with the selected one scrolled into view.
+- **Vote control:** three segments (the `love`/`like`/`pass` icons with counts); the viewer's own vote is the filled segment. The compact summary on a place row is the same icons at 15 px with counts, the viewer's vote in `--forest`.
+- **Route ribbon** (`routeRibbon()` in `js/ui.js`, data from `ribbonStops()` in `js/lib/ribbon.js`): a home dot, one hollow dot per stop labeled "ROM · 5" (city code · nights), then a home dot in `--accent`, joined by a 2.5 px **dotted** connector. On a forest card it draws in `--on-forest`, on a surface card in `--forest`. Past 5 stops it shows the first 4, then "+N", then home.
+- **Topographic texture:** `background-image: url(img/topo-on-forest.svg)` or `-on-paper`, `background-size: cover`, `background-position: right center`. Only on the Overview summary card, trip-card headers, the sign-in panel and empty states. Nowhere else.
+- **Avatars:** 28–32 px circles. A traveler's color is stable, picked by traveler order from a fixed list of six muted colors (`--forest`, `#2F76A8`, `#A8507A`, `#B98522`, `#5463A6`, `#2F8A80` — the one place outside `categories.js` where raw colors are allowed). Stacked avatars overlap by 8 px with a 2 px `--surface` ring.
+- **Dialogs and sheets:** behavior unchanged (`dialogShell()`, `field()`, `linkField()` — the one link box with its **Paste** button used by the flight, stay and place dialogs, re-reading on paste, on typing and after an auto-fill, so a link never needs pasting twice, T42). Styling: `--r` corners, a 4 px grab handle on phone sheets, a `--fs-section` title, actions right-aligned (full width on phone) with the primary last.
+- **Empty states:** one icon (32 px, `--muted`), one sentence, one button, on `--sunk` with the topo-on-paper texture at the right.
+- **Spacing rhythm:** 24 px between sections, 12 px between a section heading and its card, 8 px between rows-as-cards. A 16 px side gutter under 760 px; content max-width 880 px (760 px on the trips list and Overview).
+
+**Rules.** Forest is the only action color; marigold only marks things. `--good`/`--bad` are only for price movement and errors. Tap targets are at least 44 px, every control has a visible label and a focus ring, and `prefers-reduced-motion` turns transitions off. Price movement is shown in words and arrows ("▼ $42 lower") as well as color. Every screen works at 375 px and at 1280 px with no horizontal scrolling. `input`, `select` and `textarea` are at least 16 px everywhere (iOS zooms on focus below that); pinch zoom is never disabled.
+
+**Category colors** live in `js/lib/categories.js`; every other file imports them from there. They appear as a 9–10 px dot or an icon tint — never a filled pill with white text — and an icon tile behind a category icon uses the color at 14% (`color-mix(in srgb, <color> 14%, var(--surface))`). Menus and filters use this order:
 
 | Category | Color |
 |---|---|
-| Food | `#e8710a` |
-| Coffee & cafés | `#795548` |
-| Drinks & nightlife | `#9334e6` |
-| Neighborhood walk | `#188038` |
-| Sight | `#1a73e8` |
-| Museum & history | `#827717` |
-| Walking tour | `#00897b` |
-| Event & seasonal | `#d93025` |
-| Adventure | `#f9ab00` |
-| Day trip | `#3949ab` |
-| Shopping | `#c2185b` |
-| Other | `#5f6368` |
+| Food | `#C2602F` |
+| Coffee & cafés | `#8B6B4E` |
+| Drinks & nightlife | `#7E5AA2` |
+| Neighborhood walk | `#4F8A4E` |
+| Sight | `#2F76A8` |
+| Museum & history | `#8A7A33` |
+| Walking tour | `#2F8A80` |
+| Event & seasonal | `#B8483F` |
+| Adventure | `#B98522` |
+| Day trip | `#5463A6` |
+| Shopping | `#A8507A` |
+| Other | `#6E7470` |
 
-**Stage badge** colors (§11): Exploring and Planning use `--sunk` with `--muted` text; a countdown ("In 42 days") uses `--teal-soft` with `--teal` text; "Happening now" uses `--sun-soft` with `--sun` text; "Trip's over" uses `--sunk` with `--muted` text.
+**Stage badge** colors (§11): Exploring, Planning and "Trip's over" use `--sunk` with `--muted` text; a countdown ("In 42 days") uses `--forest-soft` with `--forest` text; "Happening now" uses `--accent` with `--on-accent` text.
 
 ## 5. Data model (Cloud Firestore)
 
@@ -442,7 +505,7 @@ service cloud.firestore {
 
 ### 7.1 Sign-in and access
 
-- Signed out: a centered card with the logo, the app name, one sentence, **Continue with Google**, and email-and-password beside it — sign in, create account, forgot password — with `autocomplete` set so iPhone offers Face ID fill.
+- Signed out: a forest panel with the topo texture carrying the 72 px app icon, "Trip Planner" and "Plan the trip together.", over a surface card with **Continue with Google** and email-and-password beside it — sign in, create account, forgot password — with `autocomplete` set so iPhone offers Face ID fill.
 - Google uses `signInWithRedirect` on phones and in the home-screen app, and `signInWithPopup` on desktop. `authDomain` is the app's own site (`trip-planner-mattchurchman.web.app`), which is what makes the redirect stick on iPhone.
 - Safari can restore the page from its back-forward cache after the Google redirect instead of loading it fresh, which would leave sign-in looking like it silently did nothing. A `pageshow` listener reloads the page when that happens (§7.1, T32).
 - In the iPhone home-screen app, iOS sometimes can't hand the redirect result back to the installed app at all. If a Google sign-in attempt there returns with no user, the sign-in screen shows "On iPhone, Google sign-in can't return to the home-screen app. Sign in with email and password here, or sign in once in Safari." (remembered across the redirect in `sessionStorage`, T32).
@@ -455,9 +518,10 @@ service cloud.firestore {
 
 ### 7.2 Trips list (`#/`)
 
-- **New trip** asks for a name and creates the trip (§5.3 defaults), then opens its Overview.
-- Cards show name, the stage badge (§11), dates, traveler names, and when it was last updated. They are sorted by `updatedAt`, newest first.
-- **Delete** appears only for the trip's creator. It asks for confirmation, then deletes every document in all the subcollections in batches of up to 400, then the trip document.
+- The one `h1` "Your trips" and **New trip** (primary, `plus` icon) share a row. **New trip** asks for a name and creates the trip (§5.3 defaults), then opens its Overview.
+- Each trip is a card: a 64 px header strip carrying the topo texture (`topo-on-forest` on `--forest` for a trip whose dates are still ahead, `topo-on-paper` on `--sunk` otherwise) with the stage badge (§11) at its right; then the name (`--fs-item`, display font), "Apr 10 – 22, 2027 · 12 nights" (or "Dates not set"), the travelers as stacked avatars, and ⋯. The whole card links to the trip; the ⋯ button stops the click from reaching it. Two columns from 760 px. Sorted by `updatedAt`, newest first.
+- **Delete** is the only item in that ⋯ menu and appears only for the trip's creator. It asks for confirmation, then deletes every document in all the subcollections in batches of up to 400, then the trip document.
+- No route ribbon here: it would need every trip's flights, which the list doesn't load.
 
 ### 7.3 Love / Like / Pass (places only)
 
@@ -524,13 +588,13 @@ Stops — where you sleep and for how many nights — are **never typed**. They 
 - **Totals:** flights from home count $0 for them, and "complete" never asks a local traveler for a picked home flight (§11).
 - Flights they saved before they became local are **never deleted**: they stay in the card, uncounted, under one muted line saying so.
 
-**The screen**, matching `docs/mock/routes-mock.html`:
+**The screen** (R7 §7, T62):
 
-- A traveler segmented control and an idea segmented control. Beside **Rename idea** / **Delete idea** sits **Choose idea** (**Chosen** once chosen): it sets `choices.<travelerId>.ideaId` for the traveler on screen only, and pressing it again unchooses it. A check on the idea chip means the traveler on screen has chosen that idea. Unchoosing an idea also clears that traveler's option when it sits under that idea (otherwise §11's fallback would keep the idea looking chosen). Travelers may have different dates; stops and totals always show for the selected traveler. Both selections live in memory only and reset when the tab is left.
-- **The home-flights card** is headed "{traveler}'s flights from home · $X" (the flights being used only, "at least" when one has no price) and lists every alternative the selected traveler has for this idea, cheapest first with unpriced last, each with **Use this** / **Using**. Picking a both-ways flight clears any separate out/back picks and vice versa. Under the **Paste flight link** button sits the small **I live here — no flight needed** tick. When the traveler is local, the card instead reads "No flight needed — {traveler} lives in {city}" with the tick below it and no paste prompts, no money in its heading, and the rail ends at "Already home" rather than a flight home. The tick shows pending while it saves and puts any error inline beside itself, not in the tab's banner.
-- **Option cards** show the cost of the option's own flights only, labeled "per person" (the flights from home are the same under every option, so they are not repeated), a line "For: Matt, Sam" (everyone any of its flights is for, §11), the path line, a **Chosen by {traveler} ✓** badge when the traveler on screen chose it, small initials for the other travelers who chose it, and a **Cheapest** badge. They open to reveal the rail: stops as dots with their nights and warnings, and the hop flights inset between them. **Choose this option** sets `choices.<travelerId>.optionId` **for the traveler on screen only** — it never changes their idea or anyone else's choice — and pressing it on their chosen option unchooses it. Map, Stays and Days read the merged route built from everyone's choices (§11), not one traveler's.
+- A traveler segmented control and an idea segmented control, both following the segmented-control rules in §4 — they scroll sideways in their own track on a phone and are never cut off. The idea switch's **Rename** and **Delete** live in its trailing ⋯; **Choose idea** (**Chosen** once chosen) is the one button beside it. It sets `choices.<travelerId>.ideaId` for the traveler on screen only, and pressing it again unchooses it. A check on the idea chip means the traveler on screen has chosen that idea. Unchoosing an idea also clears that traveler's option when it sits under that idea (otherwise §11's fallback would keep the idea looking chosen). Travelers may have different dates; stops and totals always show for the selected traveler. Both selections live in memory only and reset when the tab is left.
+- **The home-flights card** is headed "{traveler}'s flights from home · $X" (the flights being used only, "at least" when one has no price) and lists every alternative the selected traveler has for this idea, cheapest first with unpriced last. **A flight card is a two-column grid**: on the left the airline line and the OUT/BACK rows, on the right the price chip (§7.9) with its age underneath. The **New low** and **Cheapest** badges sit inline after the airline name, so they never push the left column down. **Use this** is a secondary button and **Using** a forest-soft pill with a check; Edit and Delete are in the card's ⋯. Picking a both-ways flight clears any separate out/back picks and vice versa. Under the **Paste flight link** button sits the small **I live here — no flight needed** tick. When the traveler is local, the card instead reads "No flight needed — {traveler} lives in {city}" with the tick below it and no paste prompts, no money in its heading, and the rail ends at "Already home" rather than a flight home. The tick shows pending while it saves and puts any error inline beside itself, not in the tab's banner.
+- **Option cards** have the name in `--fs-item` with the price right-aligned in tabular figures and "per person" in `--fs-small` under it. They show the cost of the option's own flights only, labeled "per person" (the flights from home are the same under every option, so they are not repeated), a line "For: Matt, Sam" (everyone any of its flights is for, §11), the path line, a **Chosen by {traveler} ✓** badge when the traveler on screen chose it, small initials for the other travelers who chose it, and a **Cheapest** badge. They open to reveal the rail: stops as dots with their nights and warnings, and the hop flights inset between them. **Choose this option** sets `choices.<travelerId>.optionId` **for the traveler on screen only** — it never changes their idea or anyone else's choice — and pressing it on their chosen option unchooses it. Map, Stays and Days read the merged route built from everyone's choices (§11), not one traveler's.
 - **Each hop** has a **Who's this for?** control: **Automatic** (everyone who chose the option) or a hand-picked set of travelers, saved as `forTravelerIds`. A hand-picked set reads "Set by hand" with a **Reset** link back to automatic.
-- **A summary pinned to the bottom of the tab** reads "{traveler}: home $A + option flights $B = $C" for the traveler on screen, using their own chosen idea and every hop they are for (§11), and "at least $C" while anything is missing. It adds "(no idea chosen)" while the traveler on screen has no idea at all (so no option either, §11's fallback having nothing to work from), which is why their home figure reads $0.
+- **A summary pinned to the bottom of the tab** reads "{traveler}: home $A + option flights $B = $C" for the traveler on screen, using their own chosen idea and every hop they are for (§11), and "at least $C" while anything is missing. It adds "(no idea chosen)" while the traveler on screen has no idea at all (so no option either, §11's fallback having nothing to work from), which is why their home figure reads $0. The page reserves 96 px of bottom padding so the bar never covers the last card. **Rename** and **Delete** on an option are in its ⋯.
 - The price on every flight is the control (§7.9) — there is no separate "Recheck" link.
 - **Earlier flights** (no `role`, saved before 4.0) sit in a collapsed list with **Move to…** (pick a traveler's home flights, or a shared hop under an idea and option) and **Delete**.
 - Editing a flight by hand stays available (`flightForm.js`, opened from a flight's **Edit**) as the fallback, not the path. Pasting a new link into it re-reads the route, dates and legs.
@@ -540,12 +604,14 @@ Stops — where you sleep and for how many nights — are **never typed**. They 
 One Leaflet map with place pins and stay price pins together, and one list below it (beside it from 760 px).
 
 - **Stop chips** across the top: **All**, then each city of the merged route in route order (first occurrence wins when the route visits a city twice), then **Elsewhere**. They filter the map and the list together. With nobody having chosen an option, the chips list every city across every option and a hint says to choose one on Routes.
-- A **Places / Stays** switch under the chips picks which list shows below the map.
+- Under the chips sits the **shared map bar** (§9.10, R7 §8): the `map` icon and "Our shared map" with **Open ↗**, **Get KML** (the `download` icon, opening `kmlUrl` in a new tab) and **Import**; when no link is set, "Add your group's My Maps link to import it in two taps" with **Add link** (the same sheet as Overview) and **Import** still available. There is no floating "Import from My Maps" button — it lives here.
+- A **Places / Stays** switch under that bar picks which list shows below the map.
+- From 760 px the map is `position: sticky` under the top bar, beside the list.
 
 **Places**
 
-- Filters: category (multi-select chips), neighborhood (dropdown built from existing values), text search on name and note, **I haven't ranked yet**. Sort: Group favorites (default), Newest, Neighborhood, Category.
-- **Each place is one compact row** (T49): category, name and a vote summary (e.g. "♥2 👍1", the viewer's own vote highlighted). Tapping a row opens it to show neighborhood, note, link, the Love/Like/Pass buttons, comments, Show on map, Edit and Delete; one open at a time is fine. A live update never closes a row someone has open. Clicking a marker scrolls to and opens its row.
+- Filters collapse behind one **Filters** button, which shows a count ("Filters · 2") when any are on and opens a sheet holding category (multi-select chips), neighborhood (a dropdown built from existing values), text search on name and note, **I haven't ranked yet**, and the sort (Group favorites by default, then Newest, Neighborhood, Category). **Add place** is a primary button on the same row as **Filters**.
+- **Each place is one compact row** (T49): a category dot, the name and the vote summary (the `love`/`like`/`pass` icons with counts, the viewer's own vote in `--forest`). Tapping a row opens it to show neighborhood, note, link, the Love/Like/Pass buttons, comments, Show on map, Edit and Delete; one open at a time is fine. A live update never closes a row someone has open. Clicking a marker scrolls to and opens its row.
 - **Add place**, in this order, because a Google Maps link alone captures an exact name, coordinates and a reusable link:
   1. **Find it on Google Maps.** A search box and a **Find on Google Maps ↗** button (§9.2), plus the shared link box (§4) — **Paste** fills it from the clipboard, and opening the dialog from a tap reads the clipboard once by itself when the box is empty (T42).
   2. **Paste the Google Maps link.** Parsed on paste or input (§9.3); found coordinates fill the location and, if empty, the name, then "✓ Pin found".
@@ -555,7 +621,7 @@ One Leaflet map with place pins and stay price pins together, and one list below
 - Every place has **Set location** / **Edit location** using the same three methods — a pasted link's coordinates aren't always the real pin, so there must always be a way to correct one without deleting the place. A place may be saved with no location; it shows "No map pin" and is left out of the map and exports.
 - Each row and popup has **Open in Google Maps ↗** (§9.2), plus Edit and Delete (with confirmation).
 - **Which city a place-search link uses (T31):** there's no trip-wide destination any more, so **Find on Google Maps**, its Nominatim search, and **Open in Google Maps ↗** all use the stop chip currently selected above the map — the one city the traveler is looking at. With **All**, **Elsewhere**, or no chip selected yet (no route chosen), they search with no city at all rather than guessing one.
-- **Import from My Maps**: the user exports KML from My Maps (with "Export as KML instead of KMZ" ticked) and picks the file. The dialog shows a per-layer summary, gives each layer a category, skips pins matching an existing place (same name, within 50 m), and adds the rest in one batch, storing the layer name on each place. A KMZ file gets a message explaining the tick box (§9.7).
+- **Import from My Maps**: when the trip has a shared map link, the dialog's instructions are two steps — "1. **Get KML from our map ↗** (downloads it)", "2. Pick the downloaded file" — and the older ⋮ → Export instructions move into a "Not working?" `<details>`. Otherwise the user exports KML from My Maps (with "Export as KML instead of KMZ" ticked) and picks the file. The dialog shows a per-layer summary, gives each layer a category, skips pins matching an existing place (same name, within 50 m), and adds the rest in one batch, storing the layer name on each place. A KMZ file gets a message explaining the tick box (§9.7).
 
 **Stays**
 
@@ -571,13 +637,15 @@ One Leaflet map with place pins and stay price pins together, and one list below
 
 ### 7.8 Days tab
 
+- **A horizontal day chooser** across the top: one 58 px square chip per day (weekday label over the date number; an undated day reads "Day 4"). A date of the route with no day yet is a dashed chip that creates that day when tapped, with the same logic as **Add day**. **Create days from route** stays as a button while no days exist at all.
 - **Create days from route** makes one day per date of the merged route, titled with that date's city; a travel day belongs to the city you arrive in, and dates that already have a day are skipped (`dayplan.js`). Before anyone has chosen an option, the same button reads **Create days from trip dates**. **Add day** makes an undated day. Days are sorted by `order`.
 - Selecting a day shows that city's places on the map as pins numbered and colored by day. Tapping a pin offers the days to put the place on, or **Remove from day** when it's already on one.
 - **Home base (T39, T50):** a dated day inside a chosen, located stay's nights (`stayForDate`, `dayplan.js`; a departure day still counts, since you slept there the night before, but tonight's bed wins when both match) shows that stay on the map with the stay pill style plus a house mark, popup naming it. A stay more than ~50km from the day's own city is ignored, so a travel day's home base is never the previous city's hotel. Undated days never show one.
-- Each day card's header reads "<title> · <date>" when it has both, the date alone with no title, the title alone when undated, and "Undated day" when it has neither. The card also shows focus, notes and its places in `dayOrder`, with **▲** / **▼** to reorder (each with an `aria-label` naming the place and direction) and **Remove** to send a place back to the pool. No drag-and-drop. Deleting a day returns its places to the pool.
-- The **Not planned** pool lists the selected day's city's places with no `dayId`, Loved first.
-- **Open walking route** builds Google Maps directions through the day's located places in order; with a home base (T39, above), the route starts and ends at the stay instead of the first and last place (§9.2).
-- **Export** (§10): **Take it to Google Maps** downloads the day-by-day map file, and the plain places CSV and KML are there too. The box says how many places have no pin and will be left out, and links to the help page's import steps.
+- Below the map, the selected day's header is the page's one `h1`, "{Weekday} · {city}" — the date alone with no title, the title alone when undated, "Undated day" when it has neither — with "Focus · N places" under it and **Walk it** (secondary, `routes` icon) beside it. **Edit day** and **Delete day** are in the header's ⋯. Deleting a day returns its places to the pool.
+- **The day's places are a numbered timeline** (`dayTimeline.js`): per row a number circle, the category icon tile, the name, "Category · neighborhood" and the vote count, with a 2.5 px dotted connector between rows. **Move up**, **Move down** and **Remove from day** are in each row's ⋯, keeping their `aria-label`s. No drag-and-drop.
+- The **not planned** pool — the selected day's city's places with no `dayId`, Loved first — is behind a dashed **+ Add from not planned · N** button that opens a sheet of those rows, each with its own **Add**.
+- **Walk it** builds Google Maps directions through the day's located places in order; with a home base (T39, above), the route starts and ends at the stay instead of the first and last place (§9.2).
+- **Export** (§10) is one `download` icon button in the top bar on this tab, opening a sheet with **Take it to Google Maps** (the day-by-day map file), the plain places CSV and KML, how many places have no pin and will be left out, a link to the help page's import steps, and **Open our shared map ↗** when the trip has a My Maps link (§9.10).
 
 ### 7.9 Price control (flights and stays)
 
@@ -785,3 +853,4 @@ Changes are made by the owner (or a model the owner asks). Edit this file first,
 | 4.0 | 2026-10-12 | **Round 3, the V4 overhaul (T14–T30).** `docs/V4.md` folded in and retired. Four tabs, **Overview → Routes → Map → Days** (§1); the Recap tab and public recap page, destination ideas (candidates), the trip-wide `destination`, voting on stays, and the separate Places and Flights & stays tabs are all gone (§1, §5.3, §5.4). New look and phone navigation from `docs/mock/routes-mock.html`: teal-on-light tokens, dark mode, Bricolage Grotesque / Instrument Sans / JetBrains Mono, a bottom tab bar under 760 px (§4). Moved to Firebase Hosting with GitHub Actions, a home-screen manifest, and sign-in that sticks on iPhone (Google redirect plus email and password, `email_verified` required) (§3, §3.3, §6, §7.1). **Routes** replaces flight comparison: ideas, options and hops, with stops and nights worked out from the flights by `route.js`, auto names, warnings, and pasting a Google Flights link as the main data entry (§5.4, §7.6). Prices became a snapshot you confirm, with an age label, a stale dot past 3 days and a **Check prices** walk-through (§7.9). Places use **Love / Like / Pass** and carry a `stopKey` and `layer`; places can be imported from a Google My Maps KML export (§5.4, §7.3, §7.7, §9.7). Stays belong to a stop, with Out/Chosen status, **Duplicate**, and night coverage (§5.4, §7.7). One **Map** tab holds places and stays together behind stop chips, and **Days** plans days on a map and exports the whole plan as one KML for Google Maps (§7.7, §7.8, §10.1). Airports are bundled (§9.8). Wikipedia destination photos and `photos.js` removed with the candidates that used them. |
 | 4.1 | 2026-10-12 | **Round 5, owner testing (T32–T40).** Google sign-in works on phones; the currency field is gone (every trip is USD) and traveler details always save; pasting a flight is scoped to the button you press, so there's no guessing where it lands (§7.6). **Every traveler now chooses their own idea and their own option, as two separate choices** (`trips.choices`, §5.3): one person's choice never moves another's, and `chosenOptionId` is retired to a read-only fallback so older trips keep the choice they had. Flights, stays and costs carry `forTravelerIds`, which says who the price is for — worked out automatically and overridable (§5.4, §11). Map, Stays and Days read one merged route built from everyone's choices rather than a single traveler's (§7.7, §7.8, §11), and the stage badge counts the trip as planned once anyone has chosen an option. New `js/lib/choices.js` holds the choices, the splits, the merged stops and the budget, which moved out of `totals.js`. On **Routes**, **Choose idea** sits beside Rename and Delete, an option card prices only its own flights ("per person") and names who they're for, and a summary pinned to the bottom adds up the traveler on screen (§7.6). **Overview**'s budget became one openable row per traveler — flights from home, option flights, stays, split costs — above "Everyone together" (§7.5). **Stays** group under the merged stops and find their own stop from their dates or their pin, with **Choose** / **Out** as two buttons (§7.7). A day on **Days** shows its chosen stay as a house pin and starts and ends its walking route there (§7.8, §9.2). The **Check prices** sweep over stale prices is gone (T36): a price is still checked by tapping it, and the sun dot is all staleness does now (§7.9, §11). Help, `docs/tasks/WORDING.md` and this file were brought back in line with the code in T40. |
 | 4.2 | 2026-10-12 | **Round 6, the phone pass (T41–T53).** The app behaves like a phone app: fields never zoom the page (16 px everywhere, pinch zoom still on), date fields match the others, the top bar keeps "Trip Planner" with the trip name on its own line and a round **?** Help button, and every screen was gone through at 375 px — Trips, Overview and Routes (T51), Map and Days (T52) — fixing overflow at the cause, mobile-first, with dialogs as bottom sheets (§3.2, §4). One shared link box now serves the flight, stay and place dialogs: it reads the clipboard once when it opens empty and re-reads on paste, typing or its **Paste** button, so a link never needs pasting twice (§4, §7.6, §7.7). Travelers are cards on Overview with one **Edit** sheet and one **Save** (§7.5). On **Routes**, **+ Idea** works, and on phones the total is a slim one-line bar with **Details** (§7.6). The price is a **chip** — amount, ↻, **Check** — with its age under it and **+ Add price** when there's none (§7.9). **"I live here — no flight needed"** (`choices.<travelerId>.localIdeaIds`): a traveler whose home airport is the idea's arrival city needs no flight from home, counts $0 and is never "missing", and anyone can tick it by hand (§5.3, §7.6, §11). Night math fixed: two visits to a city merge **only while their dates overlap or touch**, so the city you fly into ends at your first hop and a return is a second stop with its own `stopKey` (§11). **Stays** lists every stop as soon as there's a route, before any stay exists (§7.7). Places became compact rows that open for the rest, and the event fields and their filter are retired (§5.4, §7.7). Day headers read "{city} · {Day, Mon D}", and a day's home base and walking route only ever use a stay in that day's own city (§7.8). Help, `docs/tasks/WORDING.md`, `README.md` and this file were brought back in line with the code in T53. |
+| 4.3 | 2026-10-16 | **Round 7, "Waypoint" (T54–T66).** `docs/R7.md` folded in and retired; `docs/mock/routes-mock.html` is no longer the token source. A new look: forest green on warm paper, with marigold reserved for marking things, **six font sizes and no others**, Gabarito and Figtree (JetBrains Mono dropped — prices use tabular figures in the body font), 18 px cards with a border and no shadow, and the aliases `--teal`/`--sun` kept pointing at the new tokens (§4). New logo, app icon, favicon, home-screen icons and a topographic texture, all ready-made in `docs/brand/` (§3.3, §4). **One icon set and no emoji** (`js/lib/icons.js` + `icon()` in `ui.js`): votes, the Days home base and the external-link "↗" are all icons now (§4). Shared pieces were redrawn once — buttons, cards, rows, chips, badges, the segmented control, dialogs and empty states — with **a card never inside a card** (§4). **Delete and Edit moved into ⋯ menus** (`menuButton()`), so `.btn-danger` is only used inside a confirmation (§4). **The per-tab trip-name heading and stage pill are gone**: the trip name, dates and stage live in the top bar, and the stage chip on the Overview summary card (§4, §7.5). New feature: **the trip's shared Google My Maps link** (`trips.myMapsUrl`, `js/lib/mymaps.js`) on Overview, in a shared map bar on Map that makes importing two taps, and in the Days export sheet (§5.3, §7.5, §7.7, §7.8, §9.10). Every screen was reshaped: the trips list as readable cards (§7.2), Overview as a route-ribbon summary card with settings behind a tap (§7.5), Routes as two-column flight cards with switches that scroll (§7.6), Map with filters in a sheet and a sticky map (§7.7), Days with a day chooser and a numbered timeline (§7.8), plus sign-in, help and 404 (§3.2, §7.1). |
