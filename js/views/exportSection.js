@@ -1,13 +1,16 @@
-import { el, downloadFile } from "../ui.js";
+import { el, downloadFile, externalLink } from "../ui.js";
 import { buildPlacesCsv, buildPlacesKml, buildTripKml, placesCsvFilename, placesKmlFilename, tripKmlFilename, locatedCount } from "../lib/exporters.js";
+import { parseMyMapsUrl } from "../lib/mymaps.js";
 
 /**
- * The Export section on the Days tab (V4 §8): the day-by-day map file for
- * Google My Maps, the plain places CSV/KML, and the left-out-pins count.
+ * The Export sheet on the Days tab (V4 §8, T64 R7 §7 Days (f)): the
+ * day-by-day map file for Google My Maps, the plain places CSV/KML, the
+ * left-out-pins count, and a link to the group's shared map when set.
  * Stateless -- call again whenever trip/places/days change.
  */
-export function renderExportSection({ trip, places, days, chosenStays = [] }) {
+export function renderExportSection({ trip, places, days, chosenStays = [], myMapsUrl = null }) {
   const leftOutCount = places.length - locatedCount(places);
+  const parsedMyMaps = myMapsUrl ? parseMyMapsUrl(myMapsUrl) : null;
 
   const csvBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Download CSV for Google My Maps" });
   csvBtn.addEventListener("click", () => {
@@ -48,6 +51,23 @@ export function renderExportSection({ trip, places, days, chosenStays = [] }) {
         el("span", { textContent: "Take the plan to Google Maps: " }),
         el("a", { href: "help.html#google-maps", textContent: "Download the map file → import into Google My Maps → open in the Google Maps app." }),
       ]),
+      parsedMyMaps ? el("div", { className: "export-actions" }, [externalLink(parsedMyMaps.url, "Open our shared map ↗")]) : null,
     ].filter(Boolean)
   );
+}
+
+/** Opens the Export sheet (T64, R7 §7 Days (f)) from the Days header's
+ * `download` icon button: the card `renderExportSection` builds, plus Close. */
+export function openExportSheet(props) {
+  const dialog = el("dialog", { className: "app-dialog export-sheet" });
+  function closeDialog() {
+    dialog.close();
+    dialog.remove();
+  }
+  const closeBtn = el("button", { type: "button", className: "btn btn-secondary", textContent: "Close" });
+  closeBtn.addEventListener("click", closeDialog);
+  dialog.replaceChildren(renderExportSection(props), el("div", { className: "dialog-actions" }, [closeBtn]));
+  dialog.addEventListener("cancel", closeDialog);
+  document.body.appendChild(dialog);
+  dialog.showModal();
 }

@@ -1,38 +1,34 @@
 import { el, icon, friendlyError } from "../ui.js";
 import { voteSummary } from "../lib/votes.js";
 
-// Cycled by a day's position among its city's days (T27, V4 §8) — distinct
-// from the category palette so a place's own color never clashes with a
-// day's color.
-const DAY_COLORS = ["#1a73e8", "#e8710a", "#9334e6", "#188038", "#c2185b", "#00897b", "#827717", "#3949ab"];
-
-export function dayColor(index) {
-  return DAY_COLORS[index % DAY_COLORS.length];
-}
-
-function numberedIcon(number, color) {
+/** The selected day's pins, numbered by `dayOrder` (R7 §7 Days (b)): forest
+ * fill, on-forest number — the app's one action color, not a per-day hue. */
+function numberedIcon(number) {
   return window.L.divIcon({
     className: "day-marker-icon",
-    html: `<div class="day-marker" style="background:${color}">${number}</div>`,
+    html: `<div class="day-marker">${number}</div>`,
     iconSize: [24, 24],
   });
 }
 
-function plainMarker(place, color, opacity) {
-  return window.L.circleMarker([place.lat, place.lng], { radius: 7, color: "#fff", weight: 2, fillColor: color, fillOpacity: opacity });
+function plainMarker(place, opacity) {
+  return window.L.circleMarker([place.lat, place.lng], {
+    radius: 7,
+    color: "var(--surface)",
+    weight: 2,
+    fillColor: "var(--muted)",
+    fillOpacity: opacity,
+  });
 }
 
-/** The chosen stay for the selected day (T39, §7.8): the stay pill style
- * (`.stay-pin`/`.stay-pin-chosen` from the Map tab) plus a stay mark, so the
- * day's home base stands out among the day's own numbered/plain pins. Its
- * popup names it, unlike the plain tooltip on place pins. */
+/** The chosen, located stay for the selected day (T39, T64, R7 §7 Days (b)):
+ * the `stay` icon in an accent square, not the Map tab's price pill, so the
+ * day's home base reads apart from its own numbered/plain pins. Its popup
+ * names it, unlike the plain tooltip on place pins. */
 function homeMarker(stay) {
-  const pillEl = el("div", { className: "stay-pin stay-pin-chosen day-home-pin" }, [
-    icon("stay", { size: 14 }),
-    el("span", { textContent: stay.name || "Stay" }),
-  ]);
-  const icon = window.L.divIcon({ html: pillEl, className: "stay-pin-icon", iconSize: null });
-  const marker = window.L.marker([stay.lat, stay.lng], { icon });
+  const squareEl = el("div", { className: "day-home-marker" }, [icon("stay", { size: 16 })]);
+  const divIcon = window.L.divIcon({ html: squareEl, className: "day-home-marker-icon", iconSize: [32, 32] });
+  const marker = window.L.marker([stay.lat, stay.lng], { icon: divIcon });
   marker.bindPopup(stay.name || "Stay");
   return marker;
 }
@@ -100,9 +96,9 @@ function openPinSheet({ place, daysInCity, onAssign, onRemove }) {
 }
 
 /**
- * The Days tab's map (T27, V4 §8): a Leaflet map of one city's places, pins
- * numbered and colored by whichever of that city's days they're on, plain
- * when unplanned. Tapping a pin opens a sheet to assign or remove it.
+ * The Days tab's map (T27, T64, V4 §8, R7 §7 Days (b)): a Leaflet map of one
+ * city's places — the selected day's as forest, numbered pins, the rest as
+ * plain muted dots. Tapping a pin opens a sheet to assign or remove it.
  * `onAssign(place, dayId)` and `onRemove(place)` are async and may throw;
  * the sheet shows the error and stays open.
  */
@@ -126,30 +122,26 @@ export function createDaysMap({ onAssign, onRemove }) {
   }
 
   /** `cityPlaces`: this city's places (any day, or none). `daysInCity`:
-   * `{ id, label, color }` in order. `selectedDayId`: whose pins get numbered.
-   * `homeStay` (T39): the selected day's chosen, located stay, or null. */
+   * `{ id, label }` in order, for the pin sheet's day buttons. `selectedDayId`:
+   * whose pins get numbered. `homeStay` (T39): the selected day's chosen,
+   * located stay, or null. */
   function render(cityPlaces, daysInCity, selectedDayId, homeStay) {
     ensureMap();
     if (!markerLayer) return;
     markerLayer.clearLayers();
 
-    const byId = new Map(daysInCity.map((d) => [d.id, d]));
     const located = (cityPlaces || []).filter((p) => p.lat != null && p.lng != null);
     const onSelected = located
       .filter((p) => p.dayId === selectedDayId)
       .sort((a, b) => (a.dayOrder ?? 0) - (b.dayOrder ?? 0));
-    const selectedColor = (byId.get(selectedDayId) || {}).color || dayColor(0);
 
     for (const place of located) {
-      const onDay = place.dayId ? byId.get(place.dayId) : null;
       let marker;
       if (place.dayId === selectedDayId) {
         const number = onSelected.indexOf(place) + 1;
-        marker = window.L.marker([place.lat, place.lng], { icon: numberedIcon(number, selectedColor) });
-      } else if (onDay) {
-        marker = plainMarker(place, onDay.color, 0.9);
+        marker = window.L.marker([place.lat, place.lng], { icon: numberedIcon(number) });
       } else {
-        marker = plainMarker(place, "#9aa5a3", 0.5);
+        marker = plainMarker(place, place.dayId ? 0.9 : 0.5);
       }
       marker.bindTooltip(place.name);
       marker.on("click", () =>
@@ -164,7 +156,7 @@ export function createDaysMap({ onAssign, onRemove }) {
     }
 
     if (onSelected.length >= 2) {
-      window.L.polyline(onSelected.map((p) => [p.lat, p.lng]), { dashArray: "6,6", color: selectedColor }).addTo(markerLayer);
+      window.L.polyline(onSelected.map((p) => [p.lat, p.lng]), { dashArray: "6,6", color: "var(--forest)" }).addTo(markerLayer);
     }
 
     const hasHome = homeStay && homeStay.lat != null && homeStay.lng != null;

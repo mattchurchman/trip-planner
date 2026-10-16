@@ -179,3 +179,13 @@ Round 6 retires the event fields: **Add place** no longer asks for event dates, 
 |---|---|
 | On iPhone, Google sign-in can't return to the home-screen app. Sign in with email and password here, or sign in once in Safari. | Sign-in screen, shown only after a Google sign-in attempt from the home-screen app comes back with no user |
 | Move to… | Earlier flights row — picks a traveler (home) or a shared hop, plus the idea and option |
+
+## Days: day chooser and timeline (T64)
+
+| Wording | Where |
+|---|---|
+| Add day (`aria-label`, a **+** chip) | Days, the last chip in the day chooser row |
+| Export (`aria-label`, a `download` icon button) | Days header — opens the Export sheet, replacing the old "Export" card heading |
+| + Add from not planned · {N} | Days, the focused day — opens the Not planned sheet |
+| Not planned | Days, that sheet's title (was the page's own `h2`) |
+| Open our shared map ↗ | Days, Export sheet, when `trip.myMapsUrl` is set |

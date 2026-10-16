@@ -1179,11 +1179,19 @@ button.list-row:hover {
 }
 
 .travelers-header,
-.stays-header,
-.days-header {
+.stays-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-3);
+}
+
+/* The Days top bar (T64): the day chooser scrolls in its own track, so this
+   never wraps the Export button to its own line the way the other headers'
+   `flex-wrap: wrap` would (R7 §7 Days (a), (f)). */
+.days-header {
+  display: flex;
+  align-items: center;
   gap: var(--space-3);
 }
 
@@ -2495,9 +2503,104 @@ button.list-row:hover {
   color: var(--on-forest);
 }
 
-.days-header h2 {
+/* The day chooser (T64, R7 §7 Days (a)): 58px square chips, scrolling
+   sideways in their own track like .seg/.stop-chips. */
+.day-chooser {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 2px;
+}
+
+.day-chooser::-webkit-scrollbar {
+  display: none;
+}
+
+.day-chip {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  width: 58px;
+  height: 58px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.day-chip-top {
+  font-size: var(--fs-label);
+  color: var(--muted);
+}
+
+.day-chip-num {
+  font-family: var(--display);
+  font-size: var(--fs-item);
+  font-weight: 700;
+}
+
+.day-chip-selected {
+  background: var(--forest);
+  border-color: var(--forest);
+  color: var(--on-forest);
+}
+
+.day-chip-selected .day-chip-top {
+  color: var(--on-forest);
+}
+
+.day-chip-dashed,
+.day-chip-add {
+  background: transparent;
+  border-style: dashed;
+  color: var(--muted);
+}
+
+.day-chip-add {
+  color: var(--forest);
+}
+
+/* A dashed button for a secondary, "there's more over here" action — the
+   day chooser's missing-date chips and Not planned button share the look
+   (R7 §7 Days (a), (e)). */
+.btn-dashed {
+  background: transparent;
+  border-style: dashed;
+}
+
+.day-focus {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.day-focus-title {
   margin: 0;
-  margin-right: auto;
+}
+
+.day-focus-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.day-focus-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
 }
 
 .days-map-wrap {
@@ -2531,67 +2634,19 @@ button.list-row:hover {
   box-shadow: var(--shadow-sm);
 }
 
-.days-list {
-  display: grid;
-  gap: var(--space-3);
-  margin-bottom: var(--space-5);
-}
-
-/* The selected day's chosen stay on the Days map (T39, §7.8): the stay pill
-   style with a stay-icon mark so it reads as home base, not another stop. */
-.day-home-pin {
-  gap: 4px;
-}
-
-.day-card {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.day-card-header {
+/* The focused day's home-base stay (T39, T64, R7 §7 Days (b)): the `stay`
+   icon in an accent square, apart from the numbered/plain place pins. */
+.day-home-marker {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--on-accent);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-
-.day-card-header h3 {
-  margin: 0;
-}
-
-.day-card-actions {
-  display: flex;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-
-.day-places {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.day-place-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-
-.day-place-row > span:first-child {
-  flex: 1;
-  min-width: 0;
-}
-
-/* Up/down/remove (T52): thumb-sized even though they're link-styled. */
-.day-place-row button {
-  min-height: 44px;
-  min-width: 44px;
+  justify-content: center;
+  border: 2px solid var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .day-routes {
@@ -2616,49 +2671,74 @@ button.list-row:hover {
   gap: var(--space-2);
 }
 
-.unplanned-pool {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.unplanned-group h4 {
-  margin: 0 0 var(--space-2);
-}
-
-.unplanned-list {
+/* The focused day's numbered timeline (T64, R7 §7 Days (c)): a dotted
+   connector fills each marker's full row height (the row is the flex
+   container, stretched by default), so it reaches the next row's circle
+   regardless of how tall the row's own text makes it. */
+.day-timeline {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
 }
 
-.unplanned-row {
+.timeline-row {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding-block: var(--space-2);
   flex-wrap: wrap;
 }
 
-.unplanned-row > span:first-child {
-  flex: 1;
-  min-width: 120px;
+.timeline-marker {
+  flex: none;
+  width: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-/* "Add to day…" (T52): its own full-width line on phones so it's never a
-   cramped, hard-to-tap sliver next to the place name. */
-.unplanned-row select {
-  width: 100%;
-  min-height: 44px;
+.timeline-number {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--forest);
+  color: var(--on-forest);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-label);
+  font-weight: 700;
 }
 
-@media (min-width: 760px) {
-  .unplanned-row select {
-    width: auto;
-    min-height: auto;
-  }
+.timeline-connector {
+  flex: 1 1 auto;
+  width: 0;
+  min-height: 8px;
+  margin-top: 2px;
+  border-left: 2.5px dotted var(--line);
+}
+
+.timeline-votes {
+  font-size: var(--fs-small);
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* A category icon tile (R7 §2, §5): the category's color at 14% opacity
+   behind its icon. `--cat` is set inline per place. */
+.icon-tile {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--cat, var(--muted)) 14%, var(--surface));
+  color: var(--cat, var(--muted));
 }
 
 .export-section {
@@ -3169,8 +3249,7 @@ button.list-row:hover {
 
   .travelers-header,
   .costs-header,
-  .stays-header,
-  .days-header {
+  .stays-header {
     flex-wrap: wrap;
   }
 }

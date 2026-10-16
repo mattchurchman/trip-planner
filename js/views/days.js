@@ -11,14 +11,14 @@ import {
   watchStays,
 } from "../store.js";
 import { chosenStayIds } from "../lib/selection.js";
-import { el, confirmDialog, friendlyError, field, dialogShell, menuButton } from "../ui.js";
-import { renderExportSection } from "./exportSection.js";
-import { sortByRank, voteSummary, voteCounts } from "../lib/votes.js";
+import { el, icon, confirmDialog, friendlyError, field, dialogShell, menuButton } from "../ui.js";
+import { openExportSheet } from "./exportSection.js";
+import { renderTimeline, openNotPlannedSheet } from "./dayTimeline.js";
 import { walkingRouteLinks } from "../lib/links.js";
 import { datesBetween, daysFromStops, missingDays, stayForDate } from "../lib/dayplan.js";
 import { mergedStops } from "../lib/choices.js";
 import { formatLegDate } from "../lib/itineraryFormat.js";
-import { createDaysMap, dayColor } from "./daysMap.js";
+import { createDaysMap } from "./daysMap.js";
 import { loadAirports } from "../lookup.js";
 
 function dayFormDialog(existing) {
@@ -48,11 +48,32 @@ function dayFormDialog(existing) {
 }
 
 /** "<title> · <Sat 17 Oct>" when a day has both; the date alone with no
- * title, the title alone when undated (T50, §7.8). */
+ * title, the title alone when undated (T50, §7.8). Used for the Edit/Delete
+ * menu's `aria-label` and the pin sheet's per-day buttons — the day
+ * chooser's own chips and the focused day's h1 use `dayWeekday`/`dayHeading`
+ * instead (T64, R7 §7 Days). */
 function dayLabel(day) {
   const dateLabel = formatLegDate(day.date);
   if (day.title && dateLabel) return `${day.title} · ${dateLabel}`;
   return day.title || dateLabel || "Undated day";
+}
+
+/** `{ weekday, dateNum }` from a day's date ("Sat", "17"), or null undated. */
+function dayWeekday(date) {
+  const formatted = formatLegDate(date);
+  if (!formatted) return null;
+  const [weekday, dateNum] = formatted.split(" ");
+  return { weekday, dateNum };
+}
+
+/** The focused day's h1 (R7 §7 Days (b)): "{Weekday} · {city}" when both are
+ * known, whichever one isn't otherwise, else its title or "Undated day". */
+function dayHeading(day, stops) {
+  const weekday = dayWeekday(day.date)?.weekday || null;
+  const stop = day.cityKey ? (stops || []).find((s) => s.cityKey === day.cityKey) : null;
+  const city = stop ? stop.city : day.title || null;
+  if (weekday && city) return `${weekday} · ${city}`;
+  return weekday || city || "Undated day";
 }
 
 /** The merged route's stops — everyone's, merged into one (§11) — which is the
@@ -69,11 +90,28 @@ function chosenStops(trip, flights, options, airports) {
   });
 }
 
-/** Renders the Days tab (§7.9, T27 V4 §8). Returns a single unsubscribe function. */
+/** The day chooser's 58px chip (R7 §7 Days (a)): weekday + date number, or
+ * "Day {n}" undated. `dashed` marks a route date with no day yet. */
+function dayChip({ top, num, dashed = false, selected = false }, onClick) {
+  const btn = el(
+    "button",
+    {
+      type: "button",
+      className: `day-chip${dashed ? " day-chip-dashed" : ""}${selected ? " day-chip-selected" : ""}`,
+      attrs: { "aria-pressed": selected ? "true" : "false" },
+    },
+    [el("span", { className: "day-chip-top", textContent: top }), el("span", { className: "day-chip-num", textContent: num })]
+  );
+  btn.addEventListener("click", onClick);
+  return btn;
+}
+
+/** Renders the Days tab (T27/T64, V4 §8, R7 §7 Days): a day chooser, that
+ * day's map and numbered timeline, and Export. Returns a single unsubscribe
+ * function. */
 export function renderDaysPage(container, tripId, myUid) {
   let trip = null;
   let places = [];
-  let scopedPlaces = [];
   let days = [];
   let flights = [];
   let options = [];
@@ -83,15 +121,21 @@ export function renderDaysPage(container, tripId, myUid) {
 
   const loadErrorEl = el("div", { className: "field-error-holder" });
   const onError = (err) => loadErrorEl.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
-  const createDaysBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Create days from trip dates" });
-  const addDayBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Add day" });
-  const daysListEl = el("div", { className: "days-list" });
-  const unplannedEl = el("div", { className: "unplanned-pool card" });
-  const exportSectionHolder = el("div", { className: "export-section-holder" });
+
+  const chooserEl = el("div", { className: "day-chooser" });
+  const addDayChip = el("button", { type: "button", className: "day-chip day-chip-add", attrs: { "aria-label": "Add day" } }, [icon("plus", { size: 20 })]);
+  const exportBtn = el("button", { type: "button", className: "icon-btn", attrs: { "aria-label": "Export" } }, [icon("download", { size: 20 })]);
+  const daysHeaderEl = el("div", { className: "days-header" }, [chooserEl, exportBtn]);
+
+  const createDaysBtn = el("button", { type: "button", className: "btn btn-primary", textContent: "Create days from trip dates" });
+  const emptyStateEl = el("div", { className: "card" }, [
+    el("p", { className: "empty-state", textContent: "No days yet. Use Create days from route (or from trip dates) to start." }),
+    createDaysBtn,
+  ]);
 
   const daysMapSection = createDaysMap({
     onAssign: async (place, dayId) => {
-      const countInDay = scopedPlaces.filter((p) => p.dayId === dayId).length;
+      const countInDay = places.filter((p) => p.dayId === dayId).length;
       await updatePlace(tripId, place.id, { dayId, dayOrder: countInDay });
     },
     onRemove: async (place) => {
@@ -99,25 +143,32 @@ export function renderDaysPage(container, tripId, myUid) {
     },
   });
 
-  container.replaceChildren(
-    loadErrorEl,
-    el("div", { className: "days-header" }, [el("h2", { textContent: "Days" }), createDaysBtn, addDayBtn]),
+  const dayTitleEl = el("h1", { className: "day-focus-title" });
+  const daySubtitleEl = el("p", { className: "muted" });
+  const walkWrapEl = el("div", { className: "day-routes" });
+  const dayMenuHolder = el("div", {});
+  const timelineHolder = el("div", {});
+  const notPlannedBtn = el("button", { type: "button", className: "btn btn-small btn-dashed" });
+
+  const dayFocusEl = el("section", { className: "day-focus", hidden: true }, [
     daysMapSection.element,
-    daysListEl,
-    el("h2", { textContent: "Not planned" }),
-    unplannedEl,
-    exportSectionHolder
-  );
+    el("div", { className: "day-focus-header" }, [
+      el("div", {}, [dayTitleEl, daySubtitleEl]),
+      el("div", { className: "day-focus-actions" }, [walkWrapEl, dayMenuHolder]),
+    ]),
+    timelineHolder,
+    notPlannedBtn,
+  ]);
+
+  container.replaceChildren(loadErrorEl, daysHeaderEl, emptyStateEl, dayFocusEl);
 
   function nextOrder() {
     return days.length > 0 ? Math.max(...days.map((d) => d.order ?? 0)) + 1 : 0;
   }
 
-  createDaysBtn.addEventListener("click", async () => {
-    loadErrorEl.replaceChildren();
+  async function createDaysFromRouteOrDates(stops) {
     try {
       let order = nextOrder();
-      const stops = chosenStops(trip, flights, options, airports);
       if (stops.length > 0) {
         const missing = missingDays(days, daysFromStops(stops));
         for (const day of missing) {
@@ -136,47 +187,51 @@ export function renderDaysPage(container, tripId, myUid) {
     } catch (err) {
       onError(err);
     }
-  });
+  }
+  createDaysBtn.addEventListener("click", () => createDaysFromRouteOrDates(chosenStops(trip, flights, options, airports)));
 
-  addDayBtn.addEventListener("click", async () => {
+  addDayChip.addEventListener("click", async () => {
     try {
-      await addDay(tripId, { date: null, title: "", focus: "", notes: "", order: nextOrder() }, myUid);
+      const ref = await addDay(tripId, { date: null, title: "", focus: "", notes: "", order: nextOrder() }, myUid);
+      selectedDayId = ref.id;
     } catch (err) {
       onError(err);
     }
   });
 
-  async function movePlace(dayPlaces, index, direction) {
+  async function movePlace(dayPlaces, place, direction) {
+    const index = dayPlaces.indexOf(place);
     const newIndex = index + direction;
     if (newIndex < 0 || newIndex >= dayPlaces.length) return;
     const reordered = [...dayPlaces];
     [reordered[index], reordered[newIndex]] = [reordered[newIndex], reordered[index]];
-    for (let i = 0; i < reordered.length; i++) {
-      if (reordered[i].dayOrder !== i) {
-        await updatePlace(tripId, reordered[i].id, { dayOrder: i });
+    try {
+      for (let i = 0; i < reordered.length; i++) {
+        if (reordered[i].dayOrder !== i) await updatePlace(tripId, reordered[i].id, { dayOrder: i });
       }
+    } catch (err) {
+      onError(err);
     }
   }
 
-  function renderDayCard(day, chosenStays, cities) {
-    const dayPlaces = scopedPlaces.filter((p) => p.dayId === day.id).sort((a, b) => (a.dayOrder ?? 0) - (b.dayOrder ?? 0));
-    const homeStay = stayForDate(day.date, chosenStays, day.cityKey, cities);
-    const errorHolder = el("div", { className: "field-error-holder" });
+  async function removeFromDay(place) {
+    try {
+      await updatePlace(tripId, place.id, { dayId: null, dayOrder: null });
+    } catch (err) {
+      onError(err);
+    }
+  }
 
-    const selectBtn = el("button", {
-      type: "button",
-      className: `btn btn-small${day.id === selectedDayId ? " badge-chosen" : ""}`,
-      textContent: "Show on map",
-    });
-    selectBtn.addEventListener("click", () => {
-      selectedDayId = day.id;
-      renderDays();
-    });
+  exportBtn.addEventListener("click", () => {
+    const chosenStays = stays.filter((s) => chosenStayIds(trip).includes(s.id));
+    openExportSheet({ trip, places, days, chosenStays, myMapsUrl: trip.myMapsUrl });
+  });
 
-    const menu = menuButton(
+  function dayMenu(day, dayPlaces) {
+    return menuButton(
       [
         {
-          label: "Edit",
+          label: "Edit day",
           icon: "edit",
           onSelect: async () => {
             const result = await dayFormDialog(day);
@@ -184,12 +239,12 @@ export function renderDaysPage(container, tripId, myUid) {
             try {
               await updateDay(tripId, day.id, result);
             } catch (err) {
-              errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
+              onError(err);
             }
           },
         },
         {
-          label: "Delete",
+          label: "Delete day",
           icon: "trash",
           danger: true,
           onSelect: async () => {
@@ -203,156 +258,106 @@ export function renderDaysPage(container, tripId, myUid) {
               );
               if (selectedDayId === day.id) selectedDayId = null;
             } catch (err) {
-              errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
+              onError(err);
             }
           },
         },
       ],
       { label: `More actions for ${dayLabel(day)}` }
     );
+  }
 
-    const placeRows = dayPlaces.map((place, index) => {
-      const upBtn = el("button", {
-        type: "button",
-        className: "btn btn-link",
-        textContent: "▲",
-        disabled: index === 0,
-        attrs: { "aria-label": `Move ${place.name} up` },
-      });
-      upBtn.addEventListener("click", () => movePlace(dayPlaces, index, -1));
-      const downBtn = el("button", {
-        type: "button",
-        className: "btn btn-link",
-        textContent: "▼",
-        disabled: index === dayPlaces.length - 1,
-        attrs: { "aria-label": `Move ${place.name} down` },
-      });
-      downBtn.addEventListener("click", () => movePlace(dayPlaces, index, 1));
-      const removeBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Remove" });
-      removeBtn.addEventListener("click", () =>
-        updatePlace(tripId, place.id, { dayId: null, dayOrder: null }).catch((err) =>
-          errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }))
-        )
+  /** Builds the day chooser row: existing days as chips, route dates with no
+   * day yet as dashed chips that create one (T64, R7 §7 Days (a)). */
+  function renderChooser(sorted, missing) {
+    const dayButtons = sorted.map((day, index) => {
+      const weekday = dayWeekday(day.date);
+      return dayChip(
+        { top: weekday ? weekday.weekday : "Day", num: weekday ? weekday.dateNum : String(index + 1), selected: day.id === selectedDayId },
+        () => {
+          selectedDayId = day.id;
+          renderDays();
+        }
       );
-      return el("li", { className: "day-place-row" }, [
-        el("span", { textContent: place.name }),
-        upBtn,
-        downBtn,
-        removeBtn,
-      ]);
     });
+    const missingButtons = missing.map((spec) => {
+      const weekday = dayWeekday(spec.date) || { weekday: "", dateNum: "?" };
+      return dayChip({ top: weekday.weekday, num: weekday.dateNum, dashed: true }, async () => {
+        try {
+          const order = nextOrder();
+          const ref = await addDay(tripId, { date: spec.date, cityKey: spec.cityKey, title: spec.title, focus: "", notes: "", order }, myUid);
+          selectedDayId = ref.id;
+        } catch (err) {
+          onError(err);
+        }
+      });
+    });
+    chooserEl.replaceChildren(...dayButtons, ...missingButtons, addDayChip);
+  }
 
-    const routeLinks = walkingRouteLinks(dayPlaces, homeStay);
-    const routeEl = el(
-      "div",
-      { className: "day-routes" },
-      routeLinks.map((link) => el("a", { href: link.url, target: "_blank", rel: "noopener noreferrer", textContent: link.label, className: "btn btn-small" }))
+  function renderDayFocus(day, stops, chosenStaysList) {
+    const dayPlaces = places.filter((p) => p.dayId === day.id).sort((a, b) => (a.dayOrder ?? 0) - (b.dayOrder ?? 0));
+    const homeStay = stayForDate(day.date, chosenStaysList, day.cityKey, stops);
+    const cityPlaces = day.cityKey ? places.filter((p) => p.stopKey === day.cityKey) : places;
+    const daysInCity = days
+      .filter((d) => (d.cityKey || null) === (day.cityKey || null))
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      .map((d) => ({ id: d.id, label: dayLabel(d) }));
+
+    dayTitleEl.textContent = dayHeading(day, stops);
+    const count = dayPlaces.length;
+    const countLabel = `${count} place${count === 1 ? "" : "s"}`;
+    daySubtitleEl.textContent = day.focus ? `${day.focus} · ${countLabel}` : countLabel;
+
+    walkWrapEl.replaceChildren(
+      ...walkingRouteLinks(dayPlaces, homeStay).map((link) =>
+        el("a", { href: link.url, target: "_blank", rel: "noopener noreferrer", className: "btn btn-secondary btn-small" }, [
+          icon("routes", { size: 16 }),
+          link.label,
+        ])
+      )
+    );
+    dayMenuHolder.replaceChildren(dayMenu(day, dayPlaces));
+
+    timelineHolder.replaceChildren(
+      renderTimeline(dayPlaces, {
+        onMove: (place, direction) => movePlace(dayPlaces, place, direction),
+        onRemove: (place) => removeFromDay(place),
+      })
     );
 
-    return el("article", { className: "card day-card" }, [
-      el("div", { className: "day-card-header" }, [
-        el("h3", { textContent: dayLabel(day) }),
-        el("div", { className: "day-card-actions" }, [selectBtn, menu]),
-      ]),
-      day.focus ? el("p", { className: "muted", textContent: day.focus }) : null,
-      day.notes ? el("p", { textContent: day.notes }) : null,
-      dayPlaces.length === 0
-        ? el("p", { className: "empty-state", textContent: "No places yet. Tap a pin on the map, or add one from Not planned, below." })
-        : el("ul", { className: "day-places" }, placeRows),
-      routeLinks.length > 0 ? routeEl : null,
-      errorHolder,
-    ].filter(Boolean));
-  }
+    const unplanned = cityPlaces.filter((p) => p.dayId == null);
+    notPlannedBtn.textContent = `+ Add from not planned · ${unplanned.length}`;
+    notPlannedBtn.onclick = () =>
+      openNotPlannedSheet(unplanned, {
+        onAdd: (place) => updatePlace(tripId, place.id, { dayId: day.id, dayOrder: places.filter((p) => p.dayId === day.id).length }),
+      });
 
-  function buildAddToDaySelect(place, daysInCity) {
-    const select = el("select", {}, [
-      el("option", { value: "", textContent: "Add to day…" }),
-      ...daysInCity.map((d) => el("option", { value: d.id, textContent: d.label })),
-    ]);
-    select.addEventListener("change", async () => {
-      const dayId = select.value;
-      if (!dayId) return;
-      const countInDay = scopedPlaces.filter((p) => p.dayId === dayId).length;
-      try {
-        await updatePlace(tripId, place.id, { dayId, dayOrder: countInDay });
-      } catch (err) {
-        onError(err);
-      }
-    });
-    return select;
-  }
-
-  function unplannedRow(place, daysInCity) {
-    return el("li", { className: "unplanned-row" }, [
-      el("span", { textContent: place.name }),
-      el("span", { className: "muted", textContent: voteSummary(place.votes || {}) || "Not ranked yet" }),
-      buildAddToDaySelect(place, daysInCity),
-    ].filter(Boolean));
-  }
-
-  function unplannedSection(title, list, daysInCity) {
-    return el("div", { className: "unplanned-group" }, [
-      el("h4", { textContent: title }),
-      el("ul", { className: "unplanned-list" }, list.map((place) => unplannedRow(place, daysInCity))),
-    ]);
-  }
-
-  /** Loved places not yet on a day come first (T27); the rest group by
-   * neighborhood, as before. Scoped to the selected day's city when there is
-   * one, else the whole trip (no route chosen yet). */
-  function renderUnplanned(cityPlaces, daysInCity) {
-    const unplanned = sortByRank(cityPlaces.filter((p) => p.dayId == null));
-    if (unplanned.length === 0) {
-      unplannedEl.replaceChildren(el("p", { className: "empty-state", textContent: "Nothing here yet — places without a day show up here." }));
-      return;
-    }
-    const loved = unplanned.filter((p) => voteCounts(p.votes || {}).love > 0);
-    const lovedIds = new Set(loved.map((p) => p.id));
-    const rest = unplanned.filter((p) => !lovedIds.has(p.id));
-    const groups = new Map();
-    for (const place of rest) {
-      const key = place.neighborhood || "No neighborhood";
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key).push(place);
-    }
-    const groupKeys = [...groups.keys()].sort((a, b) => a.localeCompare(b));
-    const sections = [];
-    if (loved.length > 0) sections.push(unplannedSection("Loved", loved, daysInCity));
-    for (const key of groupKeys) sections.push(unplannedSection(key, groups.get(key), daysInCity));
-    unplannedEl.replaceChildren(...sections);
+    daysMapSection.render(cityPlaces, daysInCity, day.id, homeStay);
   }
 
   function renderDays() {
     if (!trip) return;
-    // Every place belongs to the trip's one route now (T23 dropped destination
-    // ideas); the Map tab already treats the whole list this way.
-    scopedPlaces = places;
-
     const stops = chosenStops(trip, flights, options, airports);
-    createDaysBtn.textContent = stops.length > 0 ? "Create days from route" : "Create days from trip dates";
-    createDaysBtn.disabled = stops.length === 0 && (!trip.startDate || !trip.endDate);
-    const chosenStays = stays.filter((s) => chosenStayIds(trip).includes(s.id));
+    const chosenStaysList = stays.filter((s) => chosenStayIds(trip).includes(s.id));
 
     const sorted = [...days].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-    if (!selectedDayId || !sorted.some((d) => d.id === selectedDayId)) selectedDayId = sorted[0] ? sorted[0].id : null;
 
     if (sorted.length === 0) {
-      daysListEl.replaceChildren(
-        el("p", { className: "empty-state", textContent: "No days yet. Use Create days from route (or from trip dates), or Add day to start one." })
-      );
+      createDaysBtn.textContent = stops.length > 0 ? "Create days from route" : "Create days from trip dates";
+      createDaysBtn.disabled = stops.length === 0 && (!trip.startDate || !trip.endDate);
+      emptyStateEl.hidden = false;
+      chooserEl.hidden = true;
+      dayFocusEl.hidden = true;
     } else {
-      daysListEl.replaceChildren(...sorted.map((day) => renderDayCard(day, chosenStays, stops)));
+      emptyStateEl.hidden = true;
+      chooserEl.hidden = false;
+      dayFocusEl.hidden = false;
+      if (!selectedDayId || !sorted.some((d) => d.id === selectedDayId)) selectedDayId = sorted[0].id;
+      const missing = missingDays(days, daysFromStops(stops));
+      renderChooser(sorted, missing);
+      renderDayFocus(sorted.find((d) => d.id === selectedDayId), stops, chosenStaysList);
     }
-
-    const selectedDay = sorted.find((d) => d.id === selectedDayId) || null;
-    const cityKey = selectedDay ? selectedDay.cityKey || null : null;
-    const daysInCity = sorted.filter((d) => (d.cityKey || null) === cityKey).map((d, i) => ({ id: d.id, label: dayLabel(d), color: dayColor(i) }));
-    const cityPlaces = cityKey ? scopedPlaces.filter((p) => p.stopKey === cityKey) : scopedPlaces;
-    const homeStay = selectedDay ? stayForDate(selectedDay.date, chosenStays, selectedDay.cityKey, stops) : null;
-
-    daysMapSection.render(cityPlaces, daysInCity, selectedDay ? selectedDay.id : null, homeStay);
-    renderUnplanned(cityPlaces, daysInCity);
-    exportSectionHolder.replaceChildren(renderExportSection({ trip, places: scopedPlaces, days, chosenStays }));
   }
 
   const unsubTrip = watchTrip(tripId, (t) => { trip = t; renderDays(); }, onError);
