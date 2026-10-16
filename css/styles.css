@@ -160,6 +160,9 @@ input {
 }
 
 .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border-radius: var(--radius);
   border: 1px solid var(--line);
   background: var(--surface);
@@ -727,17 +730,57 @@ button.list-row:hover {
   gap: var(--space-3);
 }
 
+@media (min-width: 760px) {
+  .trips-list {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* The title's <a> stretches over the whole card via ::after (R7 §7 "whole
+   card is one link"), so the card itself stays a non-interactive <article> —
+   a <button> can't nest inside an <a> and still block its navigation. */
 .trip-card {
+  position: relative;
+  display: block;
+  padding: 0;
+  overflow: hidden;
+}
+
+.trip-card-header {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+  align-items: flex-start;
+  justify-content: flex-end;
+  height: 64px;
+  padding: var(--space-2) var(--space-3);
+  background-size: cover;
+  background-position: right center;
+}
+
+.trip-card-header-forest {
+  background-color: var(--forest);
+  background-image: url(../img/topo-on-forest.svg);
+}
+
+.trip-card-header-paper {
+  background-color: var(--sunk);
+  background-image: url(../img/topo-on-paper.svg);
+}
+
+.trip-card-body {
+  padding: var(--space-4);
+}
+
+@media (min-width: 760px) {
+  .trip-card-body {
+    padding: var(--space-5);
+  }
 }
 
 /* h2 for correct document structure (this list has no section-level h2 of its
    own to nest under), styled at card-title size to match its visual weight (§4). */
 .trip-card-title {
   margin: 0;
-  font-family: var(--body);
+  font-family: var(--display);
   font-size: var(--fs-item);
   line-height: 1.3;
   font-weight: 600;
@@ -746,33 +789,51 @@ button.list-row:hover {
 }
 
 .trip-card-link {
-  text-decoration: none;
   color: var(--ink);
   font-weight: 600;
-  font-size: var(--fs-item);
-  overflow-wrap: anywhere;
+  text-decoration: none;
 }
 
-.trip-card-link:hover {
+.trip-card-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.trip-card:hover .trip-card-link {
   color: var(--teal);
 }
 
+/* Above the stretched .trip-card-link::after (which, being positioned,
+   would otherwise paint over this non-positioned button and eat its clicks). */
+.trip-card-footer .menu-trigger {
+  position: relative;
+  z-index: 1;
+}
+
 .trip-card-meta {
-  margin: 0;
+  margin: var(--space-1) 0 0;
   color: var(--muted);
   font-size: var(--fs-small);
 }
 
-.trip-card-updated {
-  margin: 4px 0 0;
-  color: var(--muted);
-  font-size: var(--fs-small);
+.trip-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-3);
 }
 
-@media (min-width: 760px) {
-  .trip-card-updated {
-    font-size: var(--fs-small);
-  }
+.trip-card-avatars {
+  display: flex;
+}
+
+.trip-card-avatars .avatar {
+  margin-left: -8px;
+}
+
+.trip-card-avatars .avatar:first-child {
+  margin-left: 0;
 }
 
 .empty-state {
@@ -782,6 +843,19 @@ button.list-row:hover {
 .empty-state-small {
   margin: var(--space-1) 0;
   font-size: var(--fs-small);
+}
+
+.trips-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-4);
+  background: var(--sunk);
+  background-image: url(../img/topo-on-paper.svg);
+  background-size: cover;
+  background-position: right center;
+  border-radius: var(--radius-card);
 }
 
 .field-error {
