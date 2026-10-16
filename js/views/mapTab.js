@@ -1,6 +1,8 @@
-import { watchTrip, watchUsers, watchPlaces, watchStays, watchFlights, watchOptions, addPlacesBatch } from "../store.js";
-import { el, friendlyError, toast } from "../ui.js";
+import { watchTrip, watchUsers, watchPlaces, watchStays, watchFlights, watchOptions, addPlacesBatch, updateTripFields } from "../store.js";
+import { el, icon, externalLink, friendlyError, toast } from "../ui.js";
 import { importFromMyMapsDialog } from "./importPlaces.js";
+import { editLinkSheet } from "./sharedLinks.js";
+import { parseMyMapsUrl, isShortMapsLink } from "../lib/mymaps.js";
 import { loadAirports } from "../lookup.js";
 import { stopsFor } from "../lib/route.js";
 import { mergedStops, budgetContext } from "../lib/choices.js";
@@ -90,8 +92,7 @@ export function renderMapPage(container, tripId, myUid) {
   const stayMarkersById = new Map();
 
   const loadErrorEl = el("div", { className: "field-error-holder" });
-  const importBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Import from My Maps" });
-  const toolbarEl = el("div", { className: "map-tab-toolbar" }, [importBtn]);
+  const mapBarEl = el("div", { className: "map-bar card" });
   const chipsEl = el("div", { className: "category-chips stop-chips" });
   const noRouteHintEl = el("p", { className: "muted", hidden: true, textContent: "Choose an option on Routes to group this by your actual route." });
   const switchEl = el("div", { className: "seg", attrs: { role: "group", "aria-label": "Show" } });
@@ -142,10 +143,34 @@ export function renderMapPage(container, tripId, myUid) {
   staysBtn.addEventListener("click", () => setListMode("stays"));
   switchEl.replaceChildren(placesBtn, staysBtn);
 
-  container.replaceChildren(loadErrorEl, toolbarEl, chipsEl, noRouteHintEl, layoutEl);
+  container.replaceChildren(loadErrorEl, chipsEl, mapBarEl, noRouteHintEl, layoutEl);
 
-  importBtn.addEventListener("click", async () => {
-    const result = await importFromMyMapsDialog({ places });
+  /** Validates a pasted My Maps link for the "Add link" sheet (mirrors
+   * `sharedLinks.js`'s own, which isn't exported). */
+  function myMapsMessage(text) {
+    if (parseMyMapsUrl(text)) return null;
+    if (isShortMapsLink(text)) return "That's a short link. Open it, then copy the address from the browser bar and paste that.";
+    return "That doesn't look like a Google My Maps link (it should contain google.com/maps/d/).";
+  }
+
+  async function openAddMyMapsLinkSheet() {
+    const value = await editLinkSheet({
+      title: "Our My Maps link",
+      placeholder: "https://www.google.com/maps/d/edit?mid=…",
+      ariaLabel: "My Maps link",
+      initialValue: trip?.myMapsUrl || "",
+      validate: myMapsMessage,
+    });
+    if (value === null) return;
+    try {
+      await updateTripFields(tripId, { myMapsUrl: value });
+    } catch (err) {
+      onError(friendlyError(err));
+    }
+  }
+
+  async function openImportDialog() {
+    const result = await importFromMyMapsDialog({ places, myMapsLink: trip ? parseMyMapsUrl(trip.myMapsUrl || "") : null });
     if (!result || result.toAdd.length === 0) return;
     try {
       await addPlacesBatch(
@@ -169,7 +194,34 @@ export function renderMapPage(container, tripId, myUid) {
     } catch (err) {
       onError(friendlyError(err));
     }
-  });
+  }
+
+  /** The shared map bar (R7 §8 point 2), between the stop chips and the
+   * Places/Stays switch: the group's My Maps link, set or not, plus Import. */
+  function renderMapBar() {
+    const parsed = trip ? parseMyMapsUrl(trip.myMapsUrl || "") : null;
+    const importBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Import", onclick: openImportDialog });
+    if (parsed) {
+      mapBarEl.replaceChildren(
+        icon("map", { size: 20 }),
+        el("span", { className: "map-bar-text", textContent: "Our shared map" }),
+        el("div", { className: "map-bar-actions" }, [
+          externalLink(parsed.url, "Open ↗"),
+          el("a", { className: "btn btn-small", href: parsed.kmlUrl, target: "_blank", rel: "noopener noreferrer", textContent: "Get KML" }),
+          importBtn,
+        ])
+      );
+    } else {
+      mapBarEl.replaceChildren(
+        icon("map", { size: 20 }),
+        el("span", { className: "map-bar-text muted", textContent: "Add your group's My Maps link to import it in two taps" }),
+        el("div", { className: "map-bar-actions" }, [
+          el("button", { type: "button", className: "btn btn-small", textContent: "Add link", onclick: openAddMyMapsLinkSheet }),
+          importBtn,
+        ])
+      );
+    }
+  }
 
   function ensureMap() {
     if (map || typeof window === "undefined" || !window.L) return;
@@ -302,6 +354,7 @@ export function renderMapPage(container, tripId, myUid) {
 
   function rerenderAll(forceFit = false) {
     if (!trip) return;
+    renderMapBar();
     const chosen = airports ? chosenStops(trip, flights, options, airports) : [];
     routeStops = chosen;
     const fallback = chosen.length === 0 && airports ? allOptionCities(flights, options, airports) : [];

@@ -99,7 +99,7 @@ Design: `docs/R7.md` (wins over `SPEC.md` §4 for the look until T66 folds it in
 | T60 | [Trips list: readable cards](T60-trips-list.md) | Sonnet | medium | T58 | Done (2026-10-16) |
 | T61 | [Overview: summary first, settings behind a tap](T61-overview.md) | Sonnet | high | T59 | Done (2026-10-16) |
 | T62 | [Routes: tidy flight cards and switches](T62-routes.md) | Sonnet | high | T58 | Done (2026-10-16) |
-| T63 | [Map: shared map bar, filters in a sheet, sticky map](T63-map-tab.md) | Sonnet | medium | T59 | To do |
+| T63 | [Map: shared map bar, filters in a sheet, sticky map](T63-map-tab.md) | Sonnet | medium | T59 | Done (2026-10-16) |
 | T64 | [Days: day chooser and a numbered timeline](T64-days.md) | Sonnet | high | T63 | To do |
 | T65 | [Sign-in, help and 404 in the new look](T65-signin-help.md) | Haiku | medium | T64 | To do |
 | T66 | [Final review and SPEC 4.3](T66-review-round7.md) | Opus | medium | T54–T65 | To do |

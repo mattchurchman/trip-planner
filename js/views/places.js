@@ -58,7 +58,7 @@ export function createPlacesSection({ tripId, myUid, onError, mapClickState, onF
 
   const addPanelToggle = el("button", { type: "button", className: "btn btn-primary", textContent: "Add place", attrs: { "aria-expanded": "false" } });
   const addPanelHolder = el("div", { className: "add-place-holder", hidden: true });
-  const filtersEl = el("div", { className: "places-filters card" });
+  const filtersBtn = el("button", { type: "button", className: "btn btn-secondary", textContent: "Filters", onclick: () => openFiltersSheet() });
   const rankCountEl = el("p", { className: "muted rank-count" });
   const listEl = el("div", { className: "places-list" });
 
@@ -99,7 +99,7 @@ export function createPlacesSection({ tripId, myUid, onError, mapClickState, onF
     renderList();
   });
 
-  const searchInput = el("input", { type: "text", placeholder: "Search name or note" });
+  const searchInput = el("input", { type: "text", placeholder: "Search name or note", attrs: { "aria-label": "Search name or note" } });
   searchInput.addEventListener("input", () => {
     filters.search = searchInput.value;
     renderList();
@@ -131,15 +131,38 @@ export function createPlacesSection({ tripId, myUid, onError, mapClickState, onF
     return el("label", { className: "filter-label" }, [el("span", { textContent: caption }), control]);
   }
 
-  filtersEl.replaceChildren(
-    categoryChipsEl,
-    el("div", { className: "filters-row" }, [
-      filterLabel("Neighborhood", neighborhoodSelect),
-      filterLabel("Search", searchInput),
-      el("label", { className: "checkbox-label" }, [notRankedCheckbox, " I haven't ranked yet"]),
-      filterLabel("Sort by", sortSelect),
-    ])
-  );
+  /** Opens the Filters sheet (R7 §7 "Map"): category chips, neighborhood,
+   * "I haven't ranked yet" and sort, applying live — Done just closes it. The
+   * search box stays on the toolbar, outside the sheet. */
+  function openFiltersSheet() {
+    const doneBtn = el("button", { type: "button", className: "btn btn-primary", textContent: "Done" });
+    const form = el("form", { method: "dialog" }, [
+      el("h3", { textContent: "Filters" }),
+      categoryChipsEl,
+      el("div", { className: "filters-row" }, [
+        filterLabel("Neighborhood", neighborhoodSelect),
+        el("label", { className: "checkbox-label" }, [notRankedCheckbox, " I haven't ranked yet"]),
+        filterLabel("Sort by", sortSelect),
+      ]),
+      el("div", { className: "dialog-actions" }, [doneBtn]),
+    ]);
+    const dialog = el("dialog", { className: "app-dialog app-dialog-form filters-dialog" }, [form]);
+    document.body.appendChild(dialog);
+    doneBtn.addEventListener("click", () => dialog.close());
+    dialog.addEventListener("close", () => dialog.remove());
+    dialog.showModal();
+  }
+
+  /** Active filter dimensions (categories, neighborhood, not-ranked-yet) for
+   * the "Filters · N" button label — sort isn't a filter, so it's excluded. */
+  function activeFilterCount() {
+    return (filters.categories.size > 0 ? 1 : 0) + (filters.neighborhood ? 1 : 0) + (filters.notRankedOnly ? 1 : 0);
+  }
+
+  function updateFiltersBtnLabel() {
+    const count = activeFilterCount();
+    filtersBtn.textContent = count > 0 ? `Filters · ${count}` : "Filters";
+  }
 
   function updateNeighborhoodOptions() {
     if (document.activeElement === neighborhoodSelect) return;
@@ -300,6 +323,7 @@ export function createPlacesSection({ tripId, myUid, onError, mapClickState, onF
   function renderList() {
     if (!trip) return;
     updateNeighborhoodOptions();
+    updateFiltersBtnLabel();
 
     const notRankedCount = notRankedByMe(places, myUid).length;
     rankCountEl.textContent =
@@ -315,9 +339,8 @@ export function createPlacesSection({ tripId, myUid, onError, mapClickState, onF
   }
 
   const element = el("div", {}, [
-    el("div", { className: "places-header" }, [addPanelToggle]),
+    el("div", { className: "places-toolbar" }, [addPanelToggle, filtersBtn, searchInput]),
     addPanelHolder,
-    filtersEl,
     rankCountEl,
     listEl,
   ]);

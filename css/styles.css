@@ -1179,7 +1179,6 @@ button.list-row:hover {
 }
 
 .travelers-header,
-.places-header,
 .stays-header,
 .days-header {
   display: flex;
@@ -1391,10 +1390,26 @@ button.list-row:hover {
   align-items: flex-start;
 }
 
-.places-filters {
+/* Places toolbar (T63): Add place + Filters + search on one row, wrapping
+   on phones. Filters itself lives in a sheet (`.filters-dialog` below). */
+.places-toolbar {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.places-toolbar input[type="text"] {
+  flex: 1 1 160px;
+  min-width: 0;
+  padding: 6px var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.filters-dialog .category-chips {
+  margin-bottom: var(--space-1);
 }
 
 .category-chips {
@@ -1559,10 +1574,32 @@ button.list-row:hover {
   }
 }
 
-.map-tab-toolbar {
+/* Shared map bar (T63, R7 §8 point 2): slim, between the stop chips and the
+   Places/Stays switch. */
+.map-bar {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   margin-bottom: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.map-bar-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.map-bar-text.muted {
+  font-weight: 400;
+}
+
+.map-bar-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .kml-import-layer-row {
@@ -3132,7 +3169,6 @@ button.list-row:hover {
 
   .travelers-header,
   .costs-header,
-  .places-header,
   .stays-header,
   .days-header {
     flex-wrap: wrap;

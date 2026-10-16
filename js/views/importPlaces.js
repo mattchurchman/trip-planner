@@ -32,13 +32,28 @@ function layerRow(layer, duplicateCount) {
   return { row, categorySelect };
 }
 
+const EXPORT_INSTRUCTIONS = 'Export your map from My Maps: ⋮ → Export to KML/KMZ, tick "Export as KML instead of KMZ".';
+
+/** The dialog's instructions (T63, R7 §8 point 3): two steps using the
+ * trip's shared map link when it parses, else the old ⋮ → Export steps. */
+function importInstructions(myMapsLink) {
+  if (!myMapsLink) return el("p", { className: "muted", textContent: EXPORT_INSTRUCTIONS });
+  return el("div", {}, [
+    el("p", {}, ["1. ", el("a", { href: myMapsLink.kmlUrl, target: "_blank", rel: "noopener noreferrer", textContent: "Get KML from our map ↗" }), " (downloads it)"]),
+    el("p", { textContent: "2. Pick the downloaded file" }),
+    el("details", {}, [el("summary", { textContent: "Not working?" }), el("p", { className: "muted", textContent: EXPORT_INSTRUCTIONS })]),
+  ]);
+}
+
 /**
  * Shows the import dialog. `places` is the trip's current places, used to
- * skip duplicates (same name, within 50m). Resolves `null` on cancel, or
- * `{ toAdd, duplicateCount }` — `toAdd` is `[{ name, lat, lng, note, layer, category }]`
- * ready for `addPlacesBatch`, already excluding duplicates.
+ * skip duplicates (same name, within 50m). `myMapsLink` is the trip's shared
+ * map link, already parsed (`parseMyMapsUrl`), or `null` when none is set.
+ * Resolves `null` on cancel, or `{ toAdd, duplicateCount }` — `toAdd` is
+ * `[{ name, lat, lng, note, layer, category }]` ready for `addPlacesBatch`,
+ * already excluding duplicates.
  */
-export function importFromMyMapsDialog({ places }) {
+export function importFromMyMapsDialog({ places, myMapsLink = null }) {
   return dialogShell("kml-import-dialog", (finish) => {
     const title = el("h2", { textContent: "Import from My Maps" });
     const fileInput = el("input", { type: "file", accept: ".kml", attrs: { "aria-label": "KML file" } });
@@ -118,7 +133,7 @@ export function importFromMyMapsDialog({ places }) {
       },
       [
         title,
-        el("p", { className: "muted", textContent: 'Export your map from My Maps: ⋮ → Export to KML/KMZ, tick "Export as KML instead of KMZ".' }),
+        importInstructions(myMapsLink),
         field("KML file", fileInput),
         errorEl,
         summaryEl,
