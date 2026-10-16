@@ -108,6 +108,19 @@ Design: folded into `SPEC.md` 4.3 by T66; `docs/R7.md` is history (it records wh
 
 **Natural stopping points:** after T55 (new colors, fonts and logo everywhere), after T59 (shared My Maps link works), after T64 (every screen reshaped), after T66.
 
+## Round 8 — loose ends found by the T66 review
+
+| # | Task | Model | Effort | Depends on | Status |
+|---|---|---|---|---|---|
+| T67 | [Round 7 loose ends: two emoji, a raw color, three missing pending states](T67-round7-loose-ends.md) | Sonnet | medium | T66 | Needs review |
+
+Five small spots Round 7 missed, each named with its file and line in the task. Nothing a traveler would call a bug — it's the look and the button rules catching up with the code. Build it only after you've said go.
+
+```
+Read AGENTS.md, then do task T67. Model: Sonnet. Effort: medium. You may push to master when tests pass.
+```
+
+
 **Saving tokens and session limits.** Each task is sized for one fresh session on the model named. Before every task: **clear the context** (`/clear` or a new session), **select the model and effort** from the table, and send only the kickoff line — the agent reads what it needs from the repo. Copy-paste lines:
 
 ```
