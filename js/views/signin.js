@@ -86,7 +86,7 @@ export function renderSignIn(actions, initialError = "") {
   });
   showMode(mode);
   return el("div", { className: "center-card sign-in-card" }, [
-    el("img", { className: "center-card-logo", src: "./img/logo.svg", alt: "", width: 64, height: 64 }),
+    el("img", { className: "center-card-logo", src: "./img/app-icon.svg", alt: "", width: 72, height: 72 }),
     el("h1", { textContent: "Trip Planner" }),
     el("p", { textContent: "Plan trips with your friends — from \"where should we go?\" to the recap." }),
     googleButton,
@@ -116,7 +116,7 @@ export function renderEmailConfirmation(user, actions, initialError = "") {
   continueButton.addEventListener("click", () => run(continueButton, "Checking…", actions.continue));
   resendButton.addEventListener("click", () => run(resendButton, "Sending…", actions.resend));
   return el("div", { className: "center-card sign-in-card" }, [
-    el("img", { className: "center-card-logo", src: "./img/logo.svg", alt: "", width: 64, height: 64 }),
+    el("img", { className: "center-card-logo", src: "./img/app-icon.svg", alt: "", width: 72, height: 72 }),
     el("h1", { textContent: "Check your email" }),
     el("p", { textContent: `Check your email to confirm, then tap Continue. We sent the link to ${user.email}.` }),
     continueButton,

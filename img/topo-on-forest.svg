@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 220" preserveAspectRatio="xMaxYMid slice" fill="none" stroke="#F6F2E9" stroke-opacity="0.12" stroke-width="1.2">
+  <g transform="translate(340 190)">
+    <path vector-effect="non-scaling-stroke" transform="scale(0.4) rotate(0)" d="M0-100C55-100 110-62 104-8 98 46 52 92-4 96-62 100-108 58-102 4-96-50-55-100 0-100z"/>
+    <path vector-effect="non-scaling-stroke" transform="scale(0.7) rotate(8)" d="M0-100C55-100 110-62 104-8 98 46 52 92-4 96-62 100-108 58-102 4-96-50-55-100 0-100z"/>
+    <path vector-effect="non-scaling-stroke" transform="scale(1.0) rotate(14)" d="M0-100C55-100 110-62 104-8 98 46 52 92-4 96-62 100-108 58-102 4-96-50-55-100 0-100z"/>
+    <path vector-effect="non-scaling-stroke" transform="scale(1.35) rotate(20)" d="M0-100C55-100 110-62 104-8 98 46 52 92-4 96-62 100-108 58-102 4-96-50-55-100 0-100z"/>
+    <path vector-effect="non-scaling-stroke" transform="scale(1.75) rotate(26)" d="M0-100C55-100 110-62 104-8 98 46 52 92-4 96-62 100-108 58-102 4-96-50-55-100 0-100z"/>
+    <path vector-effect="non-scaling-stroke" transform="scale(2.2) rotate(31)" d="M0-100C55-100 110-62 104-8 98 46 52 92-4 96-62 100-108 58-102 4-96-50-55-100 0-100z"/>
+    <path vector-effect="non-scaling-stroke" transform="scale(2.7) rotate(36)" d="M0-100C55-100 110-62 104-8 98 46 52 92-4 96-62 100-108 58-102 4-96-50-55-100 0-100z"/>
+    <path vector-effect="non-scaling-stroke" transform="scale(3.3) rotate(40)" d="M0-100C55-100 110-62 104-8 98 46 52 92-4 96-62 100-108 58-102 4-96-50-55-100 0-100z"/>
+    <path vector-effect="non-scaling-stroke" transform="scale(4.0) rotate(44)" d="M0-100C55-100 110-62 104-8 98 46 52 92-4 96-62 100-108 58-102 4-96-50-55-100 0-100z"/>
+  </g>
+  <g transform="translate(40 30)">
+    <path vector-effect="non-scaling-stroke" transform="scale(0.35) rotate(-20)" d="M0-100C55-100 110-62 104-8 98 46 52 92-4 96-62 100-108 58-102 4-96-50-55-100 0-100z"/>
+    <path vector-effect="non-scaling-stroke" transform="scale(0.7) rotate(-14)" d="M0-100C55-100 110-62 104-8 98 46 52 92-4 96-62 100-108 58-102 4-96-50-55-100 0-100z"/>
+    <path vector-effect="non-scaling-stroke" transform="scale(1.05) rotate(-8)" d="M0-100C55-100 110-62 104-8 98 46 52 92-4 96-62 100-108 58-102 4-96-50-55-100 0-100z"/>
+  </g>
+</svg>
