@@ -88,7 +88,7 @@ export function renderSignIn(actions, initialError = "") {
   return el("div", { className: "center-card sign-in-card" }, [
     el("img", { className: "center-card-logo", src: "./img/app-icon.svg", alt: "", width: 72, height: 72 }),
     el("h1", { textContent: "Trip Planner" }),
-    el("p", { textContent: "Plan trips with your friends — from \"where should we go?\" to the recap." }),
+    el("p", { textContent: "Plan the trip together." }),
     googleButton,
     errorHolder,
     el("div", { className: "sign-in-divider", textContent: "or" }),

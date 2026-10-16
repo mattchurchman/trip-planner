@@ -485,12 +485,30 @@ button.list-row:hover {
 
 .sign-in-card {
   text-align: left;
+  background-color: var(--forest);
+  background-image: url(../img/topo-on-forest.svg), linear-gradient(to bottom, transparent 0%, transparent 145px, var(--surface) 145px, var(--surface) 100%);
+  background-size: cover, 100% 100%;
+  background-repeat: repeat, no-repeat;
+  background-position: center, center;
+  border: none;
 }
 
 .sign-in-card > .center-card-logo,
 .sign-in-card > h1,
 .sign-in-card > p:first-of-type {
   text-align: center;
+  color: var(--on-forest);
+}
+
+.sign-in-card > h1 {
+  font-size: var(--fs-item);
+  font-weight: 600;
+}
+
+.sign-in-card > .sign-in-google,
+.sign-in-card > .sign-in-divider,
+.sign-in-card > div:not(.center-card-logo):not(h1):not(p) {
+  color: var(--ink);
 }
 
 .sign-in-google,

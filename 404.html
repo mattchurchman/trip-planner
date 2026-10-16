@@ -14,8 +14,18 @@
     <meta name="theme-color" content="#121815" media="(prefers-color-scheme: dark)" />
   </head>
   <body>
-    <script>
-      location.replace(location.origin + '/' + location.pathname.split('/')[1] + '/');
-    </script>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gabarito:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="./css/styles.css" />
+    <main class="app-main">
+      <div class="center-card">
+        <a class="app-brand" href="./" style="display: flex; justify-content: center; margin-bottom: var(--space-4);">
+          <img class="app-logo" src="./img/logo.svg" alt="" width="28" height="28" />
+          <span class="app-name">Trip Planner</span>
+        </a>
+        <h1 style="text-align: center; margin: 0 0 var(--space-3);">Page not found</h1>
+        <button class="btn btn-primary" style="width: 100%; margin-top: var(--space-4);" onclick="location.href='./'">Back to your trips</button>
+      </div>
+    </main>
   </body>
 </html>

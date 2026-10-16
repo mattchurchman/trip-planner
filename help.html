@@ -41,6 +41,7 @@
           <li><a href="#map">Map: places and stays by stop</a></li>
           <li><a href="#days">Days: plan day by day</a></li>
           <li><a href="#google-maps">Take the plan to Google Maps</a></li>
+        <li><a href="#shared-mymaps">Share your My Maps map</a></li>
         </ul>
       </nav>
 
@@ -70,13 +71,13 @@
         <h2>Overview: who's coming</h2>
         <p>Start on <strong>Overview</strong>: name the trip, set rough dates, and add everyone who's coming. The app needs each person's home airport before it can work out whose flight is whose.</p>
         <ol>
-          <li>Under <strong>Travelers</strong>, each person is a card with their name and <strong>Home city · AIRPORT</strong> underneath. Yours is marked <strong>(you)</strong>.</li>
-          <li>Tap <strong>Edit</strong> on a card to open a sheet with name, home city and home airport together. Change what you like and tap <strong>Save</strong> once — nothing saves until you do, so you can't lose half an edit.</li>
-          <li><strong>Add traveler</strong> picks someone who already uses the app, or just takes a name. Their edit sheet opens straight away so you can fill in the airport.</li>
-          <li><strong>Remove traveler</strong> is at the bottom of the same sheet. It asks first, and asks again whether to delete their flights.</li>
+          <li>Under <strong>Travelers</strong>, each person is a chip with their name and <strong>Home city · AIRPORT</strong> underneath. Yours is marked <strong>(you)</strong>.</li>
+          <li>Tap a chip to open an edit sheet with name, home city and home airport together. Change what you like and tap <strong>Save</strong> once — nothing saves until you do, so you can't lose half an edit.</li>
+          <li><strong>+ Add</strong> picks someone who already uses the app, or just takes a name. Their edit sheet opens straight away so you can fill in the airport.</li>
+          <li>To remove someone, open their edit sheet, tap ⋯ at the bottom, then <strong>Remove traveler</strong>. It asks first, and asks again whether to delete their flights.</li>
           <li>The airport is the 3-letter code, like LIS or DEN. It's what tells the app a flight is this person's flight from home.</li>
         </ol>
-        <!-- IMAGE: traveler cards on a phone, edit sheet open -->
+        <!-- IMAGE: traveler chips on a phone, edit sheet open -->
       </section>
 
       <section class="card help-section" id="routes">
@@ -169,10 +170,11 @@
         <ol>
           <li>Tap <strong>Add place</strong>. Start with <strong>Find on Google Maps ↗</strong>, then paste the link back in — the box takes it from your clipboard by itself where the phone allows it, and the pin and the name fill themselves in. Pick a category, and add a note if you like.</li>
           <li>The city chip you have selected is the city those searches use, so select the city before you search.</li>
-          <li><strong>Each place is one short row:</strong> its category, its name, and how the group voted (♥2 👍1). Tap the row to open it — that's where the note, the link, the <strong>Love</strong> / <strong>Like</strong> / <strong>Pass</strong> buttons, comments, Edit and Delete live. A long list stays scannable, and tapping a pin on the map opens that place's row.</li>
+          <li>Tap <strong>Filters</strong> to show only certain categories, neighborhoods, or places you haven't ranked yet. Tap it again to collapse the filters.</li>
+          <li><strong>Each place is one short row:</strong> its category, its name, and how the group voted (♥2 👍1). Tap the row to open it — that's where the note, the link, the <strong>Love</strong> / <strong>Like</strong> / <strong>Pass</strong> buttons, and comments live. A long list stays scannable, and tapping a pin on the map opens that place's row.</li>
+          <li>To edit a place's location or delete it, tap the ⋯ menu inside the opened place. <strong>Edit location</strong> fixes the pin without deleting anything.</li>
           <li>The group's favorites sort to the top, and <strong>I haven't ranked yet</strong> shows you what you haven't looked at.</li>
-          <li><strong>Import from My Maps</strong> brings in a whole Google My Maps layer at once. Export it from My Maps as KML (not KMZ) and pick the file; you give each layer a category, and pins you already have are skipped.</li>
-          <li>Got a pin in the wrong spot? <strong>Edit location</strong> on the place fixes it without deleting anything.</li>
+          <li>On the <strong>Map</strong> tab under the stop chips, the <strong>shared map bar</strong> has <strong>Get KML ↗</strong> to download your group's My Maps map, and <strong>Import</strong> to bring in a whole Google My Maps layer at once. Export it from My Maps as KML (not KMZ) and pick the file; you give each layer a category, and pins you already have are skipped.</li>
         </ol>
         <p><strong>Stays</strong></p>
         <ol>
@@ -183,7 +185,7 @@
           <li>Those booking sites don't carry an address, so set the pin yourself with <strong>Where is it?</strong> — either <strong>Find "{name}" on the map</strong> or a Google Maps link. Without a pin the stay still works, it's just left off the map.</li>
           <li>Two buttons say where a stay stands: <strong>Choose</strong> (it reads <strong>Chosen</strong>, and the pin turns teal) and <strong>Out</strong>, which dims it and sorts it to the bottom. A stay is never both.</li>
           <li>Under each city, the night bar shows every night, how many of you are sleeping there that night, and whether your chosen stays leave it open, cover it (✓) or double-book it (×2). It reads <strong>All 4 nights covered ✓</strong> once you're sorted, with the total and what it is each.</li>
-          <li><strong>Duplicate</strong> copies a stay without its price — handy for splitting a long stay into two bookings.</li>
+          <li>To edit a stay or delete it, tap the ⋯ menu on its row. <strong>Duplicate</strong> copies a stay without its price — handy for splitting a long stay into two bookings.</li>
         </ol>
         <details>
           <summary><strong>If it doesn't work</strong></summary>
@@ -202,12 +204,13 @@
         <h2>Days: plan day by day</h2>
         <p>Turn your pins into a day-by-day plan.</p>
         <ol>
-          <li>Go to <strong>Days</strong> and tap <strong>Create days from route</strong> — one day per date, each headed with the city and the date, like <strong>Lisbon · Sat, Oct 17</strong>. Before anyone has chosen an option the same button reads <strong>Create days from trip dates</strong>. <strong>Add day</strong> makes an extra day with no date.</li>
-          <li>Pick a day. The map shows that city's places, and <strong>Not planned</strong> below it lists the ones not on a day yet, with your group's favorites first.</li>
+          <li>Go to <strong>Days</strong> and tap <strong>Create days from route</strong> — one day per date, each headed with the city and the date, like <strong>Lisbon · Sat, Oct 17</strong>. Before anyone has chosen an option the same button reads <strong>Create days from trip dates</strong>. Tap a dashed chip to add a day for that date.</li>
+          <li>Pick a day. The map shows that city's places, and a <strong>+ Add from not planned</strong> button lists the ones not on a day yet, with your group's favorites first.</li>
           <li>Tap a pin and choose the day to put it on, or <strong>Remove from day</strong> to take it back off. Pins are numbered and colored by day.</li>
           <li><strong>Your stay shows up as a house.</strong> If a chosen stay covers that night, the day's map shows it with a house mark — that's where you start and end. It's always the hotel in <em>that</em> city, so on the day you change cities the house is the new one, not last night's.</li>
-          <li>On a day card, <strong>▲</strong> and <strong>▼</strong> reorder the places, and <strong>Remove</strong> sends one back to Not planned.</li>
-          <li><strong>Open walking route</strong> sends that one day to Google Maps for walking directions, in your order — only the places on that card, plus that night's hotel if it's in the same city. The button appears once a day has two places with pins, or one place and a hotel. A very long day comes out as <strong>Route part 1</strong> and <strong>Route part 2</strong>.</li>
+          <li>On a place in the day's list, the ⋯ menu has <strong>Move up</strong>, <strong>Move down</strong>, and <strong>Remove from day</strong> to reorder and remove places.</li>
+          <li>To edit a day or delete it, tap the ⋯ menu in the day header.</li>
+          <li><strong>Walk it</strong> sends that one day to Google Maps for walking directions, in your order — only the places on that card, plus that night's hotel if it's in the same city. The button appears once a day has two places with pins, or one place and a hotel. A very long day comes out as <strong>Route part 1</strong> and <strong>Route part 2</strong>.</li>
           <li>Got something happening on a certain day? Put it in the place's note — the app no longer asks for event dates.</li>
         </ol>
         <!-- IMAGE: day list, place pins numbered by day, house pin for the stay -->
@@ -217,11 +220,25 @@
         <h2>Take the plan to Google Maps</h2>
         <p>Download your day-by-day plan as a map file and open it in Google Maps for turn-by-turn navigation.</p>
         <ol>
-          <li>On the <strong>Days</strong> tab, tap <strong>Take it to Google Maps</strong> to download a file.</li>
+          <li>On the <strong>Days</strong> tab, tap the download icon (⬇) in the top bar. An Export sheet opens with options to <strong>Take it to Google Maps</strong>, download as CSV or KML, and a count of places not yet planned.</li>
+          <li>Tap <strong>Take it to Google Maps ↗</strong> to download the file as KML.</li>
           <li>Open Google My Maps and tap <strong>Create a new map</strong> → <strong>Import</strong>. Pick your file; a layer per day appears with your places and stays.</li>
           <li>Open the map in the Google Maps app on your phone. Tap a place to get directions for that day's walking route.</li>
         </ol>
-        <!-- IMAGE: days tab with export button, My Maps import dialog, navigation in Google Maps app -->
+        <!-- IMAGE: days tab with export icon, Export sheet, My Maps import dialog, navigation in Google Maps app -->
+      </section>
+
+      <section class="card help-section" id="shared-mymaps">
+        <h2>Share your My Maps map</h2>
+        <p>While you're exploring, build one shared Google My Maps map as a group. Trip Planner can import it, so you can rank places and build days from what you've found together.</p>
+        <ol>
+          <li>In Google My Maps, create a map and share the link with your group. Copy the link from your browser's address bar — it starts with <strong>https://www.google.com/maps/d/</strong>.</li>
+          <li>On the <strong>Overview</strong> tab, go to <strong>Shared links</strong> and tap <strong>Add link</strong> under "Our My Maps". Paste the link and tap <strong>Save</strong>.</li>
+          <li>Go to the <strong>Map</strong> tab. The shared map bar shows <strong>Open ↗</strong> (to view it), <strong>Get KML</strong> (to download it as a file), and <strong>Import</strong> (to bring in the pins).</li>
+          <li>Tap <strong>Get KML ↗</strong> to download the map as a file. Then tap <strong>Import</strong>, pick the file you just downloaded, and give its layer a category. The pins and their markers land on your map under that category, and ones you already have are skipped.</li>
+          <li>If the link doesn't work, the app will tell you so — a short link from <strong>maps.app.goo.gl</strong> won't work without opening it first.</li>
+        </ol>
+        <!-- IMAGE: Shared links row on Overview, shared map bar on Map tab, import sheet -->
       </section>
 
       <section class="card help-section">
