@@ -44,6 +44,12 @@ export function renderFlightRow(flight, { tripId, myUid, currency, usersById, on
     myUid,
   });
 
+  // The "New low" pill moves up next to the airline name (R7 §7 Routes (c)):
+  // the right column then holds only the price chip and its age line, so it
+  // never grows tall enough to push the left column's OUT/BACK rows down.
+  const newLow = summary.querySelector(".badge-new-low");
+  if (newLow) newLow.remove();
+
   const menu = menuButton(
     [
       { label: "Edit", icon: "edit", onSelect: onEdit },
@@ -52,15 +58,16 @@ export function renderFlightRow(flight, { tripId, myUid, currency, usersById, on
     { label: flight.label ? `More actions for ${flight.label}` : "More actions for this flight" }
   );
 
-  const header = el("div", { className: "flight-card-header" }, [
-    el("div", { className: "option-header-left" }, [flight.label ? el("span", { textContent: flight.label }) : null].filter(Boolean)),
-    summary,
+  const airlineLine = el("div", { className: "option-header-left" }, [flight.label ? el("span", { textContent: flight.label }) : null, newLow].filter(Boolean));
+
+  const grid = el("div", { className: "flight-card-grid" }, [
+    el("div", { className: "flight-card-left" }, [airlineLine, itinerary]),
+    el("div", { className: "flight-card-right" }, [summary]),
   ]);
 
   return el("div", { className: "route-flight-row" }, [
-    header,
+    grid,
     row,
-    itinerary,
     extra,
     el("div", { className: "flight-actions" }, [...leadingActions, menu]),
   ]);
@@ -230,7 +237,7 @@ export function renderOptionCard({
       ]),
       el("div", { className: "row" }, [
         el("span", { className: "muted", textContent: path || "No flights yet" }),
-        el("span", { className: "muted", textContent: "per person" }),
+        el("span", { className: "muted route-option-perperson", textContent: "per person" }),
       ]),
       el("div", { className: "row" }, [
         el("span", { className: "muted", textContent: hopFlights.length ? `For: ${forNames.length ? forNames.join(", ") : "no one yet"}` : "" }),
@@ -333,7 +340,14 @@ export function renderOptionCard({
 export function homeFlightsCardBody({ traveler, homeFlights, trip, tripId, myUid, usersById, localInfo, onEdit, onDelete, onTogglePick, onPasteFlight, onToggleLocal }) {
   function row(flight) {
     const picked = flight.picked !== false;
-    const useBtn = el("button", { type: "button", className: "btn btn-small", textContent: picked ? "Using" : "Use this" });
+    // Using reads as a forest-soft pill, not a button (R7 §7 Routes (c)); it
+    // stays a real button so it's still the one tap that un-picks a flight.
+    const useBtn = el("button", {
+      type: "button",
+      className: picked ? "flight-use-pill" : "btn btn-small",
+      textContent: picked ? "Using ✓" : "Use this",
+      attrs: { "aria-pressed": String(picked) },
+    });
     useBtn.addEventListener("click", async () => {
       setPending(useBtn, true, picked ? "Removing…" : "Using…");
       await onTogglePick(flight, homeFlights);

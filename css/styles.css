@@ -1807,6 +1807,27 @@ button.list-row:hover {
   flex-wrap: wrap;
 }
 
+/* Flight card (T62, R7 §7 Routes (c)): a two-column grid so the price chip on
+   the right can never push the airline name and OUT/BACK rows on the left
+   down the card — each column grows on its own. */
+.flight-card-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  column-gap: var(--space-3);
+  align-items: start;
+}
+
+.flight-card-left {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.flight-card-right {
+  flex: none;
+}
+
 .stay-card-title h3 {
   margin: 0;
 }
@@ -2772,6 +2793,32 @@ button.list-row:hover {
   gap: var(--space-3);
 }
 
+/* Clears the pinned total bar below (T62): routes.js already pads the page
+   by the bar's rendered height; this adds the extra 16 px of breathing room
+   phones need so the last card doesn't sit flush against it. */
+@media (max-width: 759px) {
+  .route-options-list {
+    margin-bottom: var(--space-4);
+  }
+}
+
+/* "Using" (T62, R7 §7 Routes (c)): a forest-soft pill with a check, not a
+   button-looking box — it still un-picks the flight on tap. */
+.flight-use-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: var(--space-1) var(--space-4);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--forest-soft);
+  color: var(--forest);
+  font-weight: 600;
+  font-size: var(--fs-small);
+  cursor: pointer;
+}
+
 .route-option {
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
@@ -2805,6 +2852,10 @@ button.list-row:hover {
 .route-option-total {
   font-weight: 600;
   font-size: var(--fs-item);
+}
+
+.route-option-perperson {
+  font-size: var(--fs-small);
 }
 
 .route-option-badges {

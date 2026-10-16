@@ -61,34 +61,41 @@ export async function deleteOptionDialog(tripId, option) {
 /** The traveler segmented control. Stops and totals always show for whoever
  * is selected here (V4 §4.6). */
 export function renderTravelerSwitch(switchEl, { travelers, selectedTravelerId, onSelect }) {
-  switchEl.replaceChildren(
-    ...travelers.map((t) => {
-      const btn = el("button", {
-        type: "button",
-        textContent: t.homeCity ? `${t.name} · ${t.homeCity}` : t.name,
-        attrs: { "aria-pressed": String(t.id === selectedTravelerId) },
-      });
-      btn.addEventListener("click", () => onSelect(t.id));
-      return btn;
-    })
-  );
+  let selectedBtn = null;
+  const buttons = travelers.map((t) => {
+    const btn = el("button", {
+      type: "button",
+      textContent: t.homeCity ? `${t.name} · ${t.homeCity}` : t.name,
+      attrs: { "aria-pressed": String(t.id === selectedTravelerId) },
+    });
+    btn.addEventListener("click", () => onSelect(t.id));
+    if (t.id === selectedTravelerId) selectedBtn = btn;
+    return btn;
+  });
+  switchEl.replaceChildren(...buttons);
+  // replaceChildren resets the track's scroll position, which can hide the
+  // selected chip again after a re-render (R7 §6 segmented control: "the
+  // selected one scrolled into view"); pull it back into view every time.
+  selectedBtn?.scrollIntoView({ block: "nearest", inline: "nearest" });
 }
 
 /** The idea segmented control, plus Choose idea / Rename / Delete. A check on
  * a chip means the traveler on screen has chosen that idea (§7.6). */
 export function renderIdeaSwitch(switchEl, actionsEl, { ideas, selectedIdeaId, chosenIdeaId, onSelect, onChoose, onRename, onDelete }) {
-  switchEl.replaceChildren(
-    ...ideas.map((idea) => {
-      const chosen = idea.id === chosenIdeaId;
-      const btn = el("button", {
-        type: "button",
-        textContent: chosen ? `${idea.name} ✓` : idea.name,
-        attrs: { "aria-pressed": String(idea.id === selectedIdeaId) },
-      });
-      btn.addEventListener("click", () => onSelect(idea.id));
-      return btn;
-    })
-  );
+  let selectedBtn = null;
+  const buttons = ideas.map((idea) => {
+    const chosen = idea.id === chosenIdeaId;
+    const btn = el("button", {
+      type: "button",
+      textContent: chosen ? `${idea.name} ✓` : idea.name,
+      attrs: { "aria-pressed": String(idea.id === selectedIdeaId) },
+    });
+    btn.addEventListener("click", () => onSelect(idea.id));
+    if (idea.id === selectedIdeaId) selectedBtn = btn;
+    return btn;
+  });
+  switchEl.replaceChildren(...buttons);
+  selectedBtn?.scrollIntoView({ block: "nearest", inline: "nearest" });
   const currentIdea = ideas.find((i) => i.id === selectedIdeaId);
   if (!currentIdea) {
     actionsEl.replaceChildren();
