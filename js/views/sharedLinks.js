@@ -1,6 +1,6 @@
 // The Overview "Shared links" card (§7.5, T59): the Album and Our My Maps
 // rows. Replaces the old free-standing Album field.
-import { el, field, row, icon, menuButton, externalLink, confirmDialog, friendlyError, linkField, dialogShell } from "../ui.js";
+import { el, field, row, icon, menuButton, externalLink, confirmDialog, friendlyError, linkField, dialogShell, setPending } from "../ui.js";
 import { updateTripFields } from "../store.js";
 import { safeUrl } from "../lib/links.js";
 import { parseMyMapsUrl, isShortMapsLink } from "../lib/mymaps.js";
@@ -65,42 +65,55 @@ export function editLinkSheet({ title, placeholder, ariaLabel, initialValue, val
 }
 
 function sharedLinkRow({ tripId, iconName, title, url, unsetHint, fieldName, sheetTitle, placeholder, ariaLabel, validate, onError }) {
+  // Pending state sits on whichever trailing control started the save: the
+  // Add link button for an unset row, or the row's own ⋯ menu trigger for a
+  // set row (disabled rather than relabeled — it's icon-only, so swapping its
+  // text like setPending() would clobber the icon).
+  let menuTrigger = null;
+
   async function openEdit() {
     const value = await editLinkSheet({ title: sheetTitle, placeholder, ariaLabel, initialValue: url || "", validate });
     if (value === null) return;
+    if (addBtn) setPending(addBtn, true);
+    if (menuTrigger) menuTrigger.disabled = true;
     try {
       await updateTripFields(tripId, { [fieldName]: value });
     } catch (err) {
       onError(friendlyError(err));
+    } finally {
+      if (addBtn) setPending(addBtn, false);
+      if (menuTrigger) menuTrigger.disabled = false;
     }
   }
 
   async function handleRemove() {
     const confirmed = await confirmDialog(`Remove the ${title} link?`, "Remove");
     if (!confirmed) return;
+    if (menuTrigger) menuTrigger.disabled = true;
     try {
       await updateTripFields(tripId, { [fieldName]: null });
     } catch (err) {
       onError(friendlyError(err));
+    } finally {
+      if (menuTrigger) menuTrigger.disabled = false;
     }
   }
 
   const leading = icon(iconName, { size: 20 });
+  let addBtn = null;
   if (!url) {
-    const addBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Add link", onclick: openEdit });
+    addBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Add link", onclick: openEdit });
     return row({ leading, title, subtitle: unsetHint, trailing: addBtn });
   }
 
-  const trailing = el("div", { className: "list-row-actions" }, [
-    externalLink(url, "Open ↗"),
-    menuButton(
-      [
-        { label: "Change link", icon: "edit", onSelect: openEdit },
-        { label: "Remove link", icon: "trash", onSelect: handleRemove, danger: true },
-      ],
-      { label: `More actions for ${title}` }
-    ),
-  ]);
+  menuTrigger = menuButton(
+    [
+      { label: "Change link", icon: "edit", onSelect: openEdit },
+      { label: "Remove link", icon: "trash", onSelect: handleRemove, danger: true },
+    ],
+    { label: `More actions for ${title}` }
+  );
+  const trailing = el("div", { className: "list-row-actions" }, [externalLink(url, "Open ↗"), menuTrigger]);
   return row({ leading, title, trailing });
 }
 

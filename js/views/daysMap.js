@@ -1,4 +1,4 @@
-import { el, icon, friendlyError } from "../ui.js";
+import { el, icon, friendlyError, setPending } from "../ui.js";
 import { voteSummary } from "../lib/votes.js";
 
 /** The selected day's pins, numbered by `dayOrder` (R7 §7 Days (b)): forest
@@ -54,24 +54,30 @@ function openPinSheet({ place, daysInCity, onAssign, onRemove }) {
       disabled: current,
     });
     btn.addEventListener("click", async () => {
+      setPending(btn, true);
       try {
         await onAssign(place, day.id);
         closeDialog();
       } catch (err) {
         errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
+      } finally {
+        setPending(btn, false);
       }
     });
     return btn;
   });
 
-  const removeBtn = el("button", { type: "button", className: "btn btn-small btn-danger", textContent: "Remove from day" });
+  const removeBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Remove from day" });
   removeBtn.hidden = !place.dayId;
   removeBtn.addEventListener("click", async () => {
+    setPending(removeBtn, true);
     try {
       await onRemove(place);
       closeDialog();
     } catch (err) {
       errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
+    } finally {
+      setPending(removeBtn, false);
     }
   });
 

@@ -2220,6 +2220,7 @@ button.list-row:hover {
 .sparkline {
   width: 64px;
   height: 16px;
+  color: var(--forest);
 }
 
 /* The price-check row (§5), opened by tapping the price and closed again

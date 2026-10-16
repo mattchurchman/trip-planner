@@ -26,7 +26,7 @@ function buildSparkline(prices) {
     })
     .join(" ");
   return svgEl("svg", { viewBox: `0 0 ${width} ${height}`, class: "sparkline", "aria-hidden": "true" }, [
-    svgEl("polyline", { points, fill: "none", stroke: "#1a73e8", "stroke-width": "2" }),
+    svgEl("polyline", { points, fill: "none", stroke: "currentColor", "stroke-width": "2" }),
   ]);
 }
 

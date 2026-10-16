@@ -112,7 +112,7 @@ Design: folded into `SPEC.md` 4.3 by T66; `docs/R7.md` is history (it records wh
 
 | # | Task | Model | Effort | Depends on | Status |
 |---|---|---|---|---|---|
-| T67 | [Round 7 loose ends: two emoji, a raw color, three missing pending states](T67-round7-loose-ends.md) | Sonnet | medium | T66 | Needs review |
+| T67 | [Round 7 loose ends: two emoji, a raw color, three missing pending states](T67-round7-loose-ends.md) | Sonnet | medium | T66 | Done (2026-10-16) |
 
 Five small spots Round 7 missed, each named with its file and line in the task. Nothing a traveler would call a bug — it's the look and the button rules catching up with the code. Build it only after you've said go.
 

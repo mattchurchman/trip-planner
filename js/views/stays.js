@@ -1,5 +1,5 @@
 import { addStay, updateStay, deleteStay, duplicateStay, chooseStay, unchooseStay, setForTravelers } from "../store.js";
-import { el, confirmDialog, friendlyError, renderWhenIdle, menuButton } from "../ui.js";
+import { el, confirmDialog, friendlyError, renderWhenIdle, menuButton, icon } from "../ui.js";
 import { renderComments } from "./comments.js";
 import { nightsBetween } from "../lib/dates.js";
 import { formatLegDate } from "../lib/itineraryFormat.js";
@@ -227,7 +227,7 @@ export function createStaysSection({ tripId, myUid, onError, onFocusOnMap }) {
 
     let locationLine;
     if (stay.lat != null) {
-      const onMapBtn = el("button", { type: "button", className: "btn btn-link", textContent: "📍 On the map" });
+      const onMapBtn = el("button", { type: "button", className: "btn btn-link" }, [icon("place", { size: 14 }), " On the map"]);
       onMapBtn.addEventListener("click", () => onFocusOnMap(stay));
       locationLine = el("p", { className: "muted" }, [onMapBtn]);
     } else {

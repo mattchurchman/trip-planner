@@ -3,7 +3,7 @@
 // category icon tile, name/category/neighborhood, vote count, and a ⋯ menu
 // for Move up / Move down / Remove from day. No DOM state of its own --
 // call `renderTimeline` again whenever the day's places change.
-import { el, icon, menuButton, row, friendlyError } from "../ui.js";
+import { el, icon, menuButton, row, friendlyError, setPending } from "../ui.js";
 import { sortByRank, voteSummary } from "../lib/votes.js";
 import { categoryColor } from "../lib/categories.js";
 
@@ -82,11 +82,14 @@ export function openNotPlannedSheet(unplanned, { onAdd }) {
   const rows = sortByRank(unplanned).map((place) => {
     const addBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Add" });
     addBtn.addEventListener("click", async () => {
+      setPending(addBtn, true);
       try {
         await onAdd(place);
         closeDialog();
       } catch (err) {
         errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
+      } finally {
+        setPending(addBtn, false);
       }
     });
     return row({ title: place.name, subtitle: voteSummary(place.votes || {}) || "Not ranked yet", trailing: addBtn });

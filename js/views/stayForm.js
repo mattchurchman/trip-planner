@@ -1,4 +1,4 @@
-import { el, field, dialogShell, setPending, friendlyError, linkField, autoReadLinkOnOpen } from "../ui.js";
+import { el, field, dialogShell, setPending, friendlyError, linkField, autoReadLinkOnOpen, icon } from "../ui.js";
 import { googleHotelsUrl, bookingUrl, airbnbUrl, googleMapsFindUrl } from "../lib/links.js";
 import { parseStayLink } from "../lib/staylink.js";
 import { parseGoogleMapsUrl } from "../lib/mapsurl.js";
@@ -68,7 +68,7 @@ function buildWhereIsIt({ nameInput, city, initialLat, initialLng }) {
   const clearBtn = el("button", { type: "button", className: "btn btn-link", textContent: "Clear" });
   const statusEl = el("p", { className: "muted" });
   function updateStatus() {
-    if (lat != null) statusEl.replaceChildren("📍 Pin set ", clearBtn);
+    if (lat != null) statusEl.replaceChildren(icon("place", { size: 14 }), " Pin set ", clearBtn);
     else statusEl.textContent = "No pin yet — you can add one later.";
   }
   clearBtn.addEventListener("click", () => {
