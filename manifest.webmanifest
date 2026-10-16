@@ -3,8 +3,8 @@
   "short_name": "Trip Planner",
   "display": "standalone",
   "start_url": "./",
-  "theme_color": "#1f5f5b",
-  "background_color": "#faf6f0",
+  "theme_color": "#1F4D3A",
+  "background_color": "#F6F2E9",
   "icons": [
     {
       "src": "img/icons/icon-192.png",
