@@ -91,7 +91,7 @@ Design: `docs/R7.md` (wins over `SPEC.md` §4 for the look until T66 folds it in
 | # | Task | Model | Effort | Depends on | Status |
 |---|---|---|---|---|---|
 | T54 | [Waypoint colors, fonts and six type sizes](T54-tokens-and-type.md) | Sonnet | medium | T53 | Done (2026-10-15) |
-| T55 | [New logo, app icon and favicon](T55-logo-and-icons.md) | Haiku | low | T54 | To do |
+| T55 | [New logo, app icon and favicon](T55-logo-and-icons.md) | Haiku | low | T54 | Done (2026-10-15) |
 | T56 | [One icon set, no emoji](T56-icon-set.md) | Sonnet | medium | T54 | To do |
 | T57 | [Shared pieces: buttons, cards, rows, chips, top bar](T57-shared-pieces.md) | Sonnet | high | T56 | To do |
 | T58 | [Delete and Edit move into ⋯ menus](T58-overflow-menus.md) | Sonnet | medium | T57 | To do |
