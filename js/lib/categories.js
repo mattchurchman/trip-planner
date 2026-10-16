@@ -1,18 +1,20 @@
 // Pure: the place categories and their colors (§4). No DOM, no Firebase.
 
+// Colors are R7's muted set (docs/R7.md §2): one family, toned down to sit
+// under the brand instead of louder than it.
 export const CATEGORIES = [
-  { label: "Food", color: "#e8710a" },
-  { label: "Coffee & cafés", color: "#795548" },
-  { label: "Drinks & nightlife", color: "#9334e6" },
-  { label: "Neighborhood walk", color: "#188038" },
-  { label: "Sight", color: "#1a73e8" },
-  { label: "Museum & history", color: "#827717" },
-  { label: "Walking tour", color: "#00897b" },
-  { label: "Event & seasonal", color: "#d93025" },
-  { label: "Adventure", color: "#f9ab00" },
-  { label: "Day trip", color: "#3949ab" },
-  { label: "Shopping", color: "#c2185b" },
-  { label: "Other", color: "#5f6368" },
+  { label: "Food", color: "#C2602F" },
+  { label: "Coffee & cafés", color: "#8B6B4E" },
+  { label: "Drinks & nightlife", color: "#7E5AA2" },
+  { label: "Neighborhood walk", color: "#4F8A4E" },
+  { label: "Sight", color: "#2F76A8" },
+  { label: "Museum & history", color: "#8A7A33" },
+  { label: "Walking tour", color: "#2F8A80" },
+  { label: "Event & seasonal", color: "#B8483F" },
+  { label: "Adventure", color: "#B98522" },
+  { label: "Day trip", color: "#5463A6" },
+  { label: "Shopping", color: "#A8507A" },
+  { label: "Other", color: "#6E7470" },
 ];
 
 /** Returns the color for a category label, or the "Other" color for unknown labels. */

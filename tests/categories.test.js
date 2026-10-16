@@ -25,9 +25,9 @@ export const tests = [
     assert.equal(categoryColor("xyz"), otherColor);
   }],
   ["categoryColor returns correct color for known labels", () => {
-    assert.equal(categoryColor("Food"), "#e8710a");
-    assert.equal(categoryColor("Coffee & cafés"), "#795548");
-    assert.equal(categoryColor("Museum & history"), "#827717");
-    assert.equal(categoryColor("Other"), "#5f6368");
+    assert.equal(categoryColor("Food"), "#C2602F");
+    assert.equal(categoryColor("Coffee & cafés"), "#8B6B4E");
+    assert.equal(categoryColor("Museum & history"), "#8A7A33");
+    assert.equal(categoryColor("Other"), "#6E7470");
   }],
 ];

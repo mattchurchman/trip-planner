@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { nightsBetween, nightsLabel, relativeTime, rangesOverlap } from "../js/lib/dates.js";
+import { nightsBetween, nightsLabel, relativeTime, rangesOverlap, formatDateRange } from "../js/lib/dates.js";
 
 export const tests = [
   ["nightsBetween counts whole nights between two dates", () => {
@@ -42,5 +42,19 @@ export const tests = [
     assert.equal(rangesOverlap("2026-06-01", null, "2026-06-01", "2026-06-10"), false);
     assert.equal(rangesOverlap("2026-06-01", "2026-06-05", null, "2026-06-10"), false);
     assert.equal(rangesOverlap("2026-06-01", "2026-06-05", "2026-06-01", null), false);
+  }],
+  ["formatDateRange formats a range within one month", () => {
+    assert.equal(formatDateRange("2027-04-10", "2027-04-22"), "Apr 10 – 22, 2027");
+  }],
+  ["formatDateRange formats a range across months", () => {
+    assert.equal(formatDateRange("2027-03-28", "2027-04-08"), "Mar 28 – Apr 8, 2027");
+  }],
+  ["formatDateRange formats a range across years", () => {
+    assert.equal(formatDateRange("2027-12-28", "2028-01-03"), "Dec 28, 2027 – Jan 3, 2028");
+  }],
+  ["formatDateRange shows 'Dates not set' when either date is missing", () => {
+    assert.equal(formatDateRange(null, "2027-04-22"), "Dates not set");
+    assert.equal(formatDateRange("2027-04-10", null), "Dates not set");
+    assert.equal(formatDateRange(null, null), "Dates not set");
   }],
 ];

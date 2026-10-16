@@ -109,6 +109,8 @@ h2 {
   font-size: var(--fs-section);
   line-height: 1.25;
   font-weight: 600;
+  /* 12px to its card, not the general 8px heading margin (R7 §6 spacing rhythm). */
+  margin-bottom: var(--space-3);
 }
 
 h3 {
@@ -162,9 +164,10 @@ input {
   border: 1px solid var(--line);
   background: var(--surface);
   color: var(--ink);
-  font-weight: 500;
+  font-size: var(--fs-body);
+  font-weight: 600;
   padding: var(--space-2) var(--space-4);
-  min-height: 40px;
+  min-height: 44px;
   cursor: pointer;
   transition: background-color var(--ease), border-color var(--ease), box-shadow var(--ease), transform var(--ease), color var(--ease);
 }
@@ -235,15 +238,19 @@ input {
   filter: brightness(0.92);
 }
 
+/* 36px tall visually, but the ::before pad gives it the same 44px tap target
+   as every other button (R7 §6). */
 .btn-small {
+  position: relative;
+  min-height: 36px;
   padding: var(--space-1) var(--space-3);
   font-size: var(--fs-small);
 }
 
-@media (min-width: 760px) {
-  .btn-small {
-    font-size: var(--fs-small);
-  }
+.btn-small::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
 }
 
 .btn-link {
@@ -362,23 +369,87 @@ textarea:focus {
   outline: none;
 }
 
+/* Border, not shadow, at rest (R7 §6); a card never sits inside another card. */
 .card {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
   padding: var(--space-4);
-  box-shadow: var(--shadow-sm);
   transition: box-shadow var(--ease), transform var(--ease);
 }
 
 .card:hover {
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-sm);
 }
 
 @media (min-width: 760px) {
   .card {
     padding: var(--space-5);
   }
+}
+
+/* A list row (R7 §6: "rows, not boxes in boxes") — leading content, a
+   title/subtitle text block, and trailing content. Built by `row()` in
+   js/ui.js. Named `.list-row` rather than R7's own `.row` because this
+   codebase already has an unrelated `.row` flex-utility class. */
+.list-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px var(--space-4);
+  gap: var(--space-3);
+  background: none;
+  border: none;
+  color: var(--ink);
+  text-decoration: none;
+  text-align: left;
+}
+
+a.list-row,
+button.list-row {
+  cursor: pointer;
+}
+
+a.list-row:hover,
+button.list-row:hover {
+  background: var(--sunk);
+}
+
+.list-row + .list-row {
+  border-top: 1px solid var(--line);
+}
+
+.list-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.list-row-title {
+  font-size: var(--fs-item);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.list-row-subtitle {
+  font-size: var(--fs-small);
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A column of card-rows, each its own card, instead of divided rows inside
+   one card (R7 §6: "8px between rows-as-cards"). */
+.rows-as-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
 .center-card {
@@ -486,12 +557,44 @@ textarea:focus {
   gap: var(--space-3);
 }
 
-.top-trip-name {
+/* The trip's name and dates/travelers, carried in the top bar instead of a
+   per-tab h1 (R7 §7). Hidden until a trip is open (.has-trip). */
+.trip-title {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  min-width: 0;
+}
+
+.top-bar.has-trip .trip-title {
+  display: flex;
+  flex: 1 1 auto;
+}
+
+.trip-title-name,
+.trip-title-meta {
   overflow: hidden;
-  color: var(--muted);
-  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.trip-title-name {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: var(--fs-item);
+  color: var(--ink);
+}
+
+.trip-title-meta {
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+/* The lockup's wordmark gives up its space to the trip title on phones,
+   where both can't fit next to the tabs (hidden up here; R7 §7). */
+.top-bar.has-trip .app-name {
+  display: none;
 }
 
 .account-menu { position: relative; }
@@ -526,17 +629,16 @@ textarea:focus {
   font-weight: 600;
 }
 
-/* Round icon button, sized and bordered to match .avatar (the Help "?"). */
+/* 40px square icon button (R7 §6): the Help "?", and the ⋯ overflow button T58 adds. */
 .icon-btn {
   display: flex;
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 2px solid var(--surface);
-  box-shadow: 0 0 0 1px var(--line);
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
   background: var(--surface);
   color: var(--teal);
   font-family: var(--display);
@@ -546,12 +648,13 @@ textarea:focus {
 }
 
 .icon-btn:hover {
+  border-color: var(--teal);
   background: var(--teal-soft);
   text-decoration: none;
 }
 
 .app-main {
-  max-width: 900px;
+  max-width: 880px;
   margin: 0 auto;
   padding: var(--space-5) var(--space-4) calc(var(--space-7) + 80px + env(safe-area-inset-bottom));
 }
@@ -688,7 +791,8 @@ textarea:focus {
 
 @media (min-width: 760px) {
   .top-bar { gap: var(--space-4); padding-inline: var(--space-5); }
-  .top-trip-name { display: none; }
+  .top-bar.has-trip .app-name { display: inline; }
+  .trip-title { text-align: right; align-items: flex-end; flex: 0 1 auto; max-width: 320px; }
   .top-tabs {
     display: flex;
     flex: 1;
@@ -712,7 +816,7 @@ textarea:focus {
   margin: 0;
   border: none;
   border-radius: var(--radius-card) var(--radius-card) 0 0;
-  padding: var(--space-4);
+  padding: calc(var(--space-4) + 14px) var(--space-4) var(--space-4);
   padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
   max-width: none;
   width: 100%;
@@ -721,10 +825,29 @@ textarea:focus {
   box-shadow: var(--shadow-lift);
 }
 
+/* The grab handle (R7 §6) that marks a phone sheet as draggable-feeling. */
+.app-dialog::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  width: 36px;
+  height: 4px;
+  margin-left: -18px;
+  border-radius: var(--radius-pill);
+  background: var(--line);
+}
+
 /* Form dialogs carry up to a dozen fields, several paired side by side; the
    360px confirm/prompt width leaves them unusably cramped. */
 .app-dialog-form {
   max-width: none;
+}
+
+/* A dialog/sheet's title reads at section size (R7 §6), not the body-level
+   h3 it happens to use as a heading tag. */
+.app-dialog h3:first-child {
+  font-size: var(--fs-section);
 }
 
 .app-dialog::backdrop {
@@ -744,6 +867,14 @@ textarea:focus {
   border-top: 1px solid var(--line);
 }
 
+/* Actions fill the sheet's width on phone, instead of sizing to their text
+   (R7 §6); Cancel/primary order is set by each dialog already. */
+@media (max-width: 759px) {
+  .dialog-actions .btn {
+    flex: 1 1 0;
+  }
+}
+
 @media (min-width: 760px) {
   .app-dialog {
     position: static;
@@ -756,6 +887,10 @@ textarea:focus {
     width: calc(100% - 32px);
     max-height: none;
     overflow-y: visible;
+  }
+
+  .app-dialog::before {
+    display: none;
   }
 
   .app-dialog-form {
@@ -783,15 +918,14 @@ textarea:focus {
   border-radius: var(--radius);
 }
 
-.trip-header h1 {
-  margin: 0 0 var(--space-1);
-}
-
+/* Stage badge colors (R7 §2): Exploring/Planning/Trip's over read as neutral,
+   a countdown reads as the forest action color, and "Happening now" is the
+   one state marked in marigold. */
 .stage-badge {
   display: inline-block;
   margin: 0 0 var(--space-2);
-  color: var(--teal);
-  background: var(--teal-soft);
+  color: var(--muted);
+  background: var(--sunk);
   font-weight: 600;
   font-size: var(--fs-small);
   padding: 3px var(--space-3);
@@ -799,20 +933,25 @@ textarea:focus {
   text-decoration: none;
 }
 
-@media (min-width: 760px) {
-  .stage-badge {
-    font-size: var(--fs-small);
-  }
+.stage-badge.stage-upcoming {
+  color: var(--forest);
+  background: var(--forest-soft);
+}
+
+.stage-badge.stage-now {
+  color: var(--on-accent);
+  background: var(--accent);
 }
 
 .stage-badge:hover {
   opacity: 0.85;
 }
 
+/* 24px between a tab's sections (R7 §6 spacing rhythm). */
 .trip-content {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-5);
 }
 
 .field {
@@ -1150,6 +1289,10 @@ textarea:focus {
 }
 
 .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
   border: 1px solid var(--line);
   background: var(--surface);
   border-radius: var(--radius-pill);
@@ -1162,6 +1305,24 @@ textarea:focus {
 
 .chip:hover {
   box-shadow: var(--shadow-sm);
+}
+
+.chip[aria-pressed="true"] {
+  background: var(--teal);
+  color: var(--on-teal);
+  border-color: var(--teal);
+}
+
+/* A category chip sets --cat to its category color and adds this class for a
+   colored dot before its label (R7 §2, §6), instead of a filled pill. */
+.chip-cat::before {
+  content: "";
+  display: inline-block;
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--cat, var(--muted));
 }
 
 /* The stop chips (T25) set only this class for their active state; category
@@ -1569,10 +1730,12 @@ textarea:focus {
   flex-wrap: wrap;
 }
 
+/* Marigold marks the chosen idea/stay/day (R7 §2, §6: "Chosen: --accent +
+   --on-accent" — the one accent fill in the app, not the forest action color). */
 .badge-chosen {
-  background: var(--teal-soft);
-  color: var(--teal);
-  border-color: var(--teal);
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
 }
 
 /* The standalone "Chosen ✓" pill next to a flight/stay's title — unlike
@@ -1580,19 +1743,13 @@ textarea:focus {
    padding and shape (§4 tokens). */
 .chosen-badge {
   align-self: flex-start;
-  color: var(--teal);
-  background: var(--teal-soft);
+  color: var(--on-accent);
+  background: var(--accent);
   font-weight: 600;
   font-size: var(--fs-small);
   padding: 2px var(--space-3);
   border-radius: var(--radius-pill);
   white-space: nowrap;
-}
-
-@media (min-width: 760px) {
-  .chosen-badge {
-    font-size: var(--fs-small);
-  }
 }
 
 /* Stay cards side by side for comparing, one column once they no longer fit
@@ -1849,10 +2006,12 @@ textarea:focus {
   font-size: var(--fs-small);
 }
 
+/* "Cheapest" reads as the accent-soft pill (R7 §2, §6), not a solid fill —
+   --accent itself is decoration only, never text. */
 .badge-new-low {
   align-self: flex-end;
-  background: var(--sun);
-  color: var(--ink);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
   border-radius: var(--radius-pill);
   padding: 2px var(--space-3);
   font-size: var(--fs-label);
@@ -2622,7 +2781,7 @@ textarea:focus {
   }
 
   .app-main {
-    padding: var(--space-4) var(--space-3) calc(var(--space-6) + 80px + env(safe-area-inset-bottom));
+    padding: var(--space-4) var(--space-4) calc(var(--space-6) + 80px + env(safe-area-inset-bottom));
   }
 
   .trips-header {
@@ -2630,17 +2789,7 @@ textarea:focus {
     align-items: flex-start;
   }
 
-  .top-bar { gap: var(--space-2); flex-wrap: wrap; }
-  .app-brand { order: 1; }
-  .top-bar-user { order: 2; gap: var(--space-2); margin-left: auto; }
-  /* Forced to its own full-width line (after the brand/user row) so the trip
-     name never squeezes "Trip Planner" out of the bar. */
-  .top-trip-name {
-    order: 3;
-    flex: 1 1 100%;
-    font-size: var(--fs-small);
-    font-weight: 500;
-  }
+  .top-bar { gap: var(--space-2); }
 
   .travelers-header,
   .costs-header,

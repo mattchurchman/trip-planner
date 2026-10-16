@@ -1,7 +1,7 @@
 import { auth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, signOut, onAuthStateChanged, isConfigured } from "./firebase.js";
 import { checkAllowlist, ensureUserDoc, watchTrip } from "./store.js";
 import { el, icon, friendlyError } from "./ui.js";
-import { tripStage } from "./lib/stage.js";
+import { formatDateRange } from "./lib/dates.js";
 import { renderTripsView } from "./views/trips.js";
 import { renderOverviewPage } from "./views/overview.js";
 import { renderRoutesPage } from "./views/routes.js";
@@ -130,8 +130,11 @@ function renderTopBar(user) {
       el("img", { className: "app-logo", src: "./img/logo.svg", alt: "", width: 28, height: 28 }),
       el("span", { className: "app-name", textContent: "Trip Planner" }),
     ]),
-    el("span", { className: "top-trip-name", textContent: "" }),
     el("nav", { className: "top-tabs", attrs: { "aria-label": "Trip sections" } }),
+    el("div", { className: "trip-title" }, [
+      el("span", { className: "trip-title-name", textContent: "" }),
+      el("span", { className: "trip-title-meta", textContent: "" }),
+    ]),
     el("div", { className: "top-bar-user" }, [
       el("a", {
         className: "icon-btn",
@@ -157,32 +160,29 @@ function tabLink(tab, tripId, tabKey) {
 }
 
 function renderTripShell(main, tripId, myUid, tabKey) {
-  const header = el("div", { className: "trip-header" });
   const tabBar = el("nav", { className: "tab-bar", attrs: { "aria-label": "Trip sections" } }, TABS.map((tab) => tabLink(tab, tripId, tabKey)));
   root.querySelector(".top-tabs").replaceChildren(...TABS.map((tab) => tabLink(tab, tripId, tabKey)));
+  root.querySelector(".top-bar").classList.add("has-trip");
   const content = el("div", { className: "trip-content" });
-  main.replaceChildren(el("div", { className: "trip-shell" }, [header, tabBar, content]));
+  main.replaceChildren(el("div", { className: "trip-shell" }, [tabBar, content]));
 
   const unsubHeader = watchTrip(
     tripId,
     (trip) => {
+      const nameEl = root.querySelector(".trip-title-name");
+      const metaEl = root.querySelector(".trip-title-meta");
       if (!trip) {
-        root.querySelector(".top-trip-name").textContent = "";
-        header.replaceChildren(el("p", { textContent: "This trip couldn't be found." }));
-        content.replaceChildren();
+        nameEl.textContent = "";
+        metaEl.textContent = "";
+        content.replaceChildren(el("p", { textContent: "This trip couldn't be found." }));
         return;
       }
       document.title = `${trip.name} · Trip Planner`;
-      root.querySelector(".top-trip-name").textContent = trip.name;
-      const today = new Date().toISOString().slice(0, 10);
-      const stage = tripStage(trip, today);
-      const stageBadge = el("span", { className: `stage-badge stage-${stage.key}`, textContent: stage.label });
-      header.replaceChildren(
-        el("h1", { textContent: trip.name }),
-        stageBadge
-      );
+      nameEl.textContent = trip.name;
+      const travelerCount = (trip.travelers || []).length;
+      metaEl.textContent = `${formatDateRange(trip.startDate, trip.endDate)} · ${travelerCount} traveler${travelerCount === 1 ? "" : "s"}`;
     },
-    (err) => header.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }))
+    (err) => content.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }))
   );
   const activeTab = TABS.find((t) => t.key === tabKey) || TABS[0];
   const unsubContent = activeTab.render(content, tripId, myUid);
@@ -190,6 +190,7 @@ function renderTripShell(main, tripId, myUid, tabKey) {
   return () => {
     unsubHeader();
     unsubContent();
+    root.querySelector(".top-bar").classList.remove("has-trip");
   };
 }
 

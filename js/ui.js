@@ -326,6 +326,39 @@ export function rankControl({ votes = {}, myUid, usersById = {}, onVote }) {
   return el("div", { className: "rank-control" }, summary ? [buttons, summary] : [buttons]);
 }
 
+// Fixed list a traveler's avatar color is picked from, by their order in the
+// trip's travelers array — stable regardless of who's signed in (R7 §6).
+const AVATAR_COLORS = ["var(--forest)", "#2F76A8", "#A8507A", "#B98522", "#5463A6", "#2F8A80"];
+
+/** A 28–32px initial avatar for a traveler, colored stably by their index in the travelers list (R7 §6). */
+export function avatar(traveler, index = 0) {
+  const color = AVATAR_COLORS[index % AVATAR_COLORS.length];
+  const initial = ((traveler && traveler.name) || "?")[0].toUpperCase();
+  return el("div", {
+    className: "avatar avatar-initial",
+    style: `background:${color};color:${index % AVATAR_COLORS.length === 0 ? "var(--on-forest)" : "#fff"}`,
+    textContent: initial,
+  });
+}
+
+/**
+ * A list row (R7 §6): optional leading content (avatar, number, icon tile), a
+ * title + optional muted subtitle, and optional trailing content (a value or
+ * a ⋯ button). Renders as a link when `href` is given, a button when
+ * `onClick` is given, else a plain div. Styled by `.list-row` (named apart
+ * from the pre-existing `.row` flex-utility class to avoid colliding with it).
+ */
+export function row({ leading, title, subtitle, trailing, href, onClick } = {}) {
+  const textBlock = el("div", { className: "list-row-text" }, [
+    el("span", { className: "list-row-title", textContent: title }),
+    subtitle ? el("span", { className: "list-row-subtitle", textContent: subtitle }) : null,
+  ]);
+  const children = [leading, textBlock, trailing];
+  if (href) return el("a", { className: "list-row", href }, children);
+  if (onClick) return el("button", { type: "button", className: "list-row", onclick: onClick }, children);
+  return el("div", { className: "list-row" }, children);
+}
+
 /** Triggers a browser download of in-memory content, e.g. an export file (§7.10). */
 export function downloadFile(filename, content, mimeType = "text/plain") {
   const blob = new Blob([content], { type: mimeType });
