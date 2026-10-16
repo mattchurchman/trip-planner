@@ -97,7 +97,7 @@ Design: `docs/R7.md` (wins over `SPEC.md` §4 for the look until T66 folds it in
 | T58 | [Delete and Edit move into ⋯ menus](T58-overflow-menus.md) | Sonnet | medium | T57 | Done (2026-10-16) |
 | T59 | [The trip's shared Google My Maps link](T59-mymaps-link.md) | Sonnet | medium | T58 | Done (2026-10-16) |
 | T60 | [Trips list: readable cards](T60-trips-list.md) | Sonnet | medium | T58 | Done (2026-10-16) |
-| T61 | [Overview: summary first, settings behind a tap](T61-overview.md) | Sonnet | high | T59 | To do |
+| T61 | [Overview: summary first, settings behind a tap](T61-overview.md) | Sonnet | high | T59 | Done (2026-10-16) |
 | T62 | [Routes: tidy flight cards and switches](T62-routes.md) | Sonnet | high | T58 | To do |
 | T63 | [Map: shared map bar, filters in a sheet, sticky map](T63-map-tab.md) | Sonnet | medium | T59 | To do |
 | T64 | [Days: day chooser and a numbered timeline](T64-days.md) | Sonnet | high | T63 | To do |

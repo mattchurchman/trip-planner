@@ -1179,7 +1179,6 @@ button.list-row:hover {
 }
 
 .travelers-header,
-.costs-header,
 .places-header,
 .stays-header,
 .days-header {
@@ -1189,42 +1188,29 @@ button.list-row:hover {
   gap: var(--space-3);
 }
 
-/* One card per traveler (T43): border/shadow tokens keep two travelers from
-   blurring together the way the old inline-field rows could. */
-.traveler-card {
+/* Travelers as a wrapping row of chips (R7 §7.2, T61): avatar, name, home
+   airport code. Tapping one opens their existing Edit sheet. */
+.travelers-chips {
   display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin-bottom: var(--space-2);
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
-.traveler-card-avatar {
-  flex: none;
-  width: 40px;
-  height: 40px;
-  font-size: var(--fs-item);
-}
-
-.traveler-card-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.traveler-card-name {
-  margin: 0;
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-
-.traveler-card-detail {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-
-.traveler-card-edit {
-  flex: none;
+.traveler-chip {
+  height: auto;
   min-height: 44px;
-  min-width: 44px;
+  padding: 4px var(--space-3) 4px 4px;
+  gap: var(--space-2);
+}
+
+.traveler-chip-avatar {
+  width: 28px;
+  height: 28px;
+  font-size: var(--fs-small);
+}
+
+.traveler-chip-airport {
+  font-size: var(--fs-small);
 }
 
 .btn-danger-link {
@@ -2228,6 +2214,23 @@ button.list-row:hover {
   flex-wrap: wrap;
 }
 
+/* The split-costs row group nested inside the Budget card (R7 §7.2, T61):
+   same indent as a traveler's four-part breakdown. */
+.split-costs-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: 4px 0 4px var(--space-4);
+}
+
+.split-costs-group {
+  margin-top: var(--space-2);
+}
+
+.split-costs-group .btn-small {
+  margin: var(--space-2) 0 4px var(--space-4);
+}
+
 .cost-row > span:first-child {
   font-weight: 600;
   min-width: 120px;
@@ -2261,10 +2264,6 @@ button.list-row:hover {
   color: var(--muted);
 }
 
-.overview-route-line {
-  margin: 4px 0;
-}
-
 .totals-combined {
   border-top: 1px solid var(--line);
   margin-top: 4px;
@@ -2276,6 +2275,166 @@ button.list-row:hover {
   margin: var(--space-2) 0 0;
   padding-left: 20px;
   color: var(--bad);
+}
+
+/* The Overview summary card (R7 §6, T61): forest, topo texture, the stage
+   chip and the route ribbon live here now instead of a plain h1 + form. */
+.overview-summary-card {
+  background-color: var(--forest);
+  color: var(--on-forest);
+  background-image: url(../img/topo-on-forest.svg);
+  background-size: cover;
+  background-position: right center;
+}
+
+.overview-summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.overview-summary-label {
+  font-size: var(--fs-small);
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.overview-summary-header .stage-badge {
+  margin: 0;
+}
+
+.overview-summary-card .empty-state {
+  color: var(--on-forest);
+  opacity: 0.85;
+}
+
+.overview-summary-card .empty-state a {
+  color: var(--on-forest);
+  text-decoration: underline;
+}
+
+.overview-summary-divider {
+  border: none;
+  border-top: 1px solid var(--on-forest);
+  opacity: 0.25;
+  margin: var(--space-4) 0;
+}
+
+.overview-summary-totals {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.overview-summary-mine {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.overview-summary-mine-label {
+  font-size: var(--fs-small);
+  opacity: 0.85;
+}
+
+.overview-summary-mine-amount {
+  font-family: var(--display);
+  font-size: var(--fs-title);
+  font-weight: 600;
+}
+
+.overview-summary-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  text-align: right;
+}
+
+.overview-summary-group-route {
+  font-size: var(--fs-small);
+  opacity: 0.85;
+}
+
+.overview-summary-group-amount {
+  font-weight: 600;
+}
+
+.overview-edit-trip {
+  display: block;
+  margin: var(--space-2) 0 0;
+}
+
+/* The route ribbon (R7 §6): home dot, a hollow dot per stop with its label
+   underneath, a home dot, joined by dotted connectors. Scrolls sideways on
+   phone like the stop chips, instead of wrapping into a tangle. */
+.route-ribbon {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+
+.route-ribbon::-webkit-scrollbar {
+  display: none;
+}
+
+.route-ribbon-stop {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 44px;
+}
+
+.route-ribbon-connector {
+  flex: 1 0 24px;
+  height: 0;
+  margin-top: 4px;
+  border-top: 2.5px dotted var(--forest);
+  opacity: 0.5;
+}
+
+.route-ribbon-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--forest);
+  background: transparent;
+}
+
+.route-ribbon-dot-home {
+  border: none;
+  background: var(--accent);
+}
+
+.route-ribbon-label {
+  font-size: var(--fs-small);
+  white-space: nowrap;
+}
+
+.route-ribbon-more {
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--forest);
+}
+
+.route-ribbon-on-dark .route-ribbon-connector,
+.route-ribbon-on-dark .route-ribbon-dot {
+  border-color: var(--on-forest);
+}
+
+.route-ribbon-on-dark .route-ribbon-more,
+.route-ribbon-on-dark .route-ribbon-label {
+  color: var(--on-forest);
 }
 
 .days-header h2 {

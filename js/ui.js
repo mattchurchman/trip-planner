@@ -412,6 +412,38 @@ export function avatar(traveler, index = 0) {
 }
 
 /**
+ * The route ribbon on Overview's summary card (R7 §6): a home dot, one
+ * hollow dot per stop labelled "CODE · Nnights" (from `ribbonStops()` in
+ * `js/lib/ribbon.js`), a home dot, joined by dotted connectors. `onDark`
+ * draws the hollow dots, labels and connectors in `--on-forest` for the
+ * forest summary card instead of `--forest`.
+ */
+export function routeRibbon(stops, { onDark = false } = {}) {
+  const list = stops || [];
+  const children = [];
+  list.forEach((entry, index) => {
+    if (index > 0) children.push(el("span", { className: "route-ribbon-connector", attrs: { "aria-hidden": "true" } }));
+    children.push(ribbonEntryNode(entry));
+  });
+  return el("div", { className: `route-ribbon${onDark ? " route-ribbon-on-dark" : ""}` }, children);
+}
+
+function ribbonEntryNode(entry) {
+  if (entry.home) {
+    return el("span", { className: "route-ribbon-stop" }, [
+      el("span", { className: "route-ribbon-dot route-ribbon-dot-home", attrs: { "aria-label": "Home" } }),
+    ]);
+  }
+  if (entry.more) {
+    return el("span", { className: "route-ribbon-stop" }, [el("span", { className: "route-ribbon-more", textContent: `+${entry.more}` })]);
+  }
+  return el("span", { className: "route-ribbon-stop" }, [
+    el("span", { className: "route-ribbon-dot", attrs: { "aria-hidden": "true" } }),
+    el("span", { className: "route-ribbon-label", textContent: `${entry.code || entry.label} · ${entry.nights}` }),
+  ]);
+}
+
+/**
  * A list row (R7 §6): optional leading content (avatar, number, icon tile), a
  * title + optional muted subtitle, and optional trailing content (a value or
  * a ⋯ button). Renders as a link when `href` is given, a button when

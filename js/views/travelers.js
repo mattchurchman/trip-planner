@@ -1,7 +1,7 @@
 // The Travelers card on Overview (V4 §9): who's coming, their home city and
 // airport, and adding or removing someone. Split out of overview.js.
 import { updateTravelers, getTravelerFlights, deleteFlight } from "../store.js";
-import { el, field, dialogShell, confirmDialog, friendlyError, setPending } from "../ui.js";
+import { el, field, icon, dialogShell, confirmDialog, friendlyError, setPending } from "../ui.js";
 
 /** "Add traveler": pick an app member, or type a name for someone who doesn't
  * use the app. Resolves `{ uid, name }`, or null on cancel. */
@@ -128,11 +128,11 @@ function editTravelerDialog(traveler, { tripId, getTrip }) {
 }
 
 /**
- * Fills `sectionEl` with the Travelers card: one read-only card per traveler
- * (avatar, name, home city/airport line, **Edit**) plus **Add traveler**.
- * Errors go to `errorEl`, which the caller keeps outside the rebuild so a
- * message survives the next render. Call again whenever the trip or the
- * member list changes.
+ * Fills `sectionEl` with the Travelers card: a wrapping row of chips (avatar,
+ * name, home airport code) plus a quiet **+ Add** (R7 §7.2). Tapping a chip
+ * opens the existing Edit sheet. Errors go to `errorEl`, which the caller
+ * keeps outside the rebuild so a message survives the next render. Call
+ * again whenever the trip or the member list changes.
  *
  * `getTrip()` (not a `trip` snapshot) is how the Edit sheet always writes
  * from the current trip even if it's still open when a live update lands.
@@ -145,25 +145,19 @@ export function renderTravelers(sectionEl, errorEl, { tripId, getTrip, usersById
     editTravelerDialog(traveler, { tripId, getTrip });
   }
 
-  function travelerCard(traveler) {
-    const avatar = el("div", { className: "avatar avatar-initial traveler-card-avatar", textContent: (traveler.name || "?")[0].toUpperCase() });
+  function travelerChip(traveler) {
+    const avatar = el("span", { className: "avatar avatar-initial traveler-chip-avatar", textContent: (traveler.name || "?")[0].toUpperCase() });
     const nameText = traveler.uid && traveler.uid === myUid ? `${traveler.name} (you)` : traveler.name;
-    const nameLine = el("p", { className: "traveler-card-name", textContent: nameText });
-    const detailText =
-      traveler.homeCity || traveler.homeAirport
-        ? [traveler.homeCity, traveler.homeAirport].filter(Boolean).join(" · ")
-        : "Add home city and airport";
-    const detailLine = el("p", { className: "traveler-card-detail muted", textContent: detailText });
-    const editBtn = el("button", { type: "button", className: "btn btn-small traveler-card-edit", textContent: "Edit" });
-    editBtn.addEventListener("click", () => openEdit(traveler));
-    return el("div", { className: "card traveler-card" }, [
+    const chip = el("button", { type: "button", className: "chip traveler-chip" }, [
       avatar,
-      el("div", { className: "traveler-card-info" }, [nameLine, detailLine]),
-      editBtn,
-    ]);
+      el("span", { textContent: nameText }),
+      traveler.homeAirport ? el("span", { className: "traveler-chip-airport muted", textContent: traveler.homeAirport }) : null,
+    ].filter(Boolean));
+    chip.addEventListener("click", () => openEdit(traveler));
+    return chip;
   }
 
-  const addBtn = el("button", { type: "button", className: "btn btn-small", textContent: "Add traveler" });
+  const addBtn = el("button", { type: "button", className: "btn btn-quiet" }, [icon("plus", { size: 14 }), "Add"]);
   addBtn.addEventListener("click", async () => {
     const result = await addTravelerDialog(trip, usersById);
     if (!result) return;
@@ -178,7 +172,7 @@ export function renderTravelers(sectionEl, errorEl, { tripId, getTrip, usersById
 
   sectionEl.replaceChildren(
     el("div", { className: "travelers-header" }, [el("h2", { textContent: "Travelers" }), addBtn]),
-    ...(trip.travelers || []).map(travelerCard),
+    el("div", { className: "travelers-chips" }, (trip.travelers || []).map(travelerChip)),
     errorEl
   );
 }
