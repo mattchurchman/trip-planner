@@ -3,10 +3,10 @@ import { el, friendlyError, field, renderWhenIdle } from "../ui.js";
 import { renderComments } from "./comments.js";
 import { renderTravelers } from "./travelers.js";
 import { addCostButton, renderSplitCosts } from "./splitCosts.js";
+import { renderSharedLinks } from "./sharedLinks.js";
 import { formatMoney } from "../lib/money.js";
 import { choiceFor, tripBudget } from "../lib/choices.js";
 import { chosenStayIds } from "../lib/selection.js";
-import { safeUrl } from "../lib/links.js";
 import { loadAirports } from "../lookup.js";
 
 /** Renders the Overview tab (V4 §9). Returns a single unsubscribe function. */
@@ -27,7 +27,7 @@ export function renderOverviewPage(container, tripId, myUid) {
   const routeSummaryEl = el("div", { className: "overview-route card" });
   const costsSectionEl = el("div", { className: "costs-section card" });
   const totalsCardEl = el("div", { className: "totals-card card" });
-  const albumEl = el("div", { className: "card" });
+  const sharedLinksEl = el("div", {});
   const commentsEl = el("div", {});
 
   function onError(message) {
@@ -45,7 +45,7 @@ export function renderOverviewPage(container, tripId, myUid) {
     costsSectionEl,
     el("h2", { textContent: "Budget" }),
     totalsCardEl,
-    albumEl,
+    sharedLinksEl,
     commentsEl
   );
 
@@ -145,20 +145,8 @@ export function renderOverviewPage(container, tripId, myUid) {
     totalsCardEl.replaceChildren(...body);
   }
 
-  function renderAlbum() {
-    const fieldError = el("div", { className: "field-error-holder" });
-    const urlInput = el("input", { type: "text", value: trip.albumUrl || "", placeholder: "https://photos.app.goo.gl/…" });
-    urlInput.addEventListener("change", () => {
-      fieldError.replaceChildren();
-      const value = urlInput.value.trim();
-      updateTripFields(tripId, { albumUrl: value || null }).catch((err) => {
-        fieldError.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }));
-      });
-    });
-    const url = trip.albumUrl ? safeUrl(trip.albumUrl) : null;
-    const children = [el("h2", { textContent: "Album" }), field("Album link", urlInput), fieldError];
-    if (url) children.push(el("a", { href: url, target: "_blank", rel: "noopener noreferrer", textContent: "Open album" }));
-    albumEl.replaceChildren(...children);
+  function renderSharedLinksCard() {
+    renderSharedLinks(sharedLinksEl, { tripId, trip, onError: (err) => onError(friendlyError(err)) });
   }
 
   let unsubComments = null;
@@ -189,7 +177,7 @@ export function renderOverviewPage(container, tripId, myUid) {
     renderRouteSummary();
     renderCostsSection();
     renderTotalsCard();
-    renderAlbum();
+    renderSharedLinksCard();
     renderTripComments();
   }
 

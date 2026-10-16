@@ -18,7 +18,9 @@ export function seed(T) {
   out["trips/t1"] = {
     name: "Italy & Spain", currency: "USD", notes: "", startDate: "2027-04-10", endDate: "2027-04-22",
     travelers, choices: { "tr-matt": choice, "tr-sam": choice, "tr-priya": { ideaId: "i1", optionId: "o2", localIdeaIds: [] } },
-    selectedStayIds: ["s1", "s3"], albumUrl: null, createdBy: "u-matt", createdAt: now, updatedAt: now,
+    selectedStayIds: ["s1", "s3"], albumUrl: null,
+    myMapsUrl: "https://www.google.com/maps/d/edit?mid=1ZyXwVuTsRqPoNmLkJiHgFe",
+    createdBy: "u-matt", createdAt: now, updatedAt: now,
   };
   out["trips/t2"] = {
     name: "Japan cherry blossoms", currency: "USD", notes: "", startDate: "2027-03-28", endDate: "2027-04-08",

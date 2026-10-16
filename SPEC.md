@@ -250,12 +250,13 @@ choices: {                           // one entry per traveler who has chosen (�
 }
 selectedStayIds: [stayId]            // the group may choose several stays; may be empty
 albumUrl: string | null              // shared photo album
+myMapsUrl: string | null             // the group's shared Google My Maps map (§9.10); trips made before 4.3 may not have it; read as null
 createdBy: uid
 createdAt: timestamp
 updatedAt: timestamp
 ```
 
-A new trip starts with `currency: "USD"`, empty `notes`, null dates, one traveler (the creator, linked by uid, with empty home fields), `choices: {}`, `selectedStayIds: []` and `albumUrl: null`.
+A new trip starts with `currency: "USD"`, empty `notes`, null dates, one traveler (the creator, linked by uid, with empty home fields), `choices: {}`, `selectedStayIds: []`, `albumUrl: null` and `myMapsUrl: null`.
 
 **Choosing a route (`choices`).** Every traveler chooses for themselves, and the idea and the option are two separate choices: choosing an option does not choose its idea, and nothing one traveler chooses changes another's. Write one field at a time with a field path (`choices.<travelerId>.ideaId`, `choices.<travelerId>.optionId`), never the whole map, so two people choosing at once never overwrite each other. A traveler with no entry falls back to the retired `chosenOptionId` (and that option's idea), so trips from before 4.1 still show the choice they had. Nothing writes `chosenOptionId` again. The two ids are independent and may disagree — a traveler can be looking at one idea's flights while their option belongs to another.
 
@@ -479,7 +480,7 @@ Any place, stay, or the trip itself can have a thread. Show the count, expand in
 - **Route**: one line per traveler — their chosen idea and option names ("Sam · Rome round trip · Florence + Barcelona"), linking to Routes, or "Not chosen yet".
 - **Split costs** (`splitCosts.js`): add, edit and delete a label, amount, note and **Who's this for?** (Everyone, or chosen travelers). Split equally between the travelers it's for (§11); a cost for some shows "÷ 2 · Matt, Sam".
 - **Budget**: one row per traveler with their total ("at least $X" while a price is missing), each a collapsed `<details>` opening to four parts — Flights from home, Option flights, Stays, Split costs — that add up to it. Then an "Everyone together" row. If anything is missing, the card is headed **Total so far (missing some prices)** and lists what's missing. Never show a missing price as $0 (§11).
-- **Album**: paste a Google Photos or iCloud shared album link into `albumUrl`, validated with §9.5, with **Open album** once it's set.
+- **Shared links** (`sharedLinks.js`): a card with two rows, **Album** and **Our My Maps**. Unset: a muted hint and **Add link**, opening a small sheet with the shared `linkField()` and **Save**. Set: **Open ↗** and a ⋯ menu (Change link, Remove link — Remove asks first). Album validates with §9.5; Our My Maps validates and works out its KML address per §9.10.
 - **Trip comments** at the bottom (§7.4).
 
 ### 7.6 Routes tab
@@ -686,6 +687,14 @@ The price from a link is a **suggestion the user confirms** by saving it, which 
 ### 9.8 Airports (`airports.json`, `airports.js`)
 
 `js/data/airports.json` maps IATA code → `[city, country, lat, lng]` for airports with scheduled service (source: OurAirports, public domain). `js/lookup.js` fetches it once, on demand, and `createAirportIndex` exposes `info(code)`, `cityName(code)` and `cityKey(code)` ("Rome, IT" — FCO and CIA share a key, so a flight from one and back to the other is still a round trip). An unknown code falls back to the code itself.
+
+### 9.10 Reading Google My Maps links (`mymaps.js`)
+
+`parseMyMapsUrl(text)` returns `{ mid, url, viewUrl, kmlUrl }`, or `null` when the text isn't a My Maps link. `url` is the pasted link after `safeUrl()` (§9.5). Accepts `https://www.google.com/maps/d/<anything>?mid=<id>…` and `https://google.com/maps/d/…`, including `/u/0/edit`, `/viewer` and `/embed` — any path under `/maps/d/`, any other query parameters (`usp=sharing`, `ll=…`) ignored. `mid` must match `[A-Za-z0-9_-]{10,}`; missing or too short returns `null`, as does a plain Google Maps place link (no `/maps/d/` path) or anything that fails `safeUrl`.
+
+`viewUrl` is `https://www.google.com/maps/d/viewer?mid=<mid>`. `kmlUrl` is `https://www.google.com/maps/d/kml?mid=<mid>&forcekml=1` — downloads the whole map as KML, which `kmlimport.js` (§9.7) reads.
+
+`isShortMapsLink(text)` is `true` for `maps.app.goo.gl/…` and `goo.gl/maps/…`: these can't be read without fetching the page (§2), so the field asks the user to open the link and paste the full address instead. The app never fetches a My Maps link itself — only the existing KML importer, from a file the user downloaded by hand.
 
 ## 10. Export formats (`exporters.js`)
 

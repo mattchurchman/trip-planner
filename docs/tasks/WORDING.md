@@ -129,6 +129,24 @@ Tab names: **Overview · Routes · Map · Days** (T23 removes Recap; T25 merges 
 |---|---|
 | 🏠 {stay name} | Days, the house pin of the day's chosen stay — the stay's name alone in its popup ("Stay" when it has no name) |
 
+## Shared My Maps link (T59)
+
+| Wording | Where |
+|---|---|
+| Shared links | Overview, the card holding Album and Our My Maps |
+| Our My Maps | Overview, Shared links row (`map` icon) |
+| Add the group's shared map | Overview, Our My Maps row, unset |
+| Add your shared photo album | Overview, Album row, unset |
+| Add link | Overview, Shared links row, unset |
+| Open ↗ | Overview, Shared links row, set |
+| Change link | Overview, Shared links row ⋯ menu |
+| Remove link | Overview, Shared links row ⋯ menu |
+| Remove the {row} link? | Overview, Shared links, Remove confirmation |
+| That's a short link. Open it, then copy the address from the browser bar and paste that. | Our My Maps sheet, a `maps.app.goo.gl` / `goo.gl/maps` link |
+| That doesn't look like a Google My Maps link (it should contain google.com/maps/d/). | Our My Maps sheet, anything else that isn't a My Maps link |
+| That doesn't look like a link. | Album sheet, a link that fails URL safety |
+| Paste a link first. | Either sheet, Save pressed with nothing typed |
+
 ## Round 6, the phone pass (T41–T52)
 
 | Wording | Where |

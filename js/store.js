@@ -78,6 +78,7 @@ export function createTrip(name, user) {
     choices: {},
     selectedStayIds: [],
     albumUrl: null,
+    myMapsUrl: null,
     createdBy: user.uid,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),

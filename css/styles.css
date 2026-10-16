@@ -446,6 +446,14 @@ button.list-row:hover {
   white-space: nowrap;
 }
 
+/* A row's trailing slot holding more than one control (T59: Open ↗ + ⋯). */
+.list-row-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
 /* A column of card-rows, each its own card, instead of divided rows inside
    one card (R7 §6: "8px between rows-as-cards"). */
 .rows-as-cards {
