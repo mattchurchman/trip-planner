@@ -126,7 +126,7 @@ Read AGENTS.md, then do task T67. Model: Sonnet. Effort: medium. You may push to
 | # | Task | Model | Effort | Codex | Depends on | Status |
 |---|---|---|---|---|---|---|
 | T68 | [New category list, with an icon for each](T68-new-categories.md) | Sonnet | medium | GPT-5.6 Terra, medium | T67 | Done (2026-10-18) |
-| T69 | [Tidy place notes from My Maps](T69-tidy-notes.md) | Sonnet | medium | GPT-5.6 Terra, medium | T68 | To do |
+| T69 | [Tidy place notes from My Maps](T69-tidy-notes.md) | Sonnet | medium | GPT-5.6 Terra, medium | T68 | Done (2026-10-18) |
 
 **Order.** T68, then T69, one at a time — both touch `placeForm.js`. `SPEC.md` is already at 4.4, so neither task edits it and there's no separate review task; the owner checks close the round. Each is small: send only the kickoff line in a cleared session.
 

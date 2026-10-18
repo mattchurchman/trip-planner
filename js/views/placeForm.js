@@ -5,6 +5,7 @@ import { parseGoogleMapsUrl } from "../lib/mapsurl.js";
 import { nominatimSearch } from "../lookup.js";
 import { CATEGORIES } from "../lib/categories.js";
 import { nearestStop } from "../lib/stops.js";
+import { cleanNoteText } from "../lib/notes.js";
 
 /**
  * The three location-entry methods from §7.6: find it on Google Maps then
@@ -221,7 +222,7 @@ export function editPlaceDialog(place) {
       categoryOptions
     );
     const neighborhoodInput = el("input", { type: "text", value: place.neighborhood });
-    const noteInput = el("textarea", { rows: 2, value: place.note });
+    const noteInput = el("textarea", { rows: 2, value: cleanNoteText(place.note || "") });
     const linkInput = el("input", { type: "text", value: place.link || "" });
     const errorHolder = el("div", { className: "field-error-holder" });
     const cancelBtn = el("button", { type: "button", className: "btn btn-secondary", textContent: "Cancel" });

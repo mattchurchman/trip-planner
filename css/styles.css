@@ -1703,6 +1703,25 @@ button.list-row:hover {
   padding: 0 var(--space-4) var(--space-4);
 }
 
+.note-fields {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.note-fields dt {
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+
+.note-fields dt:not(:first-child) {
+  margin-top: var(--space-2);
+}
+
+.note-fields dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 .category-chip {
   color: var(--on-color);
   border-radius: var(--radius-pill);

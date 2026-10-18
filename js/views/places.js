@@ -1,10 +1,11 @@
 import { updatePlace, deletePlace, voteOnPlace } from "../store.js";
-import { el, icon, confirmDialog, friendlyError, rankControl, renderWhenIdle, menuButton } from "../ui.js";
+import { el, icon, confirmDialog, externalLink, friendlyError, rankControl, renderWhenIdle, menuButton } from "../ui.js";
 import { renderComments } from "./comments.js";
 import { editPlaceDialog, buildSetLocationInline, buildAddPlacePanel } from "./placeForm.js";
 import { sortByRank, notRankedByMe, voteCounts, toMillis } from "../lib/votes.js";
 import { safeUrl, googleMapsOpenUrl } from "../lib/links.js";
 import { CATEGORIES, categoryColor } from "../lib/categories.js";
+import { formatNote, splitLinks } from "../lib/notes.js";
 
 function openMapsUrlFor(place, selectedCity) {
   const saved = place.googleMapsUrl ? safeUrl(place.googleMapsUrl) : null;
@@ -205,13 +206,31 @@ export function createPlacesSection({ tripId, myUid, onError, mapClickState, onF
     return el("span", { className: "vote-compact" }, items);
   }
 
+  function linkedNoteText(text) {
+    return splitLinks(text).map((piece) => piece.url ? externalLink(piece.url, piece.host) : piece.text).filter(Boolean);
+  }
+
+  function renderNote(note) {
+    const blocks = formatNote(note);
+    if (blocks.every((block) => block.type === "text")) {
+      return el("div", {}, blocks.map((block) => el("p", {}, linkedNoteText(block.text))));
+    }
+    return el("dl", { className: "note-fields" }, blocks.flatMap((block) => {
+      if (block.type === "text") return [el("p", {}, linkedNoteText(block.text))];
+      return [
+        el("dt", { textContent: block.label }),
+        ...block.values.map((value) => el("dd", {}, linkedNoteText(value))),
+      ];
+    }));
+  }
+
   function renderPlaceRow(place) {
     const errorHolder = el("div", { className: "field-error-holder" });
     const hasLocation = place.lat != null && place.lng != null;
 
     const bodyDetails = [];
     if (place.neighborhood) bodyDetails.push(el("p", { className: "muted", textContent: place.neighborhood }));
-    if (place.note) bodyDetails.push(el("p", { textContent: place.note }));
+    if (place.note) bodyDetails.push(renderNote(place.note));
     const safeLink = place.link ? safeUrl(place.link) : null;
     if (safeLink) bodyDetails.push(el("a", { href: safeLink, target: "_blank", rel: "noopener noreferrer", textContent: "Link" }));
 

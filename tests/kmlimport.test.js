@@ -24,10 +24,15 @@ export const tests = [
     assert.equal(pin.note, "Great pastéis de nata");
   }],
 
+  ["parseKml: cleans My Maps description breaks into note lines", () => {
+    const { layers } = parseKml("<Document><Placemark><name>Test</name><description>Address: One&lt;br&gt;Notes: Two</description><Point><coordinates>-105,39</coordinates></Point></Placemark></Document>");
+    assert.equal(layers[0].pins[0].note, "Address: One\nNotes: Two");
+  }],
+
   ["parseKml: decodes escaped entities in text nodes", () => {
     const { layers } = parseKml(sampleKml);
     const pin = layers[1].pins.find((p) => p.name === "Belem Tower");
-    assert.equal(pin.note, "<b>Iconic</b> & historic");
+    assert.equal(pin.note, "Iconic & historic");
   }],
 
   ["parseKml: skips a LineString (route), keeping only the pin in that folder", () => {

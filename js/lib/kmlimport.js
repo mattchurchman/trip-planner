@@ -2,6 +2,8 @@
 // string/regex parsing, not DOMParser, so it runs in Node tests too. No DOM,
 // no Firebase.
 
+import { cleanNoteText } from "./notes.js";
+
 const EARTH_RADIUS_M = 6371000;
 
 export const KMZ_MESSAGE =
@@ -41,7 +43,7 @@ function parsePlacemark(xml) {
     name: extractTag(xml, "name"),
     lat,
     lng,
-    note: extractTag(xml, "description"),
+    note: cleanNoteText(extractTag(xml, "description")),
   };
 }
 
