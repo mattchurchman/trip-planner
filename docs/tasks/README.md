@@ -121,6 +121,22 @@ Read AGENTS.md, then do task T67. Model: Sonnet. Effort: medium. You may push to
 ```
 
 
+## Round 9 — owner testing, 2026-10-18 (spec 4.4)
+
+| # | Task | Model | Effort | Codex | Depends on | Status |
+|---|---|---|---|---|---|---|
+| T68 | [New category list, with an icon for each](T68-new-categories.md) | Sonnet | medium | GPT-5.6 Terra, medium | T67 | To do |
+| T69 | [Tidy place notes from My Maps](T69-tidy-notes.md) | Sonnet | medium | GPT-5.6 Terra, medium | T68 | To do |
+
+**Order.** T68, then T69, one at a time — both touch `placeForm.js`. `SPEC.md` is already at 4.4, so neither task edits it and there's no separate review task; the owner checks close the round. Each is small: send only the kickoff line in a cleared session.
+
+```
+Read AGENTS.md, then do task T68. Model: Sonnet. Effort: medium. You may push to master when tests pass.
+Read AGENTS.md, then do task T69. Model: Sonnet. Effort: medium. You may push to master when tests pass.
+```
+
+In Codex, select the model and effort from the Codex column and send the same line with `Model: GPT-5.6 Terra`.
+
 **Saving tokens and session limits.** Each task is sized for one fresh session on the model named. Before every task: **clear the context** (`/clear` or a new session), **select the model and effort** from the table, and send only the kickoff line — the agent reads what it needs from the repo. Copy-paste lines:
 
 ```

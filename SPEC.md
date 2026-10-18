@@ -1,6 +1,6 @@
 # Trip Planner — Specification
 
-Spec version: **4.3** (October 2026)
+Spec version: **4.4** (October 2026)
 
 This is the source of truth for what the app is and how it works. `docs/V4.md` (the agreed design for round 3) and `docs/R7.md` (the "Waypoint" look, round 7) are both folded into this file and are now history. The original build phases are in `PHASES.md` (all built); current work is in `docs/tasks/`. The working rules for every coding agent are in `AGENTS.md`, and the words on screen are governed by `docs/tasks/WORDING.md`. If code and this spec disagree, the spec wins unless the owner approves a change and this file is updated in the same commit.
 
@@ -85,7 +85,7 @@ js/lib/ — pure logic, no DOM and no Firebase, each with tests in tests/
   airports.js         build the airport/city index from airports.json (§9.8)
   airlines.js         airline code -> name ("AS" -> "Alaska")
   auth-errors.js      Firebase auth error codes -> plain sentences
-  categories.js       the place categories and their colors (§4)
+  categories.js       the place categories, their colors and icons (§4)
   choices.js          per-traveler choices, who a cost is for, merged stops, the budget (§11)
   coverage.js         night coverage of a stop by its chosen stays (§7.7)
   dates.js            date math and formatting
@@ -95,6 +95,7 @@ js/lib/ — pure logic, no DOM and no Firebase, each with tests in tests/
   icons.js            the icon set: name -> SVG path data, drawn by icon() in ui.js (§4)
   itineraryFormat.js  leg date and flight label formatting
   kmlimport.js        read layers and pins from a My Maps KML export (§9.7)
+  notes.js            clean and lay out a place note from My Maps (§9.7)
   links.js            external link builders and URL safety
   mapsurl.js          read coordinates and names from Google Maps URLs (§9.3)
   money.js            parse, format, split
@@ -213,7 +214,7 @@ A big number (the Overview total) may use `--fs-title` with tabular figures. Not
 
 **Icons.** One helper, `icon(name, { size = 20, label } = {})` in `js/ui.js`, builds an inline SVG: `viewBox="0 0 24 24"`, `fill="none"`, `stroke="currentColor"`, `stroke-width="1.75"`, round caps and joins, `aria-hidden="true"` unless a `label` is given (then `role="img"` with that `aria-label`). The path data is the single source in **`js/lib/icons.js`** (`export const ICONS = { name: ["d1", …] }`, circles written as path arcs), with a test that every name is a non-empty array of strings. The set: `overview`, `routes`, `map`, `days`, `flight`, `stay`, `place`, `love`, `like`, `pass`, `travelers`, `price`, `more`, `plus`, `edit`, `trash`, `link`, `external`, `download`, `walk`, `food`, `coffee`, `help`, `close`, `chevron`. Add an icon only by adding it to `icons.js`.
 
-Category → icon, for the icon tiles: Food `food`, Coffee & cafés `coffee`, Neighborhood walk and Walking tour `walk`, everything else `place`. **No emoji anywhere**: votes are the `love`/`like`/`pass` icons, the Days map's home base is the `stay` icon, and the "↗" after external links is the `external` icon at 14 px (the CSS `::after` rule stays only as a fallback for links built without `icon()`). Text check marks in labels ("Chosen ✓") may stay.
+Category → icon, for the icon tiles: every category has its own icon, named in the category table below (the `icon` column); a label not in the table (an older place) uses `place`. The category icons are Lucide shapes redrawn into `js/lib/icons.js` like the rest of the set. **No emoji anywhere**: votes are the `love`/`like`/`pass` icons, the Days map's home base is the `stay` icon, and the "↗" after external links is the `external` icon at 14 px (the CSS `::after` rule stays only as a fallback for links built without `icon()`). Text check marks in labels ("Chosen ✓") may stay.
 
 **Navigation.** Under 760 px, a fixed bottom tab bar with an icon (from the set above) and a label per tab, plus the top bar below. From 760 px the tabs move into the top bar and the bottom bar is gone. The active tab is a `--forest-soft` pill behind its icon.
 
@@ -242,20 +243,23 @@ Category → icon, for the icon tiles: Food `food`, Coffee & cafés `coffee`, Ne
 
 **Category colors** live in `js/lib/categories.js`; every other file imports them from there. They appear as a 9–10 px dot or an icon tint — never a filled pill with white text — and an icon tile behind a category icon uses the color at 14% (`color-mix(in srgb, <color> 14%, var(--surface))`). Menus and filters use this order:
 
-| Category | Color |
-|---|---|
-| Food | `#C2602F` |
-| Coffee & cafés | `#8B6B4E` |
-| Drinks & nightlife | `#7E5AA2` |
-| Neighborhood walk | `#4F8A4E` |
-| Sight | `#2F76A8` |
-| Museum & history | `#8A7A33` |
-| Walking tour | `#2F8A80` |
-| Event & seasonal | `#B8483F` |
-| Adventure | `#B98522` |
-| Day trip | `#5463A6` |
-| Shopping | `#A8507A` |
-| Other | `#6E7470` |
+| Category | Color | Icon |
+|---|---|---|
+| Food & Dining | `#C2602F` | `food` |
+| Coffee & Cafés | `#8B6B4E` | `coffee` |
+| Bars & Nightlife | `#7E5AA2` | `drinks` |
+| Neighborhoods & Walks | `#2F8A80` | `walk` |
+| Sights & Landmarks | `#2F76A8` | `sight` |
+| Arts, Museums & Culture | `#8A7A33` | `museum` |
+| Events & Seasonal | `#B8483F` | `event` |
+| Sports & Recreation | `#6E8E2A` | `sports` |
+| Nature & Outdoors | `#4F8A4E` | `nature` |
+| Adventure & Experiences | `#B98522` | `adventure` |
+| Day Trips | `#5463A6` | `daytrip` |
+| Shopping & Markets | `#A8507A` | `shopping` |
+| Other | `#6E7470` | `place` |
+
+Places saved before 4.4 keep their old label (Food, Sight, Day trip and so on). The app doesn't translate them: the owner relabels them by hand. Until then they show the Other color and the `place` icon, and the Edit dialog keeps the old label as the selected option, marked "(old)", so saving without touching Category never changes it.
 
 **Stage badge** colors (§11): Exploring, Planning and "Trip's over" use `--sunk` with `--muted` text; a countdown ("In 42 days") uses `--forest-soft` with `--forest` text; "Happening now" uses `--accent` with `--on-accent` text.
 
@@ -380,7 +384,7 @@ prices: [ PriceEntry ]
 **`places/{id}`**
 ```
 name: string
-category: one of the 12 categories in §4, stored as the exact label
+category: one of the 13 categories in §4, stored as the exact label (older places may hold a pre-4.4 label)
 neighborhood: string                 // free text, e.g. "Alfama"
 note: string
 lat: number | null, lng: number | null
@@ -611,7 +615,7 @@ One Leaflet map with place pins and stay price pins together, and one list below
 **Places**
 
 - Filters collapse behind one **Filters** button, which shows a count ("Filters · 2") when any are on and opens a sheet holding category (multi-select chips), neighborhood (a dropdown built from existing values), text search on name and note, **I haven't ranked yet**, and the sort (Group favorites by default, then Newest, Neighborhood, Category). **Add place** is a primary button on the same row as **Filters**.
-- **Each place is one compact row** (T49): a category dot, the name and the vote summary (the `love`/`like`/`pass` icons with counts, the viewer's own vote in `--forest`). Tapping a row opens it to show neighborhood, note, link, the Love/Like/Pass buttons, comments, Show on map, Edit and Delete; one open at a time is fine. A live update never closes a row someone has open. Clicking a marker scrolls to and opens its row.
+- **Each place is one compact row** (T49): a category dot, the name and the vote summary (the `love`/`like`/`pass` icons with counts, the viewer's own vote in `--forest`). Tapping a row opens it to show neighborhood, note (laid out by `notes.js`, §9.7), link, the Love/Like/Pass buttons, comments, Show on map, Edit and Delete; one open at a time is fine. A live update never closes a row someone has open. Clicking a marker scrolls to and opens its row.
 - **Add place**, in this order, because a Google Maps link alone captures an exact name, coordinates and a reusable link:
   1. **Find it on Google Maps.** A search box and a **Find on Google Maps ↗** button (§9.2), plus the shared link box (§4) — **Paste** fills it from the clipboard, and opening the dialog from a tap reads the clipboard once by itself when the box is empty (T42).
   2. **Paste the Google Maps link.** Parsed on paste or input (§9.3); found coordinates fill the location and, if empty, the name, then "✓ Pin found".
@@ -751,6 +755,7 @@ The price from a link is a **suggestion the user confirms** by saving it, which 
 - A KMZ file (binary, starting with "PK") resolves `{ layers: [], error: KMZ_MESSAGE }` instead of being parsed, where the message explains the "Export as KML instead of KMZ" tick box.
 - `findDuplicates(pins, places)` matches a pin to an existing place by the same name within 50 m, so importing the same map twice adds nothing.
 - The file is read in the browser with `FileReader`; nothing is uploaded anywhere.
+- **Notes from My Maps** (`notes.js`). A My Maps description arrives as HTML with one `Label: value` per line separated by `<br>`; which labels appear depends entirely on how the user built their map, so nothing assumes particular labels. `cleanNoteText(text)` turns `<br>` (any spelling) and `</p>`/`</div>` into line breaks, drops every other tag, decodes entities and trims each line; the importer stores notes through it, and the place Edit dialog fills its Note box through it. `formatNote(text)` reads a cleaned or uncleaned note into blocks: a line shaped `Label: value` (a label of 1–40 characters with no `/`, and not `http`/`https`) is a **field**, its value split into separate lines at ` | `; any other line is **text**. Every field and line is shown — the app hides nothing; trimming the data is up to the user, in My Maps. On a place row a note that is only text looks as it always did; one with fields shows them as a label/value list. Any `http(s)` URL in a value or line is a link (through `safeUrl`, §9.5) that reads as its host name without `www.` followed by the external icon. Nothing in a note is ever inserted as HTML.
 
 ### 9.8 Airports (`airports.json`, `airports.js`)
 
@@ -854,3 +859,4 @@ Changes are made by the owner (or a model the owner asks). Edit this file first,
 | 4.1 | 2026-10-12 | **Round 5, owner testing (T32–T40).** Google sign-in works on phones; the currency field is gone (every trip is USD) and traveler details always save; pasting a flight is scoped to the button you press, so there's no guessing where it lands (§7.6). **Every traveler now chooses their own idea and their own option, as two separate choices** (`trips.choices`, §5.3): one person's choice never moves another's, and `chosenOptionId` is retired to a read-only fallback so older trips keep the choice they had. Flights, stays and costs carry `forTravelerIds`, which says who the price is for — worked out automatically and overridable (§5.4, §11). Map, Stays and Days read one merged route built from everyone's choices rather than a single traveler's (§7.7, §7.8, §11), and the stage badge counts the trip as planned once anyone has chosen an option. New `js/lib/choices.js` holds the choices, the splits, the merged stops and the budget, which moved out of `totals.js`. On **Routes**, **Choose idea** sits beside Rename and Delete, an option card prices only its own flights ("per person") and names who they're for, and a summary pinned to the bottom adds up the traveler on screen (§7.6). **Overview**'s budget became one openable row per traveler — flights from home, option flights, stays, split costs — above "Everyone together" (§7.5). **Stays** group under the merged stops and find their own stop from their dates or their pin, with **Choose** / **Out** as two buttons (§7.7). A day on **Days** shows its chosen stay as a house pin and starts and ends its walking route there (§7.8, §9.2). The **Check prices** sweep over stale prices is gone (T36): a price is still checked by tapping it, and the sun dot is all staleness does now (§7.9, §11). Help, `docs/tasks/WORDING.md` and this file were brought back in line with the code in T40. |
 | 4.2 | 2026-10-12 | **Round 6, the phone pass (T41–T53).** The app behaves like a phone app: fields never zoom the page (16 px everywhere, pinch zoom still on), date fields match the others, the top bar keeps "Trip Planner" with the trip name on its own line and a round **?** Help button, and every screen was gone through at 375 px — Trips, Overview and Routes (T51), Map and Days (T52) — fixing overflow at the cause, mobile-first, with dialogs as bottom sheets (§3.2, §4). One shared link box now serves the flight, stay and place dialogs: it reads the clipboard once when it opens empty and re-reads on paste, typing or its **Paste** button, so a link never needs pasting twice (§4, §7.6, §7.7). Travelers are cards on Overview with one **Edit** sheet and one **Save** (§7.5). On **Routes**, **+ Idea** works, and on phones the total is a slim one-line bar with **Details** (§7.6). The price is a **chip** — amount, ↻, **Check** — with its age under it and **+ Add price** when there's none (§7.9). **"I live here — no flight needed"** (`choices.<travelerId>.localIdeaIds`): a traveler whose home airport is the idea's arrival city needs no flight from home, counts $0 and is never "missing", and anyone can tick it by hand (§5.3, §7.6, §11). Night math fixed: two visits to a city merge **only while their dates overlap or touch**, so the city you fly into ends at your first hop and a return is a second stop with its own `stopKey` (§11). **Stays** lists every stop as soon as there's a route, before any stay exists (§7.7). Places became compact rows that open for the rest, and the event fields and their filter are retired (§5.4, §7.7). Day headers read "{city} · {Day, Mon D}", and a day's home base and walking route only ever use a stay in that day's own city (§7.8). Help, `docs/tasks/WORDING.md`, `README.md` and this file were brought back in line with the code in T53. |
 | 4.3 | 2026-10-16 | **Round 7, "Waypoint" (T54–T66).** `docs/R7.md` folded in and retired; `docs/mock/routes-mock.html` is no longer the token source. A new look: forest green on warm paper, with marigold reserved for marking things, **six font sizes and no others**, Gabarito and Figtree (JetBrains Mono dropped — prices use tabular figures in the body font), 18 px cards with a border and no shadow, and the aliases `--teal`/`--sun` kept pointing at the new tokens (§4). New logo, app icon, favicon, home-screen icons and a topographic texture, all ready-made in `docs/brand/` (§3.3, §4). **One icon set and no emoji** (`js/lib/icons.js` + `icon()` in `ui.js`): votes, the Days home base and the external-link "↗" are all icons now (§4). Shared pieces were redrawn once — buttons, cards, rows, chips, badges, the segmented control, dialogs and empty states — with **a card never inside a card** (§4). **Delete and Edit moved into ⋯ menus** (`menuButton()`), so `.btn-danger` is only used inside a confirmation (§4). **The per-tab trip-name heading and stage pill are gone**: the trip name, dates and stage live in the top bar, and the stage chip on the Overview summary card (§4, §7.5). New feature: **the trip's shared Google My Maps link** (`trips.myMapsUrl`, `js/lib/mymaps.js`) on Overview, in a shared map bar on Map that makes importing two taps, and in the Days export sheet (§5.3, §7.5, §7.7, §7.8, §9.10). Every screen was reshaped: the trips list as readable cards (§7.2), Overview as a route-ribbon summary card with settings behind a tap (§7.5), Routes as two-column flight cards with switches that scroll (§7.6), Map with filters in a sheet and a sticky map (§7.7), Days with a day chooser and a numbered timeline (§7.8), plus sign-in, help and 404 (§3.2, §7.1). |
+| 4.4 | 2026-10-18 | **Round 9, owner testing (T68–T69).** New category list — 13 categories in the owner's order, keeping Day Trips, with colors carried over by meaning and two new ones, and every category its own icon (§4); older labels are relabelled by the owner by hand and survive an unchanged Edit (§4, §5.4). Notes imported from My Maps are cleaned on import and shown as a label/value list with short links, with no assumptions about which labels a map has (§7.7, §9.7). |

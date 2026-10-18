@@ -33,6 +33,14 @@ The repo is written so any coding agent can pick up the next task. `AGENTS.md` i
 | GitHub Copilot coding agent | `AGENTS.md` | Works from a GitHub issue; paste the kickoff line as the issue text |
 | Cursor | `AGENTS.md` | Use agent mode with the repo open |
 
+**Codex on ChatGPT Plus (as of 2026-10-18)** offers GPT-5.6 Terra, GPT-5.6 Sol and GPT-6 Astra:
+
+| Tier | Codex model | Note |
+|---|---|---|
+| A | GPT-5.6 Sol | GPT-6 Astra only if Sol fails twice — it's the strongest and uses the most of your limit |
+| B | GPT-5.6 Terra | Sol if it fails twice |
+| C | GPT-5.6 Terra, low effort | |
+
 Model names change often, so this table lists tiers, not model versions. Before using a backup agent for the first time, confirm it has a free or already-paid plan. Never add payment details for this project.
 
 Kickoff line (the same for every agent):
