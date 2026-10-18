@@ -5,20 +5,11 @@
 // call `renderTimeline` again whenever the day's places change.
 import { el, icon, menuButton, row, friendlyError, setPending } from "../ui.js";
 import { sortByRank, voteSummary } from "../lib/votes.js";
-import { categoryColor } from "../lib/categories.js";
-
-/** Category → icon name for the timeline's icon tile (R7 §5 mapping). Add
- * more icons only alongside R7 §5's own table. */
-function categoryIconName(category) {
-  if (category === "Food") return "food";
-  if (category === "Coffee & cafés") return "coffee";
-  if (category === "Neighborhood walk" || category === "Walking tour") return "walk";
-  return "place";
-}
+import { categoryColor, categoryIcon } from "../lib/categories.js";
 
 function iconTile(category) {
   return el("span", { className: "icon-tile", style: `--cat:${categoryColor(category)}` }, [
-    icon(categoryIconName(category), { size: 18 }),
+    icon(categoryIcon(category), { size: 18 }),
   ]);
 }
 

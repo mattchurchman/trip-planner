@@ -69,15 +69,15 @@ export function seed(T) {
     out[t + "places/" + id] = { name, category, neighborhood: hood, note: "", lat, lng, googleMapsUrl: "https://maps.google.com/?q=" + encodeURIComponent(name),
       link: null, stopKey, layer: "", dayId, dayOrder, votes, ...meta() };
   };
-  place("pl1", "Roscioli Salumeria", "Food", "Centro Storico", 41.8937, 12.4729, "Rome, IT", { "u-matt": "love", "u-sam": "love" }, "d1", 1);
-  place("pl2", "Sant'Eustachio Il Caffè", "Coffee & cafés", "Pantheon", 41.8984, 12.4755, "Rome, IT", { "u-priya": "like" }, "d1", 0);
-  place("pl3", "Galleria Borghese", "Museum & history", "Villa Borghese", 41.9142, 12.4921, "Rome, IT", { "u-matt": "love", "u-priya": "love", "u-sam": "like" }, "d2", 0);
-  place("pl4", "Trastevere evening walk", "Neighborhood walk", "Trastevere", 41.8894, 12.4700, "Rome, IT", { "u-sam": "love" });
-  place("pl5", "Pantheon", "Sight", "Centro Storico", 41.8986, 12.4769, "Rome, IT", { "u-matt": "like" }, "d1", 2);
-  place("pl6", "Sagrada Família", "Sight", "Eixample", 41.4036, 2.1744, "Barcelona, ES", { "u-matt": "love", "u-priya": "love" });
-  place("pl7", "Bar Cañete", "Food", "El Raval", 41.3797, 2.1736, "Barcelona, ES", { "u-sam": "love" });
-  place("pl8", "Paradiso", "Drinks & nightlife", "El Born", 41.3853, 2.1832, "Barcelona, ES", { "u-sam": "like", "u-matt": "pass" });
-  place("pl9", "Montserrat", "Day trip", "", 41.5933, 1.8376, "Barcelona, ES", {});
+  place("pl1", "Roscioli Salumeria", "Food & Dining", "Centro Storico", 41.8937, 12.4729, "Rome, IT", { "u-matt": "love", "u-sam": "love" }, "d1", 1);
+  place("pl2", "Sant'Eustachio Il Caffè", "Coffee & Cafés", "Pantheon", 41.8984, 12.4755, "Rome, IT", { "u-priya": "like" }, "d1", 0);
+  place("pl3", "Galleria Borghese", "Arts, Museums & Culture", "Villa Borghese", 41.9142, 12.4921, "Rome, IT", { "u-matt": "love", "u-priya": "love", "u-sam": "like" }, "d2", 0);
+  place("pl4", "Trastevere evening walk", "Neighborhoods & Walks", "Trastevere", 41.8894, 12.4700, "Rome, IT", { "u-sam": "love" });
+  place("pl5", "Pantheon", "Sights & Landmarks", "Centro Storico", 41.8986, 12.4769, "Rome, IT", { "u-matt": "like" }, "d1", 2);
+  place("pl6", "Sagrada Família", "Sights & Landmarks", "Eixample", 41.4036, 2.1744, "Barcelona, ES", { "u-matt": "love", "u-priya": "love" });
+  place("pl7", "Bar Cañete", "Food & Dining", "El Raval", 41.3797, 2.1736, "Barcelona, ES", { "u-sam": "love" });
+  place("pl8", "Paradiso", "Bars & Nightlife", "El Born", 41.3853, 2.1832, "Barcelona, ES", { "u-sam": "like", "u-matt": "pass" });
+  place("pl9", "Montserrat", "Day Trips", "", 41.5933, 1.8376, "Barcelona, ES", {});
 
   const stay = (id, name, provider, hood, lat, lng, ci, co, stopKey, c, outFlag = false) => {
     out[t + "stays/" + id] = { name, provider, link: "https://www.booking.com/", neighborhood: hood, lat, lng, checkIn: ci, checkOut: co, guests: 3,

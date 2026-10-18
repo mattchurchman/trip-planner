@@ -210,10 +210,15 @@ export function buildLocationPicker({ getCity = () => null, mapClickState, onCha
 export function editPlaceDialog(place) {
   return dialogShell("place-edit-dialog", (finish) => {
     const nameInput = el("input", { type: "text", value: place.name });
+    const hasOldCategory = place.category && !CATEGORIES.some((c) => c.label === place.category);
+    const categoryOptions = hasOldCategory
+      ? [el("option", { value: place.category, textContent: `${place.category} (old)`, selected: true })]
+      : [];
+    categoryOptions.push(...CATEGORIES.map((c) => el("option", { value: c.label, textContent: c.label, selected: c.label === place.category })));
     const categorySelect = el(
       "select",
       {},
-      CATEGORIES.map((c) => el("option", { value: c.label, textContent: c.label, selected: c.label === place.category }))
+      categoryOptions
     );
     const neighborhoodInput = el("input", { type: "text", value: place.neighborhood });
     const noteInput = el("textarea", { rows: 2, value: place.note });
