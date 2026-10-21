@@ -8,7 +8,7 @@ Project: **Trip Planner**, a small private web app a few friends use to plan tri
 
 **One task per session. Never start a second task in the same session.**
 
-1. Open `docs/tasks/README.md`. Your task is the one the owner names, or else the first **To do** row whose dependencies are all **Done**.
+1. Open `docs/tasks/README.md`. Your task is the one the owner names, or else the first **To do** row whose dependencies are all **Done**. Finished rounds are in `docs/tasks/HISTORY.md`; don't open it unless the owner asks.
 2. Open only that task file (`docs/tasks/Txx-*.md`).
 3. **Model check.** The task header names a model and an effort level. If the owner's message names the same model (or a stronger one), continue. If it names a weaker one or none, stop and say:
    `Task Txx is written for <model> at <effort> effort. Switch to that, clear the context, and send the kickoff line again. Reply "continue" to go ahead on the current model anyway.`
@@ -42,11 +42,11 @@ Before you continue:
 
 ## 2. Where the truth lives
 
-- `SPEC.md` (version 4.3) is the design — the look as well as the behavior. It is the only source of truth: T30 folded `docs/V4.md` into it and T66 folded `docs/R7.md` in.
-- `docs/V4.md`, `docs/R7.md` and `docs/mock/routes-mock.html` are history now. Don't build from them; where any of them differs from `SPEC.md`, **SPEC wins**.
+- `SPEC.md` (version 4.4) is the design — the look as well as the behavior. It is the only source of truth: T30 folded `docs/history/V4.md` into it and T66 folded `docs/history/R7.md` in.
+- `docs/history/V4.md`, `docs/history/R7.md` and `docs/history/routes-mock.html` are history now. Don't build from them; where any of them differs from `SPEC.md`, **SPEC wins**.
 - Ready-made logo, icon and texture files are in `docs/brand/`: copy them, never redraw (`SPEC.md` §3.3).
 - `docs/tasks/WORDING.md` governs words on screen.
-- `PHASES.md` is history. Don't build from it.
+- `docs/history/PHASES.md` is history. Don't build from it.
 
 The data model and security rules are exact. If you think one must change beyond what your task says, stop and ask.
 
@@ -54,8 +54,8 @@ The data model and security rules are exact. If you think one must change beyond
 
 - **Free, no card, ever.** Firebase **Spark** plan only: Authentication, Firestore, Hosting. Never Cloud Functions, Cloud Storage, Blaze, or any service that asks for payment details.
 - Plain HTML, CSS and JavaScript ES modules. No frameworks, no build step, no bundler, no TypeScript, no npm packages in the app.
-- Hosting is **Firebase Hosting**, deployed by GitHub Actions on every push to `master` (from T14; before that, GitHub Pages). `master` is the default branch; there is no `main`.
-- Sign-in is Google or email and password (from T15), gated by the `allowlist` collection.
+- Hosting is **Firebase Hosting**, deployed by GitHub Actions on every push to `master`. `master` is the default branch; there is no `main`.
+- Sign-in is Google or email and password, gated by the `allowlist` collection.
 - The map is Leaflet 1.9.4 with OpenStreetMap tiles. Never the Google Maps JavaScript API, the Places API, or any API key.
 - The only outside services the app calls are Nominatim and the Wikipedia summary API, both from `js/lookup.js`. Everything else is a link the user opens.
 - No flight or hotel price APIs, no scraping, no made-up data in the app. Prices come from pasted links or the user.

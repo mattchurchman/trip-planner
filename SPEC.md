@@ -2,7 +2,7 @@
 
 Spec version: **4.5** (October 2026)
 
-This is the source of truth for what the app is and how it works. `docs/V4.md` (the agreed design for round 3) and `docs/R7.md` (the "Waypoint" look, round 7) are both folded into this file and are now history. The original build phases are in `PHASES.md` (all built); current work is in `docs/tasks/`. The working rules for every coding agent are in `AGENTS.md`, and the words on screen are governed by `docs/tasks/WORDING.md`. If code and this spec disagree, the spec wins unless the owner approves a change and this file is updated in the same commit.
+This is the source of truth for what the app is and how it works. `docs/history/V4.md` (the agreed design for round 3) and `docs/history/R7.md` (the "Waypoint" look, round 7) are both folded into this file and are now history. The original build phases are in `docs/history/PHASES.md` (all built); current work is in `docs/tasks/`. The working rules for every coding agent are in `AGENTS.md`, and the words on screen are governed by `docs/tasks/WORDING.md`. If code and this spec disagree, the spec wins unless the owner approves a change and this file is updated in the same commit.
 
 ---
 
