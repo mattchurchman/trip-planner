@@ -132,7 +132,7 @@ Read AGENTS.md, then do task T67. Model: Sonnet. Effort: medium. You may push to
 
 | # | Task | Model | Effort | Codex | Depends on | Status |
 |---|---|---|---|---|---|---|
-| T70 | [Slim the task board and fix stale doc references](T70-docs-cleanup.md) | Haiku | medium | GPT-5.6 Terra, low | T69 | Needs review |
+| T70 | [Slim the task board and fix stale doc references](T70-docs-cleanup.md) | Haiku | medium | GPT-5.6 Terra, low | T69 | To do |
 
 **Order.** T68, then T69, one at a time — both touch `placeForm.js`. `SPEC.md` is already at 4.4, so neither task edits it and there's no separate review task; the owner checks close the round. Each is small: send only the kickoff line in a cleared session.
 
