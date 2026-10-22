@@ -143,29 +143,14 @@ Read AGENTS.md, then do task T69. Model: Sonnet. Effort: medium. You may push to
 
 In Codex, select the model and effort from the Codex column and send the same line with `Model: GPT-5.6 Terra`.
 
-**Saving tokens and session limits.** Each task is sized for one fresh session on the model named. Before every task: **clear the context** (`/clear` or a new session), **select the model and effort** from the table, and send only the kickoff line — the agent reads what it needs from the repo. Copy-paste lines:
+## Round 11 — owner testing, Map and Days, 2026-10-21
 
-```
-Read AGENTS.md, then do task T54. Model: Sonnet. Effort: medium. You may push to master when tests pass.
-Read AGENTS.md, then do task T55. Model: Haiku. Effort: low. You may push to master when tests pass.
-Read AGENTS.md, then do task T56. Model: Sonnet. Effort: medium. You may push to master when tests pass.
-Read AGENTS.md, then do task T57. Model: Sonnet. Effort: high. You may push to master when tests pass.
-Read AGENTS.md, then do task T58. Model: Sonnet. Effort: medium. You may push to master when tests pass.
-Read AGENTS.md, then do task T59. Model: Sonnet. Effort: medium. You may push to master when tests pass.
-Read AGENTS.md, then do task T60. Model: Sonnet. Effort: medium. You may push to master when tests pass.
-Read AGENTS.md, then do task T61. Model: Sonnet. Effort: high. You may push to master when tests pass.
-Read AGENTS.md, then do task T62. Model: Sonnet. Effort: high. You may push to master when tests pass.
-Read AGENTS.md, then do task T63. Model: Sonnet. Effort: medium. You may push to master when tests pass.
-Read AGENTS.md, then do task T64. Model: Sonnet. Effort: high. You may push to master when tests pass.
-Read AGENTS.md, then do task T65. Model: Haiku. Effort: medium. You may push to master when tests pass.
-Read AGENTS.md, then do task T66. Model: Opus. Effort: medium. You may push to master when tests pass.
-```
+| # | Task | Model | Effort | Codex | Depends on | Status |
+|---|---|---|---|---|---|---|
+| T71 | [Map tab: map visible on phones, vote from the list](T71-map-phone-and-quick-votes.md) | Sonnet | medium | GPT-5.6 Terra, medium | T70 | Needs review |
+| T72 | [Days: show the day's note, spot empty days](T72-day-notes-and-empty-days.md) | Sonnet | medium | GPT-5.6 Terra, medium | T71 | Needs review |
 
-Fixes found during an **Owner check** stay in that task's session (they're small and the context is warm). Anything bigger becomes a new task.
-
-**Order.** Top to bottom is the safe path. Two tasks can be done early or alongside others because they touch nothing else: **T17** (any time before T18) and **T22** (any time after T16). Everything else changes shared screens, so run those one at a time.
-
-**Natural stopping points** where the app is fully usable: after T15 (sign-in fixed), after T21 (Routes complete), after T25 (Map complete), after T30.
+**Order.** T70, then T71, then T72, one at a time. `SPEC.md` is already at 4.5 (§7.7, §7.8), so neither task edits it; the owner checks close the round.
 
 ## Earlier rounds (history)
 
@@ -192,6 +177,34 @@ The first "T08" (link parsing and card changes, 2026-09-28) was reverted. These 
 | T12 | [Add stay dialog with "Where is it?"](T12-stay-dialog.md) | Sonnet | T11 | Done (2026-09-28) |
 | T13 | [Stays price-pin map](T13-stays-map.md) | Sonnet | T12 | Done (2026-09-28) |
 
+```
+Read AGENTS.md, then do task T71. Model: Sonnet. Effort: medium. You may push to master when tests pass.
+Read AGENTS.md, then do task T72. Model: Sonnet. Effort: medium. You may push to master when tests pass.
+```
+
+**Saving tokens and session limits.** Each task is sized for one fresh session on the model named. Before every task: **clear the context** (`/clear` or a new session), **select the model and effort** from the table, and send only the kickoff line — the agent reads what it needs from the repo. Copy-paste lines:
+
+```
+Read AGENTS.md, then do task T54. Model: Sonnet. Effort: medium. You may push to master when tests pass.
+Read AGENTS.md, then do task T55. Model: Haiku. Effort: low. You may push to master when tests pass.
+Read AGENTS.md, then do task T56. Model: Sonnet. Effort: medium. You may push to master when tests pass.
+Read AGENTS.md, then do task T57. Model: Sonnet. Effort: high. You may push to master when tests pass.
+Read AGENTS.md, then do task T58. Model: Sonnet. Effort: medium. You may push to master when tests pass.
+Read AGENTS.md, then do task T59. Model: Sonnet. Effort: medium. You may push to master when tests pass.
+Read AGENTS.md, then do task T60. Model: Sonnet. Effort: medium. You may push to master when tests pass.
+Read AGENTS.md, then do task T61. Model: Sonnet. Effort: high. You may push to master when tests pass.
+Read AGENTS.md, then do task T62. Model: Sonnet. Effort: high. You may push to master when tests pass.
+Read AGENTS.md, then do task T63. Model: Sonnet. Effort: medium. You may push to master when tests pass.
+Read AGENTS.md, then do task T64. Model: Sonnet. Effort: high. You may push to master when tests pass.
+Read AGENTS.md, then do task T65. Model: Haiku. Effort: medium. You may push to master when tests pass.
+Read AGENTS.md, then do task T66. Model: Opus. Effort: medium. You may push to master when tests pass.
+```
+
+Fixes found during an **Owner check** stay in that task's session (they're small and the context is warm). Anything bigger becomes a new task.
+
+**Order.** Top to bottom is the safe path. Two tasks can be done early or alongside others because they touch nothing else: **T17** (any time before T18) and **T22** (any time after T16). Everything else changes shared screens, so run those one at a time.
+
+**Natural stopping points** where the app is fully usable: after T15 (sign-in fixed), after T21 (Routes complete), after T25 (Map complete), after T30.
 
 ## Writing a new task
 

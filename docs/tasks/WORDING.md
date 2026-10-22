@@ -189,3 +189,14 @@ Round 6 retires the event fields: **Add place** no longer asks for event dates, 
 | + Add from not planned · {N} | Days, the focused day — opens the Not planned sheet |
 | Not planned | Days, that sheet's title (was the page's own `h2`) |
 | Open our shared map ↗ | Days, Export sheet, when `trip.myMapsUrl` is set |
+
+## Round 11 (T71–T72)
+
+| Words | Where |
+|---|---|
+| Love / Like / Pass (`aria-label`s with the count, e.g. "Love · 2") | Map, the vote bar on each place row |
+| {N} days with nothing planned / 1 day with nothing planned | Days, the line under the day chooser |
+| Next empty › | Days, beside that line — selects the next day with no places |
+| Every day has something planned | Days, that line when no day is empty |
+| "{chip date}, {N} places" / "{chip date}, nothing planned" (`aria-label`) | Days, each day chip |
+| + Add note | Days, under the day's header when it has no note |
