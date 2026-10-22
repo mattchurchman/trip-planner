@@ -1704,10 +1704,23 @@ button.list-row:hover {
   font-size: var(--fs-small);
 }
 
+/* The chosen vote reads as a tinted, heavily outlined button rather than a
+   solid fill — the same formula as `.stay-out-btn[aria-pressed="true"]`,
+   which matters most in dark mode, where --forest is a bright mint and a
+   filled button glows next to the card. The second ring is an inset shadow,
+   not a 2px border: a wider border would resize the box and nudge the icon
+   and count by a pixel on every vote. */
 .vote-bar-pressed {
-  background: var(--forest);
-  color: var(--on-forest);
+  background: var(--forest-soft);
+  color: var(--forest);
   border-color: var(--forest);
+  box-shadow: inset 0 0 0 1px var(--forest);
+  font-weight: 700;
+}
+
+.vote-bar-pressed:hover:not(:disabled) {
+  border-color: var(--forest);
+  color: var(--forest);
 }
 
 .place-row-body {
