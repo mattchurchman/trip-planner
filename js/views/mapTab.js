@@ -110,6 +110,7 @@ export function renderMapPage(container, tripId, myUid) {
     if (!map) return;
     const marker = (kind === "place" ? placeMarkersById : stayMarkersById).get(id);
     if (!marker) return;
+    if (window.innerWidth < 760) mapEl.scrollIntoView({ behavior: "smooth", block: "start" });
     map.panTo(marker.getLatLng());
   }
 
@@ -236,6 +237,9 @@ export function renderMapPage(container, tripId, myUid) {
     map.on("click", (e) => {
       if (mapClickState.armed && mapClickState.onPick) mapClickState.onPick(e.latlng);
     });
+    // The fixed phone height and the sticky desktop one both change size on
+    // rotation; Leaflet caches its size, so pins drift off-centre without this.
+    window.addEventListener("orientationchange", () => setTimeout(() => map.invalidateSize(), 200));
   }
 
   function isKnownCity(stopKey) {

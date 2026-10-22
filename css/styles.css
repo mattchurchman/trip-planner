@@ -1522,9 +1522,10 @@ button.list-row:hover {
   margin: 0;
 }
 
-/* Map tab layout (T25, T52): mobile-first — map on top at ~40dvh, the list
-   (Places or Stays) below it. From 760px the map moves beside the list,
-   sticky, at its old fixed height. */
+/* Map tab layout (T25, T52, T71): mobile-first — the map sits at the top at a
+   fixed 35dvh (never zero height, so it's always visible), the list (Places
+   or Stays) scrolls away below it. From 760px the map moves beside the list,
+   sticky, sized to fit whatever is left below the top bar. */
 .map-tab-layout {
   display: flex;
   flex-direction: column;
@@ -1541,10 +1542,10 @@ button.list-row:hover {
 }
 
 .map-tab-map {
-  flex: 1;
+  flex: none;
   min-width: 0;
   width: 100%;
-  height: 40dvh;
+  height: 35dvh;
   border-radius: var(--radius-card);
   border: 1px solid var(--line);
   order: -1;
@@ -1557,9 +1558,14 @@ button.list-row:hover {
   }
 
   .map-tab-map {
-    height: 500px;
+    /* 70px clears .top-bar: with a trip open its two-line title (name +
+       dates/travelers) is taller than the logo alone, plus 2 × 12px
+       (--space-3) padding and the safe-area inset on notched phones.
+       `top` has to clear it too, or the sticky map parks under the sticky
+       bar instead of below it. */
+    height: min(500px, calc(100dvh - 70px - env(safe-area-inset-top) - 2 * var(--space-4)));
     position: sticky;
-    top: var(--space-4);
+    top: calc(70px + env(safe-area-inset-top) + var(--space-4));
     order: 0;
   }
 }
@@ -1655,6 +1661,7 @@ button.list-row:hover {
 
 .place-row-summary {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
   min-height: 44px;
@@ -1667,33 +1674,42 @@ button.list-row:hover {
   display: none;
 }
 
+/* T71: the name takes the full remaining width on its own line, which (with
+   the summary's flex-wrap) pushes the vote bar after it onto a new line —
+   its own row under 760px. From 760px the name shares the line instead, so
+   the vote bar sits to its right. */
 .place-row-name {
-  flex: 1 1 auto;
+  flex: 1 1 100%;
   min-width: 0;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   font-weight: 700;
 }
 
-.vote-compact {
+@media (min-width: 760px) {
+  .place-row-name {
+    flex: 1 1 auto;
+  }
+}
+
+.vote-bar {
   display: flex;
   gap: 6px;
   flex-shrink: 0;
+}
+
+.vote-bar-btn {
+  padding: var(--space-1) var(--space-2);
   font-size: var(--fs-small);
-  white-space: nowrap;
 }
 
-.vote-compact-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-}
-
-.vote-compact-mine {
-  font-weight: 700;
-  color: var(--teal);
-  border-bottom: 2px solid var(--teal);
+.vote-bar-pressed {
+  background: var(--forest);
+  color: var(--on-forest);
+  border-color: var(--forest);
 }
 
 .place-row-body {

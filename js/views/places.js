@@ -1,8 +1,9 @@
 import { updatePlace, deletePlace, voteOnPlace } from "../store.js";
-import { el, icon, confirmDialog, externalLink, friendlyError, rankControl, renderWhenIdle, menuButton } from "../ui.js";
+import { el, confirmDialog, externalLink, friendlyError, rankControl, renderWhenIdle, menuButton } from "../ui.js";
 import { renderComments } from "./comments.js";
 import { editPlaceDialog, buildSetLocationInline, buildAddPlacePanel } from "./placeForm.js";
-import { sortByRank, notRankedByMe, voteCounts, toMillis } from "../lib/votes.js";
+import { voteBar } from "./voteBar.js";
+import { sortByRank, notRankedByMe, toMillis } from "../lib/votes.js";
 import { safeUrl, googleMapsOpenUrl } from "../lib/links.js";
 import { CATEGORIES, categoryColor } from "../lib/categories.js";
 import { formatNote, splitLinks } from "../lib/notes.js";
@@ -53,7 +54,7 @@ export function createPlacesSection({ tripId, myUid, onError, mapClickState, onF
   let addPanelBuilt = false;
   let addPanel = null;
   const filters = { categories: new Set(), neighborhood: "", search: "", notRankedOnly: false };
-  const openPlaceIds = new Set();
+  let openPlaceId = null;
   let sortMode = "rank";
   let lastNeighborhoodsKey = "";
 
@@ -191,21 +192,6 @@ export function createPlacesSection({ tripId, myUid, onError, mapClickState, onF
     }
   }
 
-  /** Compact love/like/pass icon summary (§7.7, R7 §5); the viewer's own vote is highlighted. */
-  function compactVoteSummary(votes) {
-    const counts = voteCounts(votes);
-    const myChoice = (votes || {})[myUid];
-    const items = ["love", "like", "pass"]
-      .filter((choice) => counts[choice] > 0)
-      .map((choice) =>
-        el("span", {
-          className: `vote-compact-item${choice === myChoice ? " vote-compact-mine" : ""}`,
-        }, [icon(choice, { size: 15 }), el("span", { textContent: String(counts[choice]) })])
-      );
-    if (items.length === 0) return el("span", { className: "vote-compact muted", textContent: "Not ranked" });
-    return el("span", { className: "vote-compact" }, items);
-  }
-
   function linkedNoteText(text) {
     return splitLinks(text).map((piece) => piece.url ? externalLink(piece.url, piece.host) : piece.text).filter(Boolean);
   }
@@ -234,15 +220,12 @@ export function createPlacesSection({ tripId, myUid, onError, mapClickState, onF
     const safeLink = place.link ? safeUrl(place.link) : null;
     if (safeLink) bodyDetails.push(el("a", { href: safeLink, target: "_blank", rel: "noopener noreferrer", textContent: "Link" }));
 
-    const rank = rankControl({
-      votes: place.votes || {},
-      myUid,
-      usersById,
-      onVote: (choice) =>
-        voteOnPlace(tripId, place.id, myUid, choice).catch((err) =>
-          errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }))
-        ),
-    });
+    const castVote = (choice) =>
+      voteOnPlace(tripId, place.id, myUid, choice).catch((err) =>
+        errorHolder.replaceChildren(el("p", { className: "field-error", textContent: friendlyError(err) }))
+      );
+    const rank = rankControl({ votes: place.votes || {}, myUid, usersById, onVote: castVote }); // who-voted-what only (§7.7)
+    rank.querySelector(".rank-buttons")?.remove();
 
     const showOnMapBtn = hasLocation
       ? el("button", { type: "button", className: "btn btn-small", textContent: "Show on map", onclick: () => onFocusOnMap(place) })
@@ -290,18 +273,26 @@ export function createPlacesSection({ tripId, myUid, onError, mapClickState, onF
 
     const row = el("details", {
       className: "card place-row",
-      open: openPlaceIds.has(place.id),
+      open: openPlaceId === place.id,
       attrs: { "data-place-id": place.id },
       ontoggle: () => {
-        if (row.open) openPlaceIds.add(place.id);
-        else openPlaceIds.delete(place.id);
+        if (row.open) {
+          openPlaceId = place.id;
+          for (const other of listEl.querySelectorAll(".place-row")) {
+            if (other !== row) other.open = false;
+          }
+          row.scrollIntoView({ block: "nearest" });
+        } else if (openPlaceId === place.id) {
+          openPlaceId = null;
+        }
       },
     });
 
+    const vote = voteBar({ votes: place.votes || {}, myUid, onVote: castVote });
     const summary = el("summary", { className: "place-row-summary" }, [
       el("span", { className: "category-chip", textContent: place.category, style: `background:${categoryColor(place.category)}` }),
       el("span", { className: "place-row-name", textContent: place.name }),
-      compactVoteSummary(place.votes || {}),
+      vote,
     ]);
 
     const body = el(
@@ -390,7 +381,10 @@ export function createPlacesSection({ tripId, myUid, onError, mapClickState, onF
       renderList();
     },
     focusCard(placeId) {
-      openPlaceIds.add(placeId);
+      openPlaceId = placeId;
+      for (const other of listEl.querySelectorAll(".place-row")) {
+        if (other.dataset.placeId !== String(placeId)) other.open = false;
+      }
       const row = listEl.querySelector(`[data-place-id="${placeId}"]`);
       if (!row) return;
       row.open = true;
