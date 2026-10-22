@@ -29,7 +29,7 @@ If a task fails twice, say "Revert the last commit" and rerun it in a fresh sess
 | # | Task | Model | Effort | Codex | Depends on | Status |
 |---|---|---|---|---|---|---|
 | T71 | [Map tab: map visible on phones, vote from the list](T71-map-phone-and-quick-votes.md) | Sonnet | medium | GPT-5.6 Terra, medium | T70 | Done (2026-10-21) |
-| T72 | [Days: show the day's note, spot empty days](T72-day-notes-and-empty-days.md) | Sonnet | medium | GPT-5.6 Terra, medium | T71 | Needs review |
+| T72 | [Days: show the day's note, spot empty days](T72-day-notes-and-empty-days.md) | Sonnet | medium | GPT-5.6 Terra, medium | T71 | Done (2026-10-21) |
 
 **Order.** T70, then T71, then T72, one at a time. `SPEC.md` is already at 4.5 (§7.7, §7.8), so neither task edits it; the owner checks close the round.
 

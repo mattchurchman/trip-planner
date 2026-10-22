@@ -2575,7 +2575,25 @@ button.list-row:hover {
   display: none;
 }
 
+/* Wraps the chooser row with its status line (T72, §7.8): "{N} days with
+   nothing planned" and Next empty ›, hidden with no days at all. */
+.day-chooser-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.day-chooser-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-label);
+}
+
 .day-chip {
+  position: relative;
   flex: 0 0 auto;
   scroll-snap-align: start;
   width: 58px;
@@ -2589,6 +2607,31 @@ button.list-row:hover {
   align-items: center;
   justify-content: center;
   gap: 2px;
+}
+
+/* The chip's corner mark (T72, §7.8): a count badge, or a dot when the day
+   has no places yet, so an empty day stands out in a long row. */
+.day-chip-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--forest);
+}
+
+.day-chip-selected .day-chip-badge {
+  color: var(--on-forest);
+}
+
+.day-chip-dot {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sun);
 }
 
 .day-chip-top {
@@ -2655,6 +2698,29 @@ button.list-row:hover {
   align-items: center;
   gap: var(--space-2);
   flex-wrap: wrap;
+}
+
+/* The day's note (T72, §7.8): tappable to open Edit day on the Notes box.
+   `-empty` is the "+ Add note" text-button state. */
+.day-note-btn {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-2) 0;
+  background: none;
+  border: none;
+  text-align: left;
+  color: var(--ink);
+  font: inherit;
+}
+
+.day-note-btn p {
+  margin: 0 0 2px;
+}
+
+.day-note-btn-empty {
+  color: var(--forest);
+  font-weight: 600;
 }
 
 .days-map-wrap {

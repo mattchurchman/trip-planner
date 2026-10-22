@@ -66,3 +66,32 @@ export function missingDays(existingDays, wanted) {
   const existingDates = new Set((existingDays || []).map((d) => d.date).filter(Boolean));
   return (wanted || []).filter((w) => !existingDates.has(w.date));
 }
+
+/** How many places sit on each day (T72, §7.8): every day in `days` gets an
+ * entry, 0 when none. Places whose `dayId` isn't one of `days` are ignored. */
+export function placeCountsByDay(days, places) {
+  const counts = {};
+  for (const day of days || []) counts[day.id] = 0;
+  for (const place of places || []) {
+    if (place && place.dayId != null && Object.prototype.hasOwnProperty.call(counts, place.dayId)) {
+      counts[place.dayId] += 1;
+    }
+  }
+  return counts;
+}
+
+/**
+ * The id of the next day after `fromId` with no places (T72, §7.8), walking
+ * `sortedDays` in order and wrapping round to the start; skips `fromId`
+ * itself and returns `null` when every day (other than it) has at least one
+ * place.
+ */
+export function nextEmptyDayId(sortedDays, counts, fromId) {
+  const list = sortedDays || [];
+  const startIndex = Math.max(0, list.findIndex((d) => d.id === fromId));
+  for (let step = 1; step <= list.length; step++) {
+    const day = list[(startIndex + step) % list.length];
+    if (day.id !== fromId && (counts[day.id] ?? 0) === 0) return day.id;
+  }
+  return null;
+}

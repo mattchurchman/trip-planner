@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createAirportIndex } from "../js/lib/airports.js";
 import { stopsFor } from "../js/lib/route.js";
-import { datesBetween, daysFromStops, missingDays, stayForDate } from "../js/lib/dayplan.js";
+import { datesBetween, daysFromStops, missingDays, stayForDate, placeCountsByDay, nextEmptyDayId } from "../js/lib/dayplan.js";
 
 const airports = createAirportIndex({
   DEN: ["Denver", "US", 39.86, -104.67],
@@ -158,5 +158,40 @@ export const tests = [
   ["stayForDate: no chosen stays at all, cityKey given", () => {
     const cities = [{ stopKey: "Paris, FR", lat: 48.85, lng: 2.35 }];
     assert.equal(stayForDate("2026-07-03", [], "Paris, FR", cities), null);
+  }],
+
+  ["placeCountsByDay: every day present, zero when no places", () => {
+    const days = [{ id: "d1" }, { id: "d2" }];
+    assert.deepEqual(placeCountsByDay(days, []), { d1: 0, d2: 0 });
+  }],
+
+  ["placeCountsByDay: counts places by dayId, ignoring ones not on a known day", () => {
+    const days = [{ id: "d1" }, { id: "d2" }];
+    const places = [{ dayId: "d1" }, { dayId: "d1" }, { dayId: "d2" }, { dayId: "d3" }, { dayId: null }];
+    assert.deepEqual(placeCountsByDay(days, places), { d1: 2, d2: 1 });
+  }],
+
+  ["nextEmptyDayId: finds the next day with zero places", () => {
+    const days = [{ id: "d1" }, { id: "d2" }, { id: "d3" }];
+    const counts = { d1: 1, d2: 0, d3: 2 };
+    assert.equal(nextEmptyDayId(days, counts, "d1"), "d2");
+  }],
+
+  ["nextEmptyDayId: wraps round past the end of the list", () => {
+    const days = [{ id: "d1" }, { id: "d2" }, { id: "d3" }];
+    const counts = { d1: 0, d2: 2, d3: 1 };
+    assert.equal(nextEmptyDayId(days, counts, "d3"), "d1");
+  }],
+
+  ["nextEmptyDayId: skips the selected day even when it has no places", () => {
+    const days = [{ id: "d1" }, { id: "d2" }];
+    const counts = { d1: 0, d2: 1 };
+    assert.equal(nextEmptyDayId(days, counts, "d1"), null);
+  }],
+
+  ["nextEmptyDayId: null when every other day is planned", () => {
+    const days = [{ id: "d1" }, { id: "d2" }, { id: "d3" }];
+    const counts = { d1: 0, d2: 3, d3: 1 };
+    assert.equal(nextEmptyDayId(days, counts, "d1"), null);
   }],
 ];

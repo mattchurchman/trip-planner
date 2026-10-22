@@ -11,17 +11,20 @@ import {
   watchStays,
 } from "../store.js";
 import { chosenStayIds } from "../lib/selection.js";
-import { el, icon, confirmDialog, friendlyError, field, dialogShell, menuButton } from "../ui.js";
+import { el, icon, confirmDialog, friendlyError, field, dialogShell, menuButton, externalLink } from "../ui.js";
 import { openExportSheet } from "./exportSection.js";
 import { renderTimeline, openNotPlannedSheet } from "./dayTimeline.js";
 import { walkingRouteLinks } from "../lib/links.js";
-import { datesBetween, daysFromStops, missingDays, stayForDate } from "../lib/dayplan.js";
+import { datesBetween, daysFromStops, missingDays, stayForDate, placeCountsByDay, nextEmptyDayId } from "../lib/dayplan.js";
 import { mergedStops } from "../lib/choices.js";
 import { formatLegDate } from "../lib/itineraryFormat.js";
+import { splitLinks } from "../lib/notes.js";
 import { createDaysMap } from "./daysMap.js";
+import { renderChooser, dayWeekday } from "./dayChooser.js";
 import { loadAirports } from "../lookup.js";
 
-function dayFormDialog(existing) {
+/** `focusNotes` (T72) starts the cursor in Notes instead of the title. */
+function dayFormDialog(existing, { focusNotes = false } = {}) {
   return dialogShell("day-dialog", (finish) => {
     const dateInput = el("input", { type: "date", value: existing?.date || "" });
     const titleInput = el("input", { type: "text", value: existing?.title || "" });
@@ -43,27 +46,17 @@ function dayFormDialog(existing) {
       event.preventDefault();
       finish({ date: dateInput.value || null, title: titleInput.value.trim(), focus: focusInput.value.trim(), notes: notesInput.value.trim() });
     });
-    return { form, focusEl: titleInput };
+    return { form, focusEl: focusNotes ? notesInput : titleInput };
   });
 }
 
 /** "<title> · <Sat 17 Oct>" when a day has both; the date alone with no
- * title, the title alone when undated (T50, §7.8). Used for the Edit/Delete
- * menu's `aria-label` and the pin sheet's per-day buttons — the day
- * chooser's own chips and the focused day's h1 use `dayWeekday`/`dayHeading`
- * instead (T64, R7 §7 Days). */
+ * title, the title alone when undated (T50, §7.8) — used for the Edit/Delete
+ * menu's `aria-label` and the pin sheet's per-day buttons. */
 function dayLabel(day) {
   const dateLabel = formatLegDate(day.date);
   if (day.title && dateLabel) return `${day.title} · ${dateLabel}`;
   return day.title || dateLabel || "Undated day";
-}
-
-/** `{ weekday, dateNum }` from a day's date ("Sat", "17"), or null undated. */
-function dayWeekday(date) {
-  const formatted = formatLegDate(date);
-  if (!formatted) return null;
-  const [weekday, dateNum] = formatted.split(" ");
-  return { weekday, dateNum };
 }
 
 /** The focused day's h1 (R7 §7 Days (b)): "{Weekday} · {city}" when both are
@@ -74,6 +67,18 @@ function dayHeading(day, stops) {
   const city = stop ? stop.city : day.title || null;
   if (weekday && city) return `${weekday} · ${city}`;
   return weekday || city || "Undated day";
+}
+
+/** `day.notes` as one `<p>` per line, links short and tappable (§9.7); a
+ * link's click stops before it bubbles to the note button (T72). */
+function noteParagraphs(notes) {
+  const piece = (p) => {
+    if (!p.url) return p.text;
+    const link = externalLink(p.url, p.host);
+    if (link) link.addEventListener("click", (event) => event.stopPropagation());
+    return link;
+  };
+  return notes.split("\n").map((line) => el("p", {}, splitLinks(line).map(piece).filter(Boolean)));
 }
 
 /** The merged route's stops — everyone's, merged into one (§11) — which is the
@@ -88,22 +93,6 @@ function chosenStops(trip, flights, options, airports) {
     const located = info && typeof info === "object";
     return { ...stop, lat: located ? info.lat : null, lng: located ? info.lng : null };
   });
-}
-
-/** The day chooser's 58px chip (R7 §7 Days (a)): weekday + date number, or
- * "Day {n}" undated. `dashed` marks a route date with no day yet. */
-function dayChip({ top, num, dashed = false, selected = false }, onClick) {
-  const btn = el(
-    "button",
-    {
-      type: "button",
-      className: `day-chip${dashed ? " day-chip-dashed" : ""}${selected ? " day-chip-selected" : ""}`,
-      attrs: { "aria-pressed": selected ? "true" : "false" },
-    },
-    [el("span", { className: "day-chip-top", textContent: top }), el("span", { className: "day-chip-num", textContent: num })]
-  );
-  btn.addEventListener("click", onClick);
-  return btn;
 }
 
 /** Renders the Days tab (T27/T64, V4 §8, R7 §7 Days): a day chooser, that
@@ -124,8 +113,12 @@ export function renderDaysPage(container, tripId, myUid) {
 
   const chooserEl = el("div", { className: "day-chooser" });
   const addDayChip = el("button", { type: "button", className: "day-chip day-chip-add", attrs: { "aria-label": "Add day" } }, [icon("plus", { size: 20 })]);
+  const chooserStatusTextEl = el("span", { className: "muted" });
+  const nextEmptyBtn = el("button", { type: "button", className: "btn btn-secondary btn-small", textContent: "Next empty ›" });
+  const chooserStatusEl = el("div", { className: "day-chooser-status" }, [chooserStatusTextEl, nextEmptyBtn]);
+  const chooserWrapEl = el("div", { className: "day-chooser-wrap" }, [chooserEl, chooserStatusEl]);
   const exportBtn = el("button", { type: "button", className: "icon-btn", attrs: { "aria-label": "Export" } }, [icon("download", { size: 20 })]);
-  const daysHeaderEl = el("div", { className: "days-header" }, [chooserEl, exportBtn]);
+  const daysHeaderEl = el("div", { className: "days-header" }, [chooserWrapEl, exportBtn]);
 
   const createDaysBtn = el("button", { type: "button", className: "btn btn-primary", textContent: "Create days from trip dates" });
   const emptyStateEl = el("div", { className: "card" }, [
@@ -147,6 +140,7 @@ export function renderDaysPage(container, tripId, myUid) {
   const daySubtitleEl = el("p", { className: "muted" });
   const walkWrapEl = el("div", { className: "day-routes" });
   const dayMenuHolder = el("div", {});
+  const dayNoteBtn = el("button", { type: "button", className: "day-note-btn" });
   const timelineHolder = el("div", {});
   const notPlannedBtn = el("button", { type: "button", className: "btn btn-small btn-dashed" });
 
@@ -156,6 +150,7 @@ export function renderDaysPage(container, tripId, myUid) {
       el("div", {}, [dayTitleEl, daySubtitleEl]),
       el("div", { className: "day-focus-actions" }, [walkWrapEl, dayMenuHolder]),
     ]),
+    dayNoteBtn,
     timelineHolder,
     notPlannedBtn,
   ]);
@@ -227,21 +222,23 @@ export function renderDaysPage(container, tripId, myUid) {
     openExportSheet({ trip, places, days, chosenStays, myMapsUrl: trip.myMapsUrl });
   });
 
+  async function editDay(day, { focusNotes = false } = {}) {
+    const result = await dayFormDialog(day, { focusNotes });
+    if (!result) return;
+    try {
+      await updateDay(tripId, day.id, result);
+    } catch (err) {
+      onError(err);
+    }
+  }
+
   function dayMenu(day, dayPlaces) {
     return menuButton(
       [
         {
           label: "Edit day",
           icon: "edit",
-          onSelect: async () => {
-            const result = await dayFormDialog(day);
-            if (!result) return;
-            try {
-              await updateDay(tripId, day.id, result);
-            } catch (err) {
-              onError(err);
-            }
-          },
+          onSelect: () => editDay(day),
         },
         {
           label: "Delete day",
@@ -265,34 +262,6 @@ export function renderDaysPage(container, tripId, myUid) {
       ],
       { label: `More actions for ${dayLabel(day)}` }
     );
-  }
-
-  /** Builds the day chooser row: existing days as chips, route dates with no
-   * day yet as dashed chips that create one (T64, R7 §7 Days (a)). */
-  function renderChooser(sorted, missing) {
-    const dayButtons = sorted.map((day, index) => {
-      const weekday = dayWeekday(day.date);
-      return dayChip(
-        { top: weekday ? weekday.weekday : "Day", num: weekday ? weekday.dateNum : String(index + 1), selected: day.id === selectedDayId },
-        () => {
-          selectedDayId = day.id;
-          renderDays();
-        }
-      );
-    });
-    const missingButtons = missing.map((spec) => {
-      const weekday = dayWeekday(spec.date) || { weekday: "", dateNum: "?" };
-      return dayChip({ top: weekday.weekday, num: weekday.dateNum, dashed: true }, async () => {
-        try {
-          const order = nextOrder();
-          const ref = await addDay(tripId, { date: spec.date, cityKey: spec.cityKey, title: spec.title, focus: "", notes: "", order }, myUid);
-          selectedDayId = ref.id;
-        } catch (err) {
-          onError(err);
-        }
-      });
-    });
-    chooserEl.replaceChildren(...dayButtons, ...missingButtons, addDayChip);
   }
 
   function renderDayFocus(day, stops, chosenStaysList) {
@@ -319,6 +288,16 @@ export function renderDaysPage(container, tripId, myUid) {
     );
     dayMenuHolder.replaceChildren(dayMenu(day, dayPlaces));
 
+    if (day.notes) {
+      dayNoteBtn.replaceChildren(...noteParagraphs(day.notes));
+      dayNoteBtn.classList.remove("day-note-btn-empty");
+    } else {
+      dayNoteBtn.replaceChildren();
+      dayNoteBtn.textContent = "+ Add note";
+      dayNoteBtn.classList.add("day-note-btn-empty");
+    }
+    dayNoteBtn.onclick = () => editDay(day, { focusNotes: true });
+
     timelineHolder.replaceChildren(
       renderTimeline(dayPlaces, {
         onMove: (place, direction) => movePlace(dayPlaces, place, direction),
@@ -336,6 +315,28 @@ export function renderDaysPage(container, tripId, myUid) {
     daysMapSection.render(cityPlaces, daysInCity, day.id, homeStay);
   }
 
+  function selectDay(dayId) {
+    selectedDayId = dayId;
+    renderDays();
+  }
+
+  async function createMissingDay(spec) {
+    try {
+      const order = nextOrder();
+      const ref = await addDay(tripId, { date: spec.date, cityKey: spec.cityKey, title: spec.title, focus: "", notes: "", order }, myUid);
+      selectedDayId = ref.id;
+    } catch (err) {
+      onError(err);
+    }
+  }
+
+  function goToNextEmptyDay(sorted, counts) {
+    const nextId = nextEmptyDayId(sorted, counts, selectedDayId);
+    if (!nextId) return;
+    selectDay(nextId);
+    chooserEl.querySelector(".day-chip-selected")?.scrollIntoView({ inline: "nearest", block: "nearest" });
+  }
+
   function renderDays() {
     if (!trip) return;
     const stops = chosenStops(trip, flights, options, airports);
@@ -347,17 +348,30 @@ export function renderDaysPage(container, tripId, myUid) {
       createDaysBtn.textContent = stops.length > 0 ? "Create days from route" : "Create days from trip dates";
       createDaysBtn.disabled = stops.length === 0 && (!trip.startDate || !trip.endDate);
       emptyStateEl.hidden = false;
-      chooserEl.hidden = true;
+      chooserWrapEl.hidden = true;
       dayFocusEl.hidden = true;
-    } else {
-      emptyStateEl.hidden = true;
-      chooserEl.hidden = false;
-      dayFocusEl.hidden = false;
-      if (!selectedDayId || !sorted.some((d) => d.id === selectedDayId)) selectedDayId = sorted[0].id;
-      const missing = missingDays(days, daysFromStops(stops));
-      renderChooser(sorted, missing);
-      renderDayFocus(sorted.find((d) => d.id === selectedDayId), stops, chosenStaysList);
+      return;
     }
+
+    emptyStateEl.hidden = true;
+    chooserWrapEl.hidden = false;
+    dayFocusEl.hidden = false;
+    if (!selectedDayId || !sorted.some((d) => d.id === selectedDayId)) selectedDayId = sorted[0].id;
+    const missing = missingDays(days, daysFromStops(stops));
+    const counts = placeCountsByDay(sorted, places);
+    const hasNote = (day) => Boolean(day.notes);
+    chooserEl.replaceChildren(
+      ...renderChooser({ sorted, missing, selectedDayId, counts, hasNote }, { onSelectDay: selectDay, onCreateMissing: createMissingDay }),
+      addDayChip
+    );
+
+    const emptyCount = sorted.filter((d) => (counts[d.id] ?? 0) === 0).length;
+    chooserStatusTextEl.textContent =
+      emptyCount === 0 ? "Every day has something planned" : `${emptyCount} day${emptyCount === 1 ? "" : "s"} with nothing planned`;
+    nextEmptyBtn.hidden = emptyCount === 0;
+    nextEmptyBtn.onclick = () => goToNextEmptyDay(sorted, counts);
+
+    renderDayFocus(sorted.find((d) => d.id === selectedDayId), stops, chosenStaysList);
   }
 
   const unsubTrip = watchTrip(tripId, (t) => { trip = t; renderDays(); }, onError);
