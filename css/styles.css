@@ -1558,6 +1558,10 @@ button.list-row:hover {
   }
 
   .map-tab-map {
+    /* Back to sharing the row with the list (T71 set `flex: none` so the
+       map keeps its 35dvh on phones, where the layout is a column and
+       `flex: 1` would collapse it to nothing). */
+    flex: 1 1 0;
     /* 70px clears .top-bar: with a trip open its two-line title (name +
        dates/travelers) is taller than the logo alone, plus 2 × 12px
        (--space-3) padding and the safe-area inset on notched phones.
@@ -1690,8 +1694,16 @@ button.list-row:hover {
 }
 
 @media (min-width: 760px) {
+  /* Beside the map there's room for the name and the vote bar on one line,
+     so the name shrinks and ellipses (as it did before T71) rather than
+     wrapping the bar onto a ragged second row. */
+  .place-row-summary {
+    flex-wrap: nowrap;
+  }
+
   .place-row-name {
     flex: 1 1 auto;
+    -webkit-line-clamp: 1;
   }
 }
 
